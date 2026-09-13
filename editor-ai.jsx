@@ -1,5 +1,6 @@
 // AI wrappers + Content Repurposer seed data.
-// Uses window.genspark.complete (built-in cheap model, no API key needed).
+// The existing built-in writer remains the default. Gemini is an optional,
+// server-side alternative exposed through /api/gemini (Cloudflare Pages Function).
 
 // ==================== SEED DATA ====================
 // User can override any of these in Brand Kit.
@@ -88,6 +89,26 @@ const CONTENT_SEED = {
 };
 
 // ==================== AI WRAPPERS ====================
+async function aiComplete({ messages, provider = 'built-in' }) {
+  if (provider === 'gemini') {
+    const response = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages }),
+    });
+    let payload = {};
+    try { payload = await response.json(); } catch {}
+    if (!response.ok) {
+      throw new Error(payload.error || 'Gemini is not connected yet.');
+    }
+    return payload.text || '';
+  }
+  if (!window.genspark?.complete) {
+    throw new Error('The built-in writer is unavailable in this deployment.');
+  }
+  return window.genspark.complete({ messages });
+}
+
 function buildBrandContext(brand, vocab) {
   const voiceDo = (brand.voiceDo || []).map(x => `- ${x}`).join('\n');
   const voiceDont = (brand.voiceDont || []).map(x => `- ${x}`).join('\n');
@@ -137,7 +158,7 @@ Write in the brand voice. Be warm, chatty, human. Never use emoji unless explici
 }
 
 // Idea starters — surface 10 post ideas tailored to this brand.
-async function aiGenerateIdeas({ brand, vocab, products = [], recentSubjects = [] }) {
+async function aiGenerateIdeas({ brand, vocab, products = [], recentSubjects = [], provider = 'built-in' }) {
   const system = buildBrandContext(brand, vocab);
   const productList = products.slice(0, 8).map(p => `- ${p.name} (${p.absorbency || 'general'}${p.price ? `, $${p.price}` : ''})`).join('\n');
   const recentBlock = recentSubjects.length
@@ -167,7 +188,7 @@ Return format (strict JSON, no markdown fence, no commentary):
     { role: 'system', content: system },
     { role: 'user',   content: userPrompt },
   ];
-  const text = await window.genspark.complete({ messages });
+  const text = await aiComplete({ messages, provider });
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('no JSON in AI response');
   const parsed = JSON.parse(jsonMatch[0]);
@@ -215,7 +236,7 @@ function productContextBlock(product) {
   return `\n\nLINKED PRODUCT (talk about THIS specifically — use the real specs, don't invent):\nProduct: ${product.name}\n${bits.join('\n')}`;
 }
 
-async function aiGenerate({ brand, vocab, task, input, platform, extra = '', product = null }) {
+async function aiGenerate({ brand, vocab, task, input, platform, extra = '', product = null, provider = 'built-in' }) {
   const system = buildBrandContext(brand, vocab);
   let userPrompt = `TASK: ${task}\n\n`;
   if (input) userPrompt += `INPUT (the idea/message):\n"""\n${input}\n"""\n\n`;
@@ -229,11 +250,11 @@ async function aiGenerate({ brand, vocab, task, input, platform, extra = '', pro
     { role: 'user',   content: userPrompt },
   ];
 
-  const text = await window.genspark.complete({ messages });
+  const text = await aiComplete({ messages, provider });
   return applyVoiceRules((text || '').trim(), brand);
 }
 
-async function aiRepurposeAll({ brand, vocab, input, platforms, counts = {}, product = null }) {
+async function aiRepurposeAll({ brand, vocab, input, platforms, counts = {}, product = null, provider = 'built-in' }) {
   // `counts` is a per-platform override, e.g. { 'instagram-carousel': 8, 'story-frames': 5 }.
   const details = platforms.map(p => {
     const tmpl = CONTENT_SEED.repurposeTemplates[p];
@@ -267,7 +288,7 @@ Each string is the finished, ready-to-post copy. Use \\n for line breaks. No emo
     { role: 'user',   content: userPrompt },
   ];
 
-  const text = await window.genspark.complete({ messages });
+  const text = await aiComplete({ messages, provider });
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('no JSON in AI response');
   const parsed = JSON.parse(jsonMatch[0]);
