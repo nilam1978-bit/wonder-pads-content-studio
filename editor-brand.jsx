@@ -584,15 +584,12 @@ function BrandKitSection({ onOpenEditor }) {
 
         {/* Right column: hint */}
         <div style={{
-          display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+          display: 'flex', flexDirection: 'column', justifyContent: 'center',
           minWidth: 140, gap: 12,
         }}>
           <div style={{ fontSize: 11, color: 'var(--ink-3)', lineHeight: 1.5, maxWidth: 200 }}>
             When you open a design, use the <b style={{ color: 'var(--ink)' }}>Brand</b> tool in the sidebar to drop these onto your canvas in one click.
           </div>
-          <button className="btn btn-primary" onClick={() => setOpen(true)} style={{ justifyContent: 'center' }}>
-            <Icon name="brand_kit" size={14} /> Customize
-          </button>
         </div>
       </div>
 
@@ -675,14 +672,14 @@ function BrandKitModal({ onClose }) {
               <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 4 }}>Heading font</div>
               <select className="pk-select" style={{ width: '100%', fontSize: 13, padding: '10px 24px 10px 12px', fontFamily: brand.fontHeading }}
                 value={brand.fontHeading} onChange={e => update({ fontHeading: e.target.value })}>
-                {FONT_OPTIONS.map(f => <option key={f.family} value={f.family} style={{ fontFamily: f.family }}>{f.label}</option>)}
+                {ALL_FONT_OPTIONS.map(f => <option key={f.family} value={f.family} style={{ fontFamily: f.family }}>{f.label}</option>)}
               </select>
             </div>
             <div>
               <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 4 }}>Body font</div>
               <select className="pk-select" style={{ width: '100%', fontSize: 13, padding: '10px 24px 10px 12px', fontFamily: brand.fontBody }}
                 value={brand.fontBody} onChange={e => update({ fontBody: e.target.value })}>
-                {FONT_OPTIONS.map(f => <option key={f.family} value={f.family} style={{ fontFamily: f.family }}>{f.label}</option>)}
+                {ALL_FONT_OPTIONS.map(f => <option key={f.family} value={f.family} style={{ fontFamily: f.family }}>{f.label}</option>)}
               </select>
             </div>
           </div>
