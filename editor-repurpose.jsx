@@ -152,6 +152,7 @@ function RepurposeScreen() {
   const [ideasLoading, setIdeasLoading] = rpS(false);
   const [linkedProductId, setLinkedProductId] = rpS(null);
   const [variantCount, setVariantCount] = rpS(1);      // 1, 2, or 3 versions per platform
+  const [aiProvider, setAiProvider] = rpS('built-in'); // Gemini is optional, never auto-selected
   const [activeVariant, setActiveVariant] = rpS({});   // per-platform active tab index
   // Per-platform slide counts for platforms with variableCount (e.g. IG carousel, story frames).
   const [counts, setCounts] = rpS(() => {
@@ -187,13 +188,14 @@ function RepurposeScreen() {
       if (draft.linkedProductId) setLinkedProductId(draft.linkedProductId);
       if (draft.variantCount) setVariantCount(draft.variantCount);
       if (draft.activeVariant) setActiveVariant(draft.activeVariant);
+      if (draft.aiProvider === 'gemini' || draft.aiProvider === 'built-in') setAiProvider(draft.aiProvider);
     } catch {}
   }, []);
   rpE(() => {
     sessionStorage.setItem('wpr-repurpose-draft', JSON.stringify({
-      input, platforms, outputs, counts, linkedProductId, variantCount, activeVariant,
+      input, platforms, outputs, counts, linkedProductId, variantCount, activeVariant, aiProvider,
     }));
-  }, [input, platforms, outputs, counts, linkedProductId, variantCount, activeVariant]);
+  }, [input, platforms, outputs, counts, linkedProductId, variantCount, activeVariant, aiProvider]);
 
   const togglePlatform = (p) => {
     setPlatforms(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
@@ -227,6 +229,7 @@ function RepurposeScreen() {
           platforms,
           counts,
           product: linkedProduct,
+          provider: aiProvider,
         }));
       }
       const allResults = await Promise.all(runs);
@@ -240,7 +243,7 @@ function RepurposeScreen() {
       setActiveVariant({});  // reset all to variant 0
     } catch (e) {
       console.error(e);
-      toast('generation failed — try again');
+      toast(e.message || 'generation failed — try again');
       setOutputs({});
     }
     setLoading(false);
@@ -269,6 +272,7 @@ function RepurposeScreen() {
         input,
         platform,
         product: linkedProduct,
+        provider: aiProvider,
       });
       setOutputs(prev => {
         const val = prev[platform];
@@ -316,6 +320,7 @@ function RepurposeScreen() {
         vocab: state.vocab,
         products: state.products,
         recentSubjects,
+        provider: aiProvider,
       });
       setIdeas(list);
     } catch (e) {
@@ -638,6 +643,29 @@ function RepurposeScreen() {
                 );
               })}
             </div>
+          </div>
+
+          {/* Optional model choice. Built-in stays primary; Gemini requires the server-side secret. */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-3)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+              Writing model
+            </div>
+            <div style={{ background: 'white', border: '1px solid var(--line)', borderRadius: 10, padding: 4, display: 'inline-flex', gap: 2, maxWidth: '100%' }}>
+              {[
+                ['built-in', 'Built-in', 'Default writer'],
+                ['gemini', 'Gemini', 'Optional'],
+              ].map(([value, label, note]) => {
+                const active = aiProvider === value;
+                return <button key={value} onClick={() => setAiProvider(value)}
+                  style={{ padding: '7px 12px', borderRadius: 7, border: 'none', cursor: 'pointer', fontFamily: 'inherit', background: active ? 'var(--ink)' : 'transparent', color: active ? 'white' : 'var(--ink-2)', display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>{label}</span>
+                  <span style={{ fontSize: 10, opacity: .68 }}>{note}</span>
+                </button>;
+              })}
+            </div>
+            {aiProvider === 'gemini' && <div style={{ marginTop: 6, fontSize: 11, color: 'var(--ink-3)' }}>
+              Uses your private Cloudflare Gemini connection. It does not replace the built-in writer.
+            </div>}
           </div>
 
           {/* Voice style rules */}
