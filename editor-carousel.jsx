@@ -1431,7 +1431,12 @@ function SlideEditorModal({ slide, canvas, carousel, brand, onClose, onUpdate })
       role, mode, handleKey,
       startX: e.clientX, startY: e.clientY,
       origX: el.x, origY: el.y, origW: el.w, origH: el.h,
+      origRot: el.rot || 0, origFontSize: el.fontSize || 24,
+      centerX: stageRef.current.getBoundingClientRect().left + (stageSize.w - canvas.w * scale) / 2 + (el.x + el.w / 2) * scale,
+      centerY: stageRef.current.getBoundingClientRect().top + (stageSize.h - canvas.h * scale) / 2 + (el.y + el.h / 2) * scale,
+      startAngle: 0,
     };
+    dragRef.current.startAngle = Math.atan2(e.clientY - dragRef.current.centerY, e.clientX - dragRef.current.centerX) * 180 / Math.PI;
     const move = (ev) => {
       const dRef = dragRef.current;
       if (!dRef) return;
@@ -1446,7 +1451,19 @@ function SlideEditorModal({ slide, canvas, carousel, brand, onClose, onUpdate })
         if (h.includes('w')) { nw = Math.max(20, dRef.origW - dx); nx = dRef.origX + (dRef.origW - nw); }
         if (h.includes('s')) nh = Math.max(20, dRef.origH + dy);
         if (h.includes('n')) { nh = Math.max(20, dRef.origH - dy); ny = dRef.origY + (dRef.origH - nh); }
-        setOverride(dRef.role, { x: nx, y: ny, w: nw, h: nh });
+        const patch = { x: nx, y: ny, w: nw, h: nh };
+        if (el.type === 'text') {
+          if (h === 'e' || h === 'w') {
+            patch.y = dRef.origY;
+            patch.h = dRef.origH;
+          } else {
+            patch.fontSize = Math.max(8, dRef.origFontSize * (nw / dRef.origW));
+          }
+        }
+        setOverride(dRef.role, patch);
+      } else if (dRef.mode === 'rotate') {
+        const angle = Math.atan2(ev.clientY - dRef.centerY, ev.clientX - dRef.centerX) * 180 / Math.PI;
+        setOverride(dRef.role, { rot: dRef.origRot + angle - dRef.startAngle });
       }
     };
     const up = () => {
@@ -1489,7 +1506,9 @@ function SlideEditorModal({ slide, canvas, carousel, brand, onClose, onUpdate })
         <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
           {/* Stage */}
           <div ref={stageRef}
-            onClick={() => setSelectedRole(null)}
+            onClick={(e) => {
+              if (e.target === e.currentTarget || e.target.dataset.slideCanvasBg) setSelectedRole(null);
+            }}
             style={{
               flex: 1, background: 'var(--pink-100)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1506,7 +1525,7 @@ function SlideEditorModal({ slide, canvas, carousel, brand, onClose, onUpdate })
                 height: canvas.h * scale,
                 background: canvas.bg?.value || '#FDFBFC',
                 boxShadow: 'var(--shadow-lg)',
-              }}>
+              }} data-slide-canvas-bg="true">
                 {/* Scaled canvas layer */}
                 <div style={{
                   position: 'absolute', inset: 0,
@@ -1533,6 +1552,7 @@ function SlideEditorModal({ slide, canvas, carousel, brand, onClose, onUpdate })
                     el={selectedEl}
                     scale={scale}
                     onResize={(handleKey, e) => startDrag(e, selectedRole, 'resize', handleKey)}
+                    onRotate={(e) => startDrag(e, selectedRole, 'rotate')}
                   />
                 )}
               </div>
@@ -1551,7 +1571,7 @@ function SlideEditorModal({ slide, canvas, carousel, brand, onClose, onUpdate })
                   role={selectedRole}
                   onUpdate={(patch) => setOverride(selectedRole, patch)}
                   onReset={() => { clearOverride(selectedRole); setSelectedRole(null); }}
-                  brandColors={brand.colors}
+                  brandColors={brand.colors} canvas={canvas}
                 />
               ) : (
                 <SlideMetaPanel slide={slide} canvas={canvas} carousel={carousel} onUpdate={onUpdate} brandColors={brand.colors} />
@@ -1671,7 +1691,7 @@ function InteractiveElementView({ el, role, selected, editing, onSelect, onDoubl
   );
 }
 
-function SelectionOverlay({ el, scale, onResize }) {
+function SelectionOverlay({ el, scale, onResize, onRotate }) {
   const style = {
     position: 'absolute',
     left: el.x * scale, top: el.y * scale,
@@ -1689,7 +1709,7 @@ function SelectionOverlay({ el, scale, onResize }) {
     { key: 's',  style: { left: '50%', bottom: -5, marginLeft: -5, cursor: 'ns-resize' } },
     { key: 'sw', style: { left: -5, bottom: -5, cursor: 'nesw-resize' } },
     { key: 'w',  style: { left: -5, top: '50%', marginTop: -5, cursor: 'ew-resize' } },
-  ];
+  ].filter(handle => el.type !== 'text' || !['n', 's'].includes(handle.key));
   return (
     <div style={style}>
       <div style={{ position: 'absolute', inset: 0, outline: '1.5px solid var(--pink-500)' }} />
@@ -1702,12 +1722,18 @@ function SelectionOverlay({ el, scale, onResize }) {
           pointerEvents: 'auto', ...h.style,
         }} onPointerDown={(e) => onResize(h.key, e)} />
       ))}
+      <div style={{
+        position: 'absolute', left: '50%', top: -30, marginLeft: -7,
+        width: 14, height: 14, borderRadius: '50%', background: 'var(--pink-500)',
+        border: '2px solid white', boxShadow: '0 1px 4px rgba(0,0,0,.2)',
+        pointerEvents: 'auto', cursor: 'grab', boxSizing: 'border-box',
+      }} onPointerDown={onRotate} title="Rotate" />
     </div>
   );
 }
 
 // Properties panel when an element is selected
-function ElementPropertiesPanel({ el, role, onUpdate, onReset, brandColors }) {
+function ElementPropertiesPanel({ el, role, onUpdate, onReset, brandColors, canvas }) {
   return (
     <>
       <div style={{ marginBottom: 12 }}>
@@ -1735,6 +1761,14 @@ function ElementPropertiesPanel({ el, role, onUpdate, onReset, brandColors }) {
             />
           </div>
 
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 4 }}>Font</div>
+            <select className="pk-select" style={{ width: '100%', fontFamily: el.fontFamily }}
+              value={el.fontFamily} onChange={e => onUpdate({ fontFamily: e.target.value })}>
+              {ALL_FONT_OPTIONS.map(f => <option key={f.family} value={f.family}>{f.label}</option>)}
+            </select>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
             <div>
               <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 4 }}>Size</div>
@@ -1742,10 +1776,20 @@ function ElementPropertiesPanel({ el, role, onUpdate, onReset, brandColors }) {
                 onChange={e => onUpdate({ fontSize: Math.max(6, +e.target.value) })} />
             </div>
             <div>
-              <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 4 }}>Line</div>
-              <input type="number" step="0.1" className="num-input" value={el.lineHeight || 1.2}
-                onChange={e => onUpdate({ lineHeight: +e.target.value })} />
+              <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 4 }}>Weight</div>
+              <select className="pk-select" style={{ width: '100%' }} value={el.fontWeight || 400}
+                onChange={e => onUpdate({ fontWeight: +e.target.value })}>
+                <option value="300">Light</option><option value="400">Regular</option>
+                <option value="500">Medium</option><option value="600">Semibold</option><option value="700">Bold</option>
+              </select>
             </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
+            <MiniNum label="Letter" value={el.letterSpacing || 0} onChange={v => onUpdate({ letterSpacing: +v })} />
+            <div><div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 4 }}>Line</div>
+              <input type="number" step="0.1" className="num-input" value={el.lineHeight || 1.2}
+                onChange={e => onUpdate({ lineHeight: +e.target.value })} /></div>
           </div>
 
           <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
@@ -1797,17 +1841,30 @@ function ElementPropertiesPanel({ el, role, onUpdate, onReset, brandColors }) {
       )}
 
       {el.type === 'image' && (
-        <>
-          <div style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 8 }}>
-            Image linked to your brand logo. Change in Brand kit.
-          </div>
-          <div>
-            <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 4 }}>Opacity</div>
-            <input type="range" min="0" max="1" step="0.01" value={el.opacity ?? 1}
-              onChange={e => onUpdate({ opacity: +e.target.value })} />
-          </div>
-        </>
+        <div style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 8 }}>
+          Image linked to your brand logo. Change in Brand kit.
+        </div>
       )}
+
+      <div style={{ borderTop: '1px solid var(--line)', paddingTop: 12, marginTop: 16 }}>
+        <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 6, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 600 }}>Opacity & rotation</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 74px', gap: 8, alignItems: 'center' }}>
+          <input type="range" min="0" max="1" step="0.01" value={el.opacity ?? 1}
+            onChange={e => onUpdate({ opacity: +e.target.value })} />
+          <input type="number" className="num-input" value={Math.round(el.rot || 0)}
+            onChange={e => onUpdate({ rot: +e.target.value })} title="Rotation in degrees" />
+        </div>
+      </div>
+
+      {canvas && <div style={{ marginTop: 16 }}>
+        <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 6, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 600 }}>Align to page</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 5 }}>
+          {[
+            ['Left', { x: 0 }], ['Centre', { x: (canvas.w - el.w) / 2 }], ['Right', { x: canvas.w - el.w }],
+            ['Top', { y: 0 }], ['Middle', { y: (canvas.h - el.h) / 2 }], ['Bottom', { y: canvas.h - el.h }],
+          ].map(([label, patch]) => <button key={label} className="btn btn-tonal" style={{ justifyContent: 'center', padding: '7px 4px', fontSize: 10 }} onClick={() => onUpdate(patch)}>{label}</button>)}
+        </div>
+      </div>}
 
       <div style={{ borderTop: '1px solid var(--line)', paddingTop: 12, marginTop: 20 }}>
         <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 6, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 600 }}>
