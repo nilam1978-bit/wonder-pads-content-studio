@@ -170,11 +170,13 @@
     pointer-events: none;
   }
   .handle {
-    position: absolute; width: 10px; height: 10px;
+    position: absolute; width: 22px; height: 22px;
     background: white; border: 1.5px solid var(--pink-500);
     border-radius: 2px; box-sizing: border-box;
     box-shadow: 0 1px 3px rgba(0,0,0,.15);
+    z-index: 3;
   }
+  .handle::after { content: ''; position: absolute; inset: -6px; }
   .handle.circle { border-radius: 50%; }
   .rotate-handle {
     position: absolute; width: 14px; height: 14px;
@@ -292,8 +294,8 @@
   <script type="text/babel" src="editor-utils.jsx"></script>
   <script type="text/babel" src="editor-ai.jsx?v=6"></script>
   <script type="text/babel" src="editor-export.jsx"></script>
-  <script type="text/babel" src="editor-canvas.jsx?v=5"></script>
-  <script type="text/babel" src="editor-panels.jsx?v=5"></script>
+  <script type="text/babel" src="editor-canvas.jsx?v=9"></script>
+  <script type="text/babel" src="editor-panels.jsx?v=9"></script>
   <script type="text/babel" src="editor-brand.jsx?v=6"></script>
   <script type="text/babel" src="editor-carousel.jsx?v=6"></script>
   <script type="text/babel" src="editor-repurpose.jsx?v=6"></script>
