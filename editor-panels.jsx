@@ -31,6 +31,9 @@ const MORE_FONT_OPTIONS = [
   { family: 'Chewy',         label: 'Chewy',         kind: 'display' },
 ];
 
+// Shared by every selected-text editor, including generated slides and mobile.
+const ALL_FONT_OPTIONS = [...FONT_OPTIONS, ...MORE_FONT_OPTIONS];
+
 // ------- Palette swatches -------
 const BRAND_PALETTE = ['#F1CFEA', '#E8B8DC', '#D98BC6', '#C260A8', '#A0447F', '#2A1F2A', '#FDFBFC', '#F7E1F0'];
 const NEUTRAL_PALETTE = ['#2A1F2A', '#56454F', '#8A7684', '#EADDE5', '#FDFBFC', '#FFFFFF', '#000000'];
@@ -1287,10 +1290,29 @@ function TextProps({ el, update }) {
   return (
     <>
       <SectionLabel>Text</SectionLabel>
+      <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 5 }}>Font library · {ALL_FONT_OPTIONS.length} fonts</div>
       <select className="pk-select" style={{ width: '100%', padding: '10px 24px 10px 12px', fontSize: 13, fontFamily: el.fontFamily }}
         value={el.fontFamily} onChange={e => update({ fontFamily: e.target.value })}>
-        {FONT_OPTIONS.map(f => <option key={f.family} value={f.family} style={{ fontFamily: f.family }}>{f.label}</option>)}
+        <optgroup label="Core fonts">
+          {FONT_OPTIONS.map(f => <option key={f.family} value={f.family} style={{ fontFamily: f.family }}>{f.label}</option>)}
+        </optgroup>
+        <optgroup label="Handmade & extra fonts">
+          {MORE_FONT_OPTIONS.map(f => <option key={f.family} value={f.family} style={{ fontFamily: f.family }}>{f.label}</option>)}
+        </optgroup>
       </select>
+      <div style={{ display: 'flex', gap: 5, marginTop: 6, flexWrap: 'wrap' }}>
+        {['Chewy', 'Kalam', 'Shantell Sans'].map(family => (
+          <button key={family} onClick={() => update({ fontFamily: family })}
+            style={{
+              padding: '6px 9px', borderRadius: 7, border: '1px solid var(--line)',
+              background: el.fontFamily === family ? 'var(--pink-100)' : 'white',
+              color: el.fontFamily === family ? 'var(--pink-600)' : 'var(--ink-2)',
+              fontFamily: family, fontSize: 12,
+            }}>
+            {family}
+          </button>
+        ))}
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
         <LabeledInput label="Size" value={el.fontSize} onChange={v => update({ fontSize: Math.max(6, +v) })} />
