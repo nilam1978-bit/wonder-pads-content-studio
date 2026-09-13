@@ -1,5 +1,5 @@
 // Canvas rendering + element rendering + interactions
-const { useEffect: uE, useRef: uR, useState: uS, useCallback: uCB, useMemo: uM } = React;
+const { useEffect: uE, useLayoutEffect: uLE, useRef: uR, useState: uS, useCallback: uCB, useMemo: uM } = React;
 
 // ---------------- ELEMENT RENDERER ----------------
 function ElementView({ el, selected, dispatch, scale, editing, setEditing }) {
@@ -24,6 +24,7 @@ function ElementView({ el, selected, dispatch, scale, editing, setEditing }) {
     return (
       <div {...commonProps}>
         <div
+          data-text-content-id={el.id}
           contentEditable={editing}
           suppressContentEditableWarning
           onBlur={(e) => {
@@ -32,7 +33,7 @@ function ElementView({ el, selected, dispatch, scale, editing, setEditing }) {
           }}
           onKeyDown={(e) => e.stopPropagation()}
           style={{
-            width: '100%', height: '100%',
+            width: '100%', height: 'auto',
             fontFamily: el.fontFamily,
             fontSize: el.fontSize,
             fontWeight: el.fontWeight,
@@ -42,14 +43,13 @@ function ElementView({ el, selected, dispatch, scale, editing, setEditing }) {
             color: el.color,
             letterSpacing: el.letterSpacing,
             lineHeight: el.lineHeight,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: el.align === 'left' ? 'flex-start' : el.align === 'right' ? 'flex-end' : 'center',
+            display: 'block',
             cursor: editing ? 'text' : 'move',
             userSelect: editing ? 'text' : 'none',
             padding: '4px',
             boxSizing: 'border-box',
             wordBreak: 'break-word',
+            whiteSpace: 'pre-wrap',
           }}
         >
           {el.text}
@@ -256,6 +256,22 @@ function CanvasArea() {
   const [guides, setGuides] = uS([]);
   const startDataRef = uR(null); // { origEls, canvasSnapshot }
 
+  // Canva-like text boxes: height follows the content while width stays user-controlled.
+  uLE(() => {
+    if (!canvas || drag?.mode?.startsWith('resize')) return;
+    const nodes = stageRef.current?.querySelectorAll('[data-text-content-id]');
+    if (!nodes?.length) return;
+    const heights = new Map([...nodes].map(node => [node.dataset.textContentId, Math.ceil(node.scrollHeight)]));
+    canvas.elements.filter(element => element.type === 'text').forEach(element => {
+      const measured = heights.get(element.id);
+      const minimum = Math.ceil((element.fontSize || 16) * (element.lineHeight || 1.2) + 8);
+      const height = Math.max(minimum, measured || 0);
+      if (height > 0 && Math.abs(height - element.h) > 1) {
+        dispatch({ type: 'update-element', id: element.id, transient: true, patch: { h: height } });
+      }
+    });
+  }, [canvas?.elements, canvas?.id, editing, drag?.mode]);
+
   // Center canvas initially
   uE(() => {
     if (!stageRef.current || !canvas) return;
@@ -307,7 +323,13 @@ function CanvasArea() {
 
   // Element interactions
   const startInteract = (e, mode, elId) => {
+    // Preserve click/double-click on the body so text can enter edit mode.
+    // Handles still suppress native browser dragging/selection.
+    if (mode !== 'drag') e.preventDefault();
     e.stopPropagation();
+    // Keep receiving movement even when the pointer leaves a small resize handle.
+    // This is especially important for mouse drags at low canvas zoom levels.
+    try { e.currentTarget?.setPointerCapture?.(e.pointerId); } catch {}
     const canvasEl = canvas.elements.find(el => el.id === elId);
     if (canvasEl?.locked && mode !== 'select') return;
 
@@ -410,15 +432,16 @@ function CanvasArea() {
         }
       }
 
-      // Canva-style: for TEXT elements resized via a corner handle,
-      // scale fontSize proportionally to the box size so the text visually
-      // grows/shrinks with the box (instead of just re-flowing).
-      const isCorner = handle === 'nw' || handle === 'ne' || handle === 'sw' || handle === 'se';
       const patch = { x: nx, y: ny, w: nw, h: nh };
-      if (orig.type === 'text' && isCorner) {
-        const scale = Math.min(nw / orig.w, nh / orig.h);
-        const nextFs = Math.max(6, Math.round((orig.fontSize || 24) * scale));
-        patch.fontSize = nextFs;
+      if (orig.type === 'text') {
+        // Side handles change line length; corner handles scale the type.
+        // Text height is then measured from the resulting content.
+        patch.y = orig.y;
+        delete patch.h;
+        if (['nw', 'ne', 'sw', 'se'].includes(handle)) {
+          const scale = Math.max(0.1, nw / orig.w);
+          patch.fontSize = Math.max(8, (orig.fontSize || 64) * scale);
+        }
       }
       dispatch({ type: 'update-element', id: orig.id, transient: true, patch });
     } else if (mode === 'rotate') {
@@ -532,9 +555,39 @@ function CanvasArea() {
         {/* Selection overlay (in screen space) */}
         {primary && !editing && (
           <SelectionOverlay el={primary} scale={state.zoom}
+            onDrag={(e) => startInteract(e, 'drag', primary.id)}
             onHandle={(handle, e) => startInteract(e, 'resize-' + handle, primary.id)}
             onRotate={(e) => startInteract(e, 'rotate', primary.id)}
+            onEdit={() => {
+              if (primary.type === 'text') {
+                setEditing(primary.id);
+                dispatch({ type: 'set-selection', ids: [primary.id] });
+                setTimeout(() => {
+                  const node = stageRef.current?.querySelector(`[data-text-content-id="${primary.id}"]`);
+                  node?.focus();
+                }, 0);
+              }
+            }}
           />
+        )}
+        {primary?.type === 'text' && !editing && !primary.locked && (
+          <button type="button"
+            aria-label="Scale text"
+            title="Drag to make text larger or smaller"
+            onPointerDown={(e) => startInteract(e, 'resize-se', primary.id)}
+            style={{
+              position: 'absolute',
+              left: (primary.x + primary.w) * state.zoom - 12,
+              top: (primary.y + primary.h) * state.zoom - 12,
+              width: 24, height: 24, borderRadius: 7,
+              background: 'var(--pink-500)', color: 'white',
+              border: '2px solid white', boxShadow: '0 2px 7px rgba(42,31,42,.24)',
+              zIndex: 1000, pointerEvents: 'auto', touchAction: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 13, lineHeight: 1, cursor: 'nwse-resize',
+            }}>
+            ↘
+          </button>
         )}
       </div>
 
@@ -559,38 +612,75 @@ function renderBg(bg) {
   return '#FDFBFC';
 }
 
-function SelectionOverlay({ el, scale, onHandle, onRotate }) {
+function SelectionOverlay({ el, scale, onDrag, onHandle, onRotate, onEdit }) {
   const style = {
     position: 'absolute',
     left: el.x * scale, top: el.y * scale,
     width: el.w * scale, height: el.h * scale,
     transform: `rotate(${el.rot}deg)`,
     transformOrigin: 'center center',
-    pointerEvents: 'none',
+    pointerEvents: 'auto',
+    zIndex: 50,
+    cursor: el.locked ? 'not-allowed' : 'move',
+    touchAction: 'none',
+    userSelect: 'none',
   };
   const handles = [
-    { key: 'nw', style: { left: -5, top: -5, cursor: 'nwse-resize' } },
-    { key: 'n',  style: { left: '50%', top: -5, marginLeft: -5, cursor: 'ns-resize' } },
-    { key: 'ne', style: { right: -5, top: -5, cursor: 'nesw-resize' } },
-    { key: 'e',  style: { right: -5, top: '50%', marginTop: -5, cursor: 'ew-resize' } },
-    { key: 'se', style: { right: -5, bottom: -5, cursor: 'nwse-resize' } },
-    { key: 's',  style: { left: '50%', bottom: -5, marginLeft: -5, cursor: 'ns-resize' } },
-    { key: 'sw', style: { left: -5, bottom: -5, cursor: 'nesw-resize' } },
-    { key: 'w',  style: { left: -5, top: '50%', marginTop: -5, cursor: 'ew-resize' } },
-  ];
+    { key: 'nw', style: { left: 0, top: 0, cursor: 'nwse-resize' } },
+    { key: 'n',  style: { left: '50%', top: 0, transform: 'translateX(-50%)', cursor: 'ns-resize' } },
+    { key: 'ne', style: { right: 0, top: 0, cursor: 'nesw-resize' } },
+    { key: 'e',  style: { right: 0, top: '50%', transform: 'translateY(-50%)', cursor: 'ew-resize' } },
+    { key: 'se', style: { right: 0, bottom: 0, cursor: 'nwse-resize' } },
+    { key: 's',  style: { left: '50%', bottom: 0, transform: 'translateX(-50%)', cursor: 'ns-resize' } },
+    { key: 'sw', style: { left: 0, bottom: 0, cursor: 'nesw-resize' } },
+    { key: 'w',  style: { left: 0, top: '50%', transform: 'translateY(-50%)', cursor: 'ew-resize' } },
+  ].filter(handle => el.type !== 'text' || !['n', 's'].includes(handle.key));
+
+  // Route the whole visible edge/corner to the correct resize action. This is
+  // more reliable than requiring the pointer to land on a tiny decorative dot.
+  const onBoxPointerDown = (e) => {
+    if (el.locked) return;
+    const edge = 22;
+    const localX = e.nativeEvent.offsetX;
+    const localY = e.nativeEvent.offsetY;
+    const boxW = el.w * scale;
+    const boxH = el.h * scale;
+    const nearLeft = localX <= edge;
+    const nearRight = boxW - localX <= edge;
+    const nearTop = localY <= edge;
+    const nearBottom = boxH - localY <= edge;
+
+    let handle = '';
+    if (nearTop && nearLeft) handle = 'nw';
+    else if (nearTop && nearRight) handle = 'ne';
+    else if (nearBottom && nearRight) handle = 'se';
+    else if (nearBottom && nearLeft) handle = 'sw';
+    else if (nearRight) handle = 'e';
+    else if (nearLeft) handle = 'w';
+    else if (el.type !== 'text' && nearTop) handle = 'n';
+    else if (el.type !== 'text' && nearBottom) handle = 's';
+
+    if (handle) onHandle(handle, e);
+    else onDrag(e);
+  };
   return (
-    <div style={style}>
+    <div style={style}
+      onPointerDown={onBoxPointerDown}
+      onDoubleClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit?.(); }}>
       <div className="sel-ring" />
       {handles.map(h => (
-        <div key={h.key}
+        <button key={h.key} type="button"
           className={'handle' + (h.key.length === 1 ? ' side' : '')}
-          style={{ ...h.style, pointerEvents: 'auto' }}
-          onPointerDown={(e) => { e.stopPropagation(); onHandle(h.key, e); }}
+          style={{ ...h.style, pointerEvents: 'auto', touchAction: 'none' }}
+          tabIndex={-1}
+          title={`Resize ${h.key}`}
+          aria-label={`Resize ${h.key}`}
+          onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onHandle(h.key, e); }}
         />
       ))}
       <div className="rotate-handle"
-        style={{ left: '50%', top: -32, marginLeft: -7, pointerEvents: 'auto' }}
-        onPointerDown={(e) => { e.stopPropagation(); onRotate(e); }}
+        style={{ left: '50%', top: -32, marginLeft: -7, pointerEvents: 'auto', touchAction: 'none' }}
+        onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onRotate(e); }}
       />
       {/* Size badge */}
       <div style={{
