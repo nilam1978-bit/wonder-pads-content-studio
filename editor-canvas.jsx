@@ -327,9 +327,6 @@ function CanvasArea() {
     // Handles still suppress native browser dragging/selection.
     if (mode !== 'drag') e.preventDefault();
     e.stopPropagation();
-    // Keep receiving movement even when the pointer leaves a small resize handle.
-    // This is especially important for mouse drags at low canvas zoom levels.
-    try { e.currentTarget?.setPointerCapture?.(e.pointerId); } catch {}
     const canvasEl = canvas.elements.find(el => el.id === elId);
     if (canvasEl?.locked && mode !== 'select') return;
 
@@ -359,6 +356,7 @@ function CanvasArea() {
     const up = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
       setDrag(null);
       setGuides([]);
       // Commit transient — push snapshot to history
@@ -369,6 +367,7 @@ function CanvasArea() {
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   };
 
   const onInteractMove = (e, mode, ids) => {
@@ -583,26 +582,16 @@ function CanvasArea() {
               top: g.y - 0.5, left: -1000, height: 1, width: canvas.w + 2000,
             }} />
           ))}
-        </div>
 
-        {/* Selection overlay (in screen space) */}
-        {primary && !editing && (
-          <SelectionOverlay el={primary} scale={state.zoom}
-            onDrag={(e) => startInteract(e, 'drag', primary.id)}
-            onHandle={(handle, e) => startInteract(e, 'resize-' + handle, primary.id)}
-            onRotate={(e) => startInteract(e, 'rotate', primary.id)}
-            onEdit={() => {
-              if (primary.type === 'text') {
-                setEditing(primary.id);
-                dispatch({ type: 'set-selection', ids: [primary.id] });
-                setTimeout(() => {
-                  const node = stageRef.current?.querySelector(`[data-text-content-id="${primary.id}"]`);
-                  node?.focus();
-                }, 0);
-              }
-            }}
-          />
-        )}
+          {/* Keep transform handles in the same scaled coordinate system as the
+              artwork. This mirrors the earlier editor's proven interaction model. */}
+          {primary && !editing && (
+            <SelectionOverlay el={primary} scale={1}
+              onHandle={(handle, e) => startInteract(e, 'resize-' + handle, primary.id)}
+              onRotate={(e) => startInteract(e, 'rotate', primary.id)}
+            />
+          )}
+        </div>
       </div>
 
       {/* Zoom badge */}
@@ -626,14 +615,14 @@ function renderBg(bg) {
   return '#FDFBFC';
 }
 
-function SelectionOverlay({ el, scale, onDrag, onHandle, onRotate, onEdit }) {
+function SelectionOverlay({ el, scale, onHandle, onRotate }) {
   const style = {
     position: 'absolute',
     left: el.x * scale, top: el.y * scale,
     width: el.w * scale, height: el.h * scale,
     transform: `rotate(${el.rot}deg)`,
     transformOrigin: 'center center',
-    pointerEvents: 'auto',
+    pointerEvents: 'none',
     zIndex: 50,
     cursor: el.locked ? 'not-allowed' : 'move',
     touchAction: 'none',
@@ -651,9 +640,7 @@ function SelectionOverlay({ el, scale, onDrag, onHandle, onRotate, onEdit }) {
   ].filter(handle => el.type !== 'text' || !['n', 's'].includes(handle.key));
 
   return (
-    <div style={style}
-      onPointerDown={(e) => { if (!el.locked) onDrag(e); }}
-      onDoubleClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit?.(); }}>
+    <div style={style}>
       <div className="sel-ring" />
       {handles.map(h => (
         <button key={h.key} type="button"
