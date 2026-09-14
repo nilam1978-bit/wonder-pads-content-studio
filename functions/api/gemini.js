@@ -24,11 +24,17 @@ export async function onRequestPost({ request, env }) {
   if (!prompt.trim()) return json({ error: 'Nothing to write.' }, 400);
   if (prompt.length > 50000) return json({ error: 'This request is too long.' }, 413);
 
-  const model = env.GEMINI_MODEL || 'gemini-3.8-flash';
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+  const primaryModel = env.GEMINI_MODEL || 'gemini-3.8-flash';
+  const fallbackModel = env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite';
+  const attempts = [primaryModel, primaryModel, fallbackModel];
+  let lastStatus = 502;
+  let lastDetail = 'Gemini could not complete this request.';
 
-  try {
-    const upstream = await fetch(endpoint, {
+  for (let attempt = 0; attempt < attempts.length; attempt++) {
+    const model = attempts[attempt];
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+    try {
+      const upstream = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -39,20 +45,31 @@ export async function onRequestPost({ request, env }) {
         generationConfig: { temperature: 0.72, maxOutputTokens: 8192 },
       }),
     });
-    const data = await upstream.json();
-    if (!upstream.ok) {
-      const detail = data?.error?.message || 'Gemini could not complete this request.';
-      return json({ error: detail }, upstream.status);
+      const data = await upstream.json();
+      if (upstream.ok) {
+        const text = (data.candidates?.[0]?.content?.parts || [])
+          .map(part => part.text || '')
+          .join('')
+          .trim();
+        if (text) return json({ text, model, usedFallback: model === fallbackModel });
+        lastDetail = 'Gemini returned an empty response.';
+        lastStatus = 502;
+      } else {
+        lastDetail = data?.error?.message || 'Gemini could not complete this request.';
+        lastStatus = upstream.status;
+        const retryable = [429, 500, 502, 503, 504].includes(upstream.status)
+          || /high demand|overload|unavailable|try again/i.test(lastDetail);
+        if (!retryable) return json({ error: lastDetail }, upstream.status);
+      }
+    } catch {
+      lastDetail = 'Could not reach Gemini. Try again shortly.';
+      lastStatus = 502;
     }
-    const text = (data.candidates?.[0]?.content?.parts || [])
-      .map(part => part.text || '')
-      .join('')
-      .trim();
-    if (!text) return json({ error: 'Gemini returned an empty response.' }, 502);
-    return json({ text, model });
-  } catch {
-    return json({ error: 'Could not reach Gemini. Try again shortly.' }, 502);
+    if (attempt < attempts.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, attempt === 0 ? 350 : 650));
+    }
   }
+  return json({ error: `${lastDetail} Both Gemini models are temporarily unavailable.` }, lastStatus);
 }
 
 export function onRequest() {
