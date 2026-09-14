@@ -586,7 +586,7 @@ function CanvasArea() {
           {/* Keep transform handles in the same scaled coordinate system as the
               artwork. This mirrors the earlier editor's proven interaction model. */}
           {primary && !editing && (
-            <SelectionOverlay el={primary} scale={1}
+            <SelectionOverlay el={primary} scale={1} viewportScale={state.zoom}
               onHandle={(handle, e) => startInteract(e, 'resize-' + handle, primary.id)}
               onRotate={(e) => startInteract(e, 'rotate', primary.id)}
             />
@@ -615,7 +615,7 @@ function renderBg(bg) {
   return '#FDFBFC';
 }
 
-function SelectionOverlay({ el, scale, onHandle, onRotate }) {
+function SelectionOverlay({ el, scale, viewportScale = 1, onHandle, onRotate }) {
   const style = {
     position: 'absolute',
     left: el.x * scale, top: el.y * scale,
@@ -639,16 +639,28 @@ function SelectionOverlay({ el, scale, onHandle, onRotate }) {
     { key: 'w',  style: { left: 0, top: '50%', transform: 'translate(-50%,-50%)', cursor: 'ew-resize' } },
   ].filter(handle => el.type !== 'text' || !['n', 's'].includes(handle.key));
 
+  // Handles live inside the zoomed artboard, but their mouse target must remain
+  // comfortably grab-able at every zoom. Counter-scale the hit target so it is
+  // always about 36 screen pixels while keeping the visible dot at 10px.
+  const safeViewportScale = Math.max(0.05, viewportScale || 1);
+  const cornerHit = 36 / safeViewportScale;
+  const sideHitW = 28 / safeViewportScale;
+  const sideHitH = 48 / safeViewportScale;
+  const dot = 10 / safeViewportScale;
+
   return (
     <div style={style}>
       <div className="sel-ring" />
       {handles.map(h => (
         <button key={h.key} type="button"
-          className={'handle' + (h.key.length === 1 ? ' side' : '')}
+          data-resize-handle={h.key}
           style={{
             ...h.style,
-            width: h.key.length === 1 ? 14 : 22,
-            height: h.key.length === 1 ? 34 : 22,
+            position: 'absolute',
+            width: h.key.length === 1 ? sideHitW : cornerHit,
+            height: h.key.length === 1 ? sideHitH : cornerHit,
+            padding: 0, margin: 0,
+            background: 'transparent', border: 0, boxShadow: 'none',
             zIndex: 200,
             pointerEvents: 'auto', touchAction: 'none',
           }}
@@ -656,7 +668,18 @@ function SelectionOverlay({ el, scale, onHandle, onRotate }) {
           title={`Resize ${h.key}`}
           aria-label={`Resize ${h.key}`}
           onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onHandle(h.key, e); }}
-        />
+        >
+          <span aria-hidden="true" style={{
+            position: 'absolute', left: '50%', top: '50%',
+            width: h.key.length === 1 ? dot * .75 : dot,
+            height: h.key.length === 1 ? dot * 1.7 : dot,
+            transform: 'translate(-50%,-50%)',
+            background: 'white', border: `${1.5 / safeViewportScale}px solid var(--pink-500)`,
+            borderRadius: h.key.length === 1 ? 999 : Math.max(1, 2 / safeViewportScale),
+            boxSizing: 'border-box', boxShadow: '0 1px 3px rgba(0,0,0,.15)',
+            pointerEvents: 'none',
+          }} />
+        </button>
       ))}
       <div className="rotate-handle"
         style={{ left: '50%', top: -32, marginLeft: -7, pointerEvents: 'auto', touchAction: 'none' }}
