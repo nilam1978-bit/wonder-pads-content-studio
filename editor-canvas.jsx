@@ -413,6 +413,50 @@ function CanvasArea() {
     } else if (mode.startsWith('resize')) {
       const handle = sd.handle;
       const orig = sd.origEls[0];
+
+      // Text has two deliberately different resize behaviours, matching Canva:
+      // the middle side handles change only the line length, while every corner
+      // scales the complete text object from its opposite corner.
+      if (orig.type === 'text') {
+        const minimumWidth = Math.max(40, (orig.fontSize || 16) * 0.75);
+        if (handle === 'e' || handle === 'w') {
+          const width = handle === 'e'
+            ? Math.max(minimumWidth, orig.w + dx)
+            : Math.max(minimumWidth, orig.w - dx);
+          dispatch({
+            type: 'update-element', id: orig.id, transient: true,
+            patch: {
+              x: handle === 'w' ? orig.x + orig.w - width : orig.x,
+              w: width,
+            },
+          });
+          return;
+        }
+
+        if (['nw', 'ne', 'sw', 'se'].includes(handle)) {
+          const sx = handle.includes('e') ? (orig.w + dx) / orig.w : (orig.w - dx) / orig.w;
+          const sy = handle.includes('s') ? (orig.h + dy) / orig.h : (orig.h - dy) / orig.h;
+          // Use whichever pointer axis expresses the larger intentional change.
+          // This keeps the aspect ratio fixed without requiring Shift.
+          let factor = Math.abs(sx - 1) >= Math.abs(sy - 1) ? sx : sy;
+          factor = clamp(factor, 0.1, 20);
+          const width = Math.max(minimumWidth, orig.w * factor);
+          const height = Math.max(10, orig.h * factor);
+          const actualFactor = width / orig.w;
+          dispatch({
+            type: 'update-element', id: orig.id, transient: true,
+            patch: {
+              x: handle.includes('w') ? orig.x + orig.w - width : orig.x,
+              y: handle.includes('n') ? orig.y + orig.h - height : orig.y,
+              w: width,
+              h: height,
+              fontSize: Math.max(8, (orig.fontSize || 64) * actualFactor),
+            },
+          });
+          return;
+        }
+      }
+
       let nx = orig.x, ny = orig.y, nw = orig.w, nh = orig.h;
       // Handle each corner/side
       if (handle.includes('e')) nw = Math.max(10, orig.w + dx);
@@ -432,18 +476,7 @@ function CanvasArea() {
         }
       }
 
-      const patch = { x: nx, y: ny, w: nw, h: nh };
-      if (orig.type === 'text') {
-        // Side handles change line length; corner handles scale the type.
-        // Text height is then measured from the resulting content.
-        patch.y = orig.y;
-        delete patch.h;
-        if (['nw', 'ne', 'sw', 'se'].includes(handle)) {
-          const scale = Math.max(0.1, nw / orig.w);
-          patch.fontSize = Math.max(8, (orig.fontSize || 64) * scale);
-        }
-      }
-      dispatch({ type: 'update-element', id: orig.id, transient: true, patch });
+      dispatch({ type: 'update-element', id: orig.id, transient: true, patch: { x: nx, y: ny, w: nw, h: nh } });
     } else if (mode === 'rotate') {
       const orig = sd.origEls[0];
       const rect = stageRef.current.getBoundingClientRect();
@@ -570,25 +603,6 @@ function CanvasArea() {
             }}
           />
         )}
-        {primary?.type === 'text' && !editing && !primary.locked && (
-          <button type="button"
-            aria-label="Scale text"
-            title="Drag to make text larger or smaller"
-            onPointerDown={(e) => startInteract(e, 'resize-se', primary.id)}
-            style={{
-              position: 'absolute',
-              left: (primary.x + primary.w) * state.zoom - 12,
-              top: (primary.y + primary.h) * state.zoom - 12,
-              width: 24, height: 24, borderRadius: 7,
-              background: 'var(--pink-500)', color: 'white',
-              border: '2px solid white', boxShadow: '0 2px 7px rgba(42,31,42,.24)',
-              zIndex: 1000, pointerEvents: 'auto', touchAction: 'none',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 13, lineHeight: 1, cursor: 'nwse-resize',
-            }}>
-            ↘
-          </button>
-        )}
       </div>
 
       {/* Zoom badge */}
@@ -626,52 +640,31 @@ function SelectionOverlay({ el, scale, onDrag, onHandle, onRotate, onEdit }) {
     userSelect: 'none',
   };
   const handles = [
-    { key: 'nw', style: { left: 0, top: 0, cursor: 'nwse-resize' } },
-    { key: 'n',  style: { left: '50%', top: 0, transform: 'translateX(-50%)', cursor: 'ns-resize' } },
-    { key: 'ne', style: { right: 0, top: 0, cursor: 'nesw-resize' } },
-    { key: 'e',  style: { right: 0, top: '50%', transform: 'translateY(-50%)', cursor: 'ew-resize' } },
-    { key: 'se', style: { right: 0, bottom: 0, cursor: 'nwse-resize' } },
-    { key: 's',  style: { left: '50%', bottom: 0, transform: 'translateX(-50%)', cursor: 'ns-resize' } },
-    { key: 'sw', style: { left: 0, bottom: 0, cursor: 'nesw-resize' } },
-    { key: 'w',  style: { left: 0, top: '50%', transform: 'translateY(-50%)', cursor: 'ew-resize' } },
+    { key: 'nw', style: { left: 0, top: 0, transform: 'translate(-50%,-50%)', cursor: 'nwse-resize' } },
+    { key: 'n',  style: { left: '50%', top: 0, transform: 'translate(-50%,-50%)', cursor: 'ns-resize' } },
+    { key: 'ne', style: { left: '100%', top: 0, transform: 'translate(-50%,-50%)', cursor: 'nesw-resize' } },
+    { key: 'e',  style: { left: '100%', top: '50%', transform: 'translate(-50%,-50%)', cursor: 'ew-resize' } },
+    { key: 'se', style: { left: '100%', top: '100%', transform: 'translate(-50%,-50%)', cursor: 'nwse-resize' } },
+    { key: 's',  style: { left: '50%', top: '100%', transform: 'translate(-50%,-50%)', cursor: 'ns-resize' } },
+    { key: 'sw', style: { left: 0, top: '100%', transform: 'translate(-50%,-50%)', cursor: 'nesw-resize' } },
+    { key: 'w',  style: { left: 0, top: '50%', transform: 'translate(-50%,-50%)', cursor: 'ew-resize' } },
   ].filter(handle => el.type !== 'text' || !['n', 's'].includes(handle.key));
 
-  // Route the whole visible edge/corner to the correct resize action. This is
-  // more reliable than requiring the pointer to land on a tiny decorative dot.
-  const onBoxPointerDown = (e) => {
-    if (el.locked) return;
-    const edge = 22;
-    const localX = e.nativeEvent.offsetX;
-    const localY = e.nativeEvent.offsetY;
-    const boxW = el.w * scale;
-    const boxH = el.h * scale;
-    const nearLeft = localX <= edge;
-    const nearRight = boxW - localX <= edge;
-    const nearTop = localY <= edge;
-    const nearBottom = boxH - localY <= edge;
-
-    let handle = '';
-    if (nearTop && nearLeft) handle = 'nw';
-    else if (nearTop && nearRight) handle = 'ne';
-    else if (nearBottom && nearRight) handle = 'se';
-    else if (nearBottom && nearLeft) handle = 'sw';
-    else if (nearRight) handle = 'e';
-    else if (nearLeft) handle = 'w';
-    else if (el.type !== 'text' && nearTop) handle = 'n';
-    else if (el.type !== 'text' && nearBottom) handle = 's';
-
-    if (handle) onHandle(handle, e);
-    else onDrag(e);
-  };
   return (
     <div style={style}
-      onPointerDown={onBoxPointerDown}
+      onPointerDown={(e) => { if (!el.locked) onDrag(e); }}
       onDoubleClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit?.(); }}>
       <div className="sel-ring" />
       {handles.map(h => (
         <button key={h.key} type="button"
           className={'handle' + (h.key.length === 1 ? ' side' : '')}
-          style={{ ...h.style, pointerEvents: 'auto', touchAction: 'none' }}
+          style={{
+            ...h.style,
+            width: h.key.length === 1 ? 14 : 22,
+            height: h.key.length === 1 ? 34 : 22,
+            zIndex: 200,
+            pointerEvents: 'auto', touchAction: 'none',
+          }}
           tabIndex={-1}
           title={`Resize ${h.key}`}
           aria-label={`Resize ${h.key}`}
