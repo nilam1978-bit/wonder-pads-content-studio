@@ -192,7 +192,7 @@ function MobileCarouselMaker() {
   const focusedSlide = focusedSlideId ? slides.find(s => s.id === focusedSlideId) : null;
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--pink-100)' }}>
+    <div style={{ height: 'var(--studio-viewport-height, 100dvh)', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--pink-100)' }}>
       <div className="safe-top" style={{
         padding: '10px 12px', background: 'white', borderBottom: '1px solid var(--line)',
         display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, zIndex: 20,
@@ -772,7 +772,12 @@ function MobileSlideEditor({ slide, canvas, carousel, brand, onClose, onUpdate }
       role, mode, handleKey,
       startX: clientX, startY: clientY,
       origX: el.x, origY: el.y, origW: el.w, origH: el.h,
+      origRot: el.rot || 0, origFontSize: el.fontSize || 24,
+      centerX: stageRef.current.getBoundingClientRect().left + (stageSize.w - canvas.w * scale) / 2 + (el.x + el.w / 2) * scale,
+      centerY: stageRef.current.getBoundingClientRect().top + (stageSize.h - canvas.h * scale) / 2 + (el.y + el.h / 2) * scale,
+      startAngle: 0,
     };
+    dragRef.current.startAngle = Math.atan2(clientY - dragRef.current.centerY, clientX - dragRef.current.centerX) * 180 / Math.PI;
     const move = (ev) => {
       const dRef = dragRef.current;
       if (!dRef) return;
@@ -790,7 +795,27 @@ function MobileSlideEditor({ slide, canvas, carousel, brand, onClose, onUpdate }
         if (h.includes('w')) { nw = Math.max(20, dRef.origW - dx); nx = dRef.origX + (dRef.origW - nw); }
         if (h.includes('s')) nh = Math.max(20, dRef.origH + dy);
         if (h.includes('n')) { nh = Math.max(20, dRef.origH - dy); ny = dRef.origY + (dRef.origH - nh); }
-        setOverride(dRef.role, { x: nx, y: ny, w: nw, h: nh });
+        const patch = { x: nx, y: ny, w: nw, h: nh };
+        if (el.type === 'text') {
+          if (h === 'e' || h === 'w') {
+            patch.y = dRef.origY;
+            patch.h = dRef.origH;
+          } else {
+            const sx = nw / dRef.origW;
+            const sy = nh / dRef.origH;
+            const factor = Math.max(8 / dRef.origFontSize,
+              Math.abs(sx - 1) >= Math.abs(sy - 1) ? sx : sy);
+            patch.w = dRef.origW * factor;
+            patch.h = dRef.origH * factor;
+            patch.x = h.includes('w') ? dRef.origX + dRef.origW - patch.w : dRef.origX;
+            patch.y = h.includes('n') ? dRef.origY + dRef.origH - patch.h : dRef.origY;
+            patch.fontSize = dRef.origFontSize * factor;
+          }
+        }
+        setOverride(dRef.role, patch);
+      } else if (dRef.mode === 'rotate') {
+        const angle = Math.atan2(cy - dRef.centerY, cx - dRef.centerX) * 180 / Math.PI;
+        setOverride(dRef.role, { rot: dRef.origRot + angle - dRef.startAngle });
       }
     };
     const up = () => {
@@ -836,7 +861,9 @@ function MobileSlideEditor({ slide, canvas, carousel, brand, onClose, onUpdate }
       </div>
 
       <div ref={stageRef}
-        onClick={() => setSelectedRole(null)}
+        onClick={(e) => {
+          if (e.target === e.currentTarget || e.target.dataset.slideCanvasBg) setSelectedRole(null);
+        }}
         style={{
           flex: 1, background: 'var(--pink-100)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -851,7 +878,7 @@ function MobileSlideEditor({ slide, canvas, carousel, brand, onClose, onUpdate }
             width: canvas.w * scale, height: canvas.h * scale,
             background: canvas.bg?.value || '#FDFBFC',
             boxShadow: 'var(--shadow-lg)',
-          }}>
+          }} data-slide-canvas-bg="true">
             <div style={{
               position: 'absolute', inset: 0,
               transform: `scale(${scale})`, transformOrigin: 'top left',
@@ -871,7 +898,8 @@ function MobileSlideEditor({ slide, canvas, carousel, brand, onClose, onUpdate }
             </div>
             {selectedEl && (
               <MobileSelectionOverlay el={selectedEl} scale={scale}
-                onResize={(handle, e) => startDrag(e, selectedRole, 'resize', handle)} />
+                onResize={(handle, e) => startDrag(e, selectedRole, 'resize', handle)}
+                onRotate={(e) => startDrag(e, selectedRole, 'rotate')} />
             )}
           </div>
         )}
@@ -903,7 +931,7 @@ function MobileSlideEditor({ slide, canvas, carousel, brand, onClose, onUpdate }
           <ElementPropertiesPanel el={selectedEl} role={selectedRole}
             onUpdate={(patch) => setOverride(selectedRole, patch)}
             onReset={() => { clearOverride(selectedRole); setSelectedRole(null); setPropOpen(false); }}
-            brandColors={brand.colors} />
+            brandColors={brand.colors} canvas={canvas} />
         ) : (
           <SlideMetaPanel slide={slide} canvas={canvas} carousel={carousel}
             onUpdate={onUpdate} brandColors={brand.colors} />
