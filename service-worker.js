@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wonder-pads-content-studio-v12';
+const CACHE_NAME = 'wonder-pads-content-studio-v14';
 
 const APP_FILES = [
   './',
