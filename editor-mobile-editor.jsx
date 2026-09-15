@@ -45,7 +45,7 @@ function MobileEditor() {
 
   return (
     <div style={{
-      height: '100vh', width: '100%',
+      height: 'var(--studio-viewport-height, 100dvh)', width: '100%', overflow: 'hidden',
       display: 'flex', flexDirection: 'column',
       background: 'var(--pink-100)',
     }}>
@@ -424,9 +424,10 @@ function MobileCanvasArea({ onLongPress }) {
   };
 
   const startResize = (e, elId, handleKey) => {
+    e.preventDefault();
     e.stopPropagation();
     const el = canvas.elements.find(x => x.id === elId);
-    if (!el) return;
+    if (!el || el.locked) return;
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     const startData = {
@@ -450,8 +451,15 @@ function MobileCanvasArea({ onLongPress }) {
       const isCorner = h === 'nw' || h === 'ne' || h === 'sw' || h === 'se';
       const patch = { x: nx, y: ny, w: nw, h: nh };
       if (startData.orig.type === 'text' && isCorner) {
-        const scale = Math.min(nw / startData.orig.w, nh / startData.orig.h);
-        patch.fontSize = Math.max(6, Math.round((startData.orig.fontSize || 24) * scale));
+        const sx = nw / startData.orig.w;
+        const sy = nh / startData.orig.h;
+        const factor = Math.max(6 / (startData.orig.fontSize || 24),
+          Math.abs(sx - 1) >= Math.abs(sy - 1) ? sx : sy);
+        patch.w = startData.orig.w * factor;
+        patch.h = startData.orig.h * factor;
+        patch.x = h.includes('w') ? startData.orig.x + startData.orig.w - patch.w : startData.orig.x;
+        patch.y = h.includes('n') ? startData.orig.y + startData.orig.h - patch.h : startData.orig.y;
+        patch.fontSize = (startData.orig.fontSize || 24) * factor;
       }
       dispatch({ type: 'update-element', id: elId, transient: true, patch });
     };
@@ -594,7 +602,7 @@ function MobileCanvasArea({ onLongPress }) {
   );
 }
 
-function MobileSelectionOverlay({ el, scale, onResize }) {
+function MobileSelectionOverlay({ el, scale, onResize, onRotate }) {
   const style = {
     position: 'absolute',
     left: el.x * scale, top: el.y * scale,
@@ -628,6 +636,9 @@ function MobileSelectionOverlay({ el, scale, onResize }) {
           onPointerDown={(e) => { if (e.pointerType !== 'touch') { e.stopPropagation(); onResize(h.key, e); } }}
         />
       ))}
+      {onRotate && <div className="rotate-handle"
+        style={{ left: '50%', top: -38, marginLeft: -10, width: 20, height: 20, pointerEvents: 'auto', touchAction: 'none' }}
+        onPointerDown={(e) => { e.stopPropagation(); onRotate(e); }} />}
     </div>
   );
 }
@@ -644,7 +655,7 @@ function MobileEditorBottomBar({ activeTool, onOpen, onMore }) {
     <div className="safe-bottom" style={{
       display: 'flex', background: 'white',
       borderTop: '1px solid var(--line)',
-      flexShrink: 0, padding: '4px 4px',
+      flexShrink: 0, padding: '4px 4px calc(4px + env(safe-area-inset-bottom, 0px))',
       zIndex: 15,
     }}>
       {tools.map(t => (
@@ -675,7 +686,7 @@ function MobileEditorBottomBar({ activeTool, onOpen, onMore }) {
 function MobileSelectionBar({ el, onOpenProperties, onDuplicate, onDelete, onDeselect }) {
   return (
     <div className="safe-bottom" style={{
-      display: 'flex', gap: 4, padding: '8px 12px',
+      display: 'flex', gap: 4, padding: '8px 12px calc(8px + env(safe-area-inset-bottom, 0px))',
       background: 'white', borderTop: '1px solid var(--line)',
       flexShrink: 0, alignItems: 'center', zIndex: 15,
     }}>
