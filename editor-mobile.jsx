@@ -189,7 +189,7 @@ function MobileHome() {
 
   return (
     <div style={{
-      height: '100vh', width: '100%',
+      height: 'var(--studio-viewport-height, 100dvh)', width: '100%',
       display: 'flex', flexDirection: 'column',
       background: 'linear-gradient(180deg, var(--pink-200) 0%, var(--pink-100) 200px, #FBF5F9 500px)',
     }}>
