@@ -586,7 +586,7 @@ function CanvasArea() {
           {/* Keep transform handles in the same scaled coordinate system as the
               artwork. This mirrors the earlier editor's proven interaction model. */}
           {primary && !editing && (
-            <SelectionOverlay el={primary} scale={1} viewportScale={state.zoom}
+            <CanvasSelectionOverlay el={primary} scale={1} viewportScale={state.zoom}
               onHandle={(handle, e) => startInteract(e, 'resize-' + handle, primary.id)}
               onRotate={(e) => startInteract(e, 'rotate', primary.id)}
             />
@@ -615,7 +615,7 @@ function renderBg(bg) {
   return '#FDFBFC';
 }
 
-function SelectionOverlay({ el, scale, viewportScale = 1, onHandle, onRotate }) {
+function CanvasSelectionOverlay({ el, scale, viewportScale = 1, onHandle, onRotate }) {
   const style = {
     position: 'absolute',
     left: el.x * scale, top: el.y * scale,
