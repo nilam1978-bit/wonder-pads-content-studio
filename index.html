@@ -294,7 +294,7 @@
   <script type="text/babel" src="editor-utils.jsx"></script>
   <script type="text/babel" src="editor-ai.jsx?v=6"></script>
   <script type="text/babel" src="editor-export.jsx"></script>
-  <script type="text/babel" src="editor-canvas.jsx?v=12"></script>
+  <script type="text/babel" src="editor-canvas.jsx?v=13"></script>
   <script type="text/babel" src="editor-panels.jsx?v=9"></script>
   <script type="text/babel" src="editor-brand.jsx?v=6"></script>
   <script type="text/babel" src="editor-carousel.jsx?v=6"></script>
@@ -303,11 +303,20 @@
   <script type="text/babel" src="editor-history.jsx"></script>
   <script type="text/babel" src="editor-calendar.jsx"></script>
   <script type="text/babel" src="editor-home.jsx"></script>
-  <script type="text/babel" src="editor-mobile.jsx"></script>
-  <script type="text/babel" src="editor-mobile-editor.jsx?v=5"></script>
-  <script type="text/babel" src="editor-mobile-carousel.jsx?v=5"></script>
+  <script type="text/babel" src="editor-mobile.jsx?v=14"></script>
+  <script type="text/babel" src="editor-mobile-editor.jsx?v=14"></script>
+  <script type="text/babel" src="editor-mobile-carousel.jsx?v=14"></script>
   <script type="text/babel" src="editor.jsx"></script>
   <script>
+    // Safari's visible area changes as its address bar and keyboard open.
+    // Size the mobile flex layout to that area so its footer stays reachable.
+    const updateStudioViewport = () => {
+      document.documentElement.style.setProperty('--studio-viewport-height',
+        `${window.visualViewport?.height || window.innerHeight}px`);
+    };
+    updateStudioViewport();
+    window.addEventListener('resize', updateStudioViewport);
+    window.visualViewport?.addEventListener('resize', updateStudioViewport);
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./service-worker.js').catch((error) => {
