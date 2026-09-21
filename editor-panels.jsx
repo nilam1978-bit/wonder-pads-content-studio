@@ -69,6 +69,11 @@ const RAIL_TOOLS = [
 
 function LeftRail() {
   const { state, dispatch } = useStore();
+  const project = activeProject(state);
+  const isSimpleCarousel = !!project && state.carousel?.simpleProjectId === project.id;
+  const visibleTools = isSimpleCarousel
+    ? RAIL_TOOLS.filter(tool => tool.id !== 'text')
+    : RAIL_TOOLS;
   return (
     <div style={{
       width: 84, background: 'var(--pink-100)',
@@ -76,7 +81,7 @@ function LeftRail() {
       display: 'flex', flexDirection: 'column',
       padding: '12px 0', gap: 4,
     }}>
-      {RAIL_TOOLS.map(t => (
+      {visibleTools.map(t => (
         <button key={t.id}
           onClick={() => dispatch({ type: 'set-tool', tool: state.tool === t.id ? null : t.id })}
           style={{
@@ -102,7 +107,12 @@ function LeftRail() {
 // ---------- LEFT PANEL ----------
 function LeftPanel() {
   const { state } = useStore();
+  const project = activeProject(state);
+  const isSimpleCarousel = !!project && state.carousel?.simpleProjectId === project.id;
   if (!state.tool) return null;
+  // Carousel copy is managed in 1 · Words. Design only formats text that is
+  // already on a slide, so do not expose a second add-text route here.
+  if (isSimpleCarousel && state.tool === 'text') return null;
 
   return (
     <div style={{
@@ -600,7 +610,7 @@ function ShapesPanel() {
 function ImagesPanel() {
   const { state, dispatch } = useStore();
   const [uploads, setUploads] = pS(() => {
-    try { return JSON.parse(localStorage.getItem('petal-uploads') || '[]'); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem('simple-preview-uploads') || '[]'); } catch { return []; }
   });
   const fileRef = pR(null);
 
@@ -611,7 +621,7 @@ function ImagesPanel() {
         const src = e.target.result;
         const newList = [src, ...uploads].slice(0, 24);
         setUploads(newList);
-        try { localStorage.setItem('petal-uploads', JSON.stringify(newList)); } catch {}
+        try { localStorage.setItem('simple-preview-uploads', JSON.stringify(newList)); } catch {}
       };
       reader.readAsDataURL(file);
     });
@@ -764,6 +774,11 @@ function BackgroundPanel() {
   const setBg = (bg) => dispatch({ type: 'update-canvas', id: canvas.id, patch: { bg } });
   // Merge patch onto existing bg to keep opacity when only value changes and vice versa.
   const patchBg = (patch) => setBg({ type: 'color', value: '#FDFBFC', ...(canvas.bg || {}), ...patch });
+  const applyCurrentBgToAll = () => {
+    if (!proj || !canvas) return;
+    const bg = JSON.parse(JSON.stringify(canvas.bg || { type: 'color', value: '#FDFBFC' }));
+    for (const target of proj.canvases) dispatch({ type: 'update-canvas', id: target.id, patch: { bg } });
+  };
 
   const currentOpacity = canvas.bg?.opacity ?? 1;
 
@@ -919,6 +934,11 @@ function BackgroundPanel() {
       <div style={{ fontSize: 10, color: 'var(--ink-3)', marginTop: 4, lineHeight: 1.4 }}>
         Only the background layer is affected. Elements on the canvas keep their own opacity.
       </div>
+      <button className="btn btn-tonal" onClick={applyCurrentBgToAll}
+        disabled={!proj || proj.canvases.length < 2}
+        style={{ width:'100%', marginTop:10, padding:'9px 10px', fontSize:12 }}>
+        Apply current background to all slides
+      </button>
 
       {/* Petal — My Backgrounds. Two save modes: bg-only and complete-canvas (frozen snapshot). */}
       <SectionLabel>My Backgrounds</SectionLabel>

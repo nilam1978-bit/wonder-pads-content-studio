@@ -70,7 +70,7 @@ function startOfDay(d) {
   const x = new Date(d); x.setHours(0, 0, 0, 0); return x;
 }
 
-function CalendarScreen() {
+function CalendarScreen({ embedded = false }) {
   const { state, dispatch } = useStore();
   const { show: toast, Toast } = CalToast();
   const isMobile = useIsMobile();
@@ -132,13 +132,13 @@ function CalendarScreen() {
 
   return (
     <div style={{
-      height: '100vh', width: '100%', display: 'flex', flexDirection: 'column',
+      height: embedded ? '100%' : '100vh', width: '100%', display: 'flex', flexDirection: 'column',
       background: 'linear-gradient(180deg, var(--pink-100) 0%, #FBF5F9 400px)', overflow: 'hidden',
     }}>
       {Toast}
 
       {/* Top bar */}
-      <div className="safe-top" style={{
+      {!embedded && <div className="safe-top" style={{
         padding: '14px 24px', display: 'flex', alignItems: 'center', gap: 12,
         borderBottom: '1px solid var(--line)', background: 'rgba(255,255,255,.7)',
         backdropFilter: 'blur(8px)', flexShrink: 0,
@@ -165,7 +165,9 @@ function CalendarScreen() {
           style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           Today
         </button>
-      </div>
+      </div>}
+
+      {embedded && <div style={{padding:'10px 20px',display:'flex',alignItems:'center',borderBottom:'1px solid var(--line)',background:'rgba(255,255,255,.72)',flexShrink:0}}><div><div style={{fontFamily:'DM Serif Display',fontSize:18}}>Calendar</div><div style={{fontSize:10,letterSpacing:'.12em',textTransform:'uppercase',color:'var(--ink-3)'}}>Content queue workspace</div></div><div style={{flex:1}}/><button onClick={goToday} className="btn btn-tonal">Today</button></div>}
 
       {/* Body */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>

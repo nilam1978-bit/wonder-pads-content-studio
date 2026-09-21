@@ -27,7 +27,7 @@ function placementElements(kind, canvas, brand) {
   // BrandArrangements can identify which elements on a canvas belong to the branding system,
   // and so downstream consumers (undo history, exports, mobile) can style them consistently.
   const logoEl = (x, y, w, h, opacity = 1) => newElement('image', {
-    src: brand.logo, x, y, w, h, opacity,
+    src: brand.logo, x, y, w, h, opacity, radius: 9999,
     fromBrand: true, role: 'logo',
   });
   const nameEl = (x, y, w, h, opts = {}) => newElement('text', {
@@ -226,7 +226,7 @@ function BrandPanel() {
       const s = Math.round(w * 0.2);
       el = newElement('image', {
         src: brand.logo, x: (w - s) / 2, y: (h - s) / 2, w: s, h: s,
-        fromBrand: true, role: 'logo',
+        radius: 9999, fromBrand: true, role: 'logo',
       });
     } else if (kind === 'shopName') {
       el = newElement('text', {

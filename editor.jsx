@@ -407,7 +407,7 @@ function ExportOption({ title, desc, icon, onClick, recommended }) {
 }
 
 // ---------- Editor screen ----------
-function EditorScreen() {
+function EditorScreen({ progressNav }) {
   const { state, dispatch } = useStore();
   const proj = activeProject(state);
 
@@ -482,11 +482,14 @@ function EditorScreen() {
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <TopBar />
+      {progressNav}
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         <LeftRail />
-        <PagesList />
         <LeftPanel />
-        <CanvasArea />
+        <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column'}}>
+          <CanvasArea />
+          <SimpleSlideStrip />
+        </div>
         <RightPanel />
       </div>
     </div>
@@ -518,13 +521,13 @@ function App() {
   const { state } = useStore();
   const isMobile = useIsMobile();
   const inEditor = !!state.activeProjectId && !!activeProject(state);
-  if (inEditor) return isMobile ? <MobileEditor /> : <EditorScreen />;
+  if (inEditor) return <SimpleProjectWorkspace isMobile={isMobile} />;
   if (state.view === 'carousel') return isMobile ? <MobileCarouselMaker /> : <CarouselMakerScreen />;
   if (state.view === 'repurpose') return <RepurposeScreen />;
   if (state.view === 'launch') return <LaunchScreen />;
   if (state.view === 'history') return <HistoryScreen />;
-  if (state.view === 'calendar') return <CalendarScreen />;
-  return isMobile ? <MobileHome /> : <HomeScreen />;
+  if (state.view === 'calendar') return <SimpleCalendarWorkspace />;
+  return <SimpleStudioHome />;
 }
 
 class ErrorBoundary extends React.Component {
@@ -542,7 +545,7 @@ class ErrorBoundary extends React.Component {
             Try again
           </button>
           <button style={{ marginLeft: 8, padding: '10px 16px', background: '#F1CFEA', borderRadius: 8, border: 'none', cursor: 'pointer' }}
-            onClick={() => { localStorage.removeItem('wpr-studio-v1'); location.reload(); }}>
+            onClick={() => { localStorage.removeItem(STORAGE_KEY); location.reload(); }}>
             Reset storage & reload
           </button>
         </div>

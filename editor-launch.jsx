@@ -182,7 +182,7 @@ function LaunchScreen() {
     const parsed = parseCarouselText(text);
     const nextCarousel = { ...state.carousel, applyBrand: true };
     const decorated = decorateSlides(parsed.map(p => ({ ...p, kind: 'content' })), nextCarousel);
-    dispatch({ type: 'update-carousel', patch: { applyBrand: true, slides: decorated, activeSlideIdx: 0 } });
+    dispatch({ type: 'update-carousel', patch: { applyBrand: true, slides: decorated, activeSlideIdx: 0, simpleProjectId: null } });
     dispatch({ type: 'set-view', view: 'carousel' });
   };
 

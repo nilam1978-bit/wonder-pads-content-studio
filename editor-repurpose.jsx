@@ -170,17 +170,17 @@ function RepurposeScreen() {
     try {
       // A one-shot seed from other screens (e.g. Library "Rewrite here") takes priority
       // over the previous draft, then gets cleared so a refresh doesn't re-seed.
-      const seedRaw = sessionStorage.getItem('wpr-repurpose-seed');
+      const seedRaw = sessionStorage.getItem('simple-preview-repurpose-seed');
       if (seedRaw) {
         const seed = JSON.parse(seedRaw);
         if (seed.input) setInput(seed.input);
         if (seed.platforms) setPlatforms(seed.platforms);
         // Reset outputs so the old ones don't get confused with the new seed.
         setOutputs({});
-        sessionStorage.removeItem('wpr-repurpose-seed');
+        sessionStorage.removeItem('simple-preview-repurpose-seed');
         return;
       }
-      const draft = JSON.parse(sessionStorage.getItem('wpr-repurpose-draft') || '{}');
+      const draft = JSON.parse(sessionStorage.getItem('simple-preview-repurpose-draft') || '{}');
       if (draft.input) setInput(draft.input);
       if (draft.platforms) setPlatforms(draft.platforms);
       if (draft.outputs) setOutputs(draft.outputs);
@@ -192,7 +192,7 @@ function RepurposeScreen() {
     } catch {}
   }, []);
   rpE(() => {
-    sessionStorage.setItem('wpr-repurpose-draft', JSON.stringify({
+    sessionStorage.setItem('simple-preview-repurpose-draft', JSON.stringify({
       input, platforms, outputs, counts, linkedProductId, variantCount, activeVariant, aiProvider,
     }));
   }, [input, platforms, outputs, counts, linkedProductId, variantCount, activeVariant, aiProvider]);
@@ -366,7 +366,7 @@ function RepurposeScreen() {
     const parsed = parseCarouselText(text);
     const nextCarousel = { ...state.carousel, applyBrand: true };
     const decorated = decorateSlides(parsed.map(p => ({ ...p, kind: 'content' })), nextCarousel);
-    dispatch({ type: 'update-carousel', patch: { applyBrand: true, slides: decorated, activeSlideIdx: 0 } });
+    dispatch({ type: 'update-carousel', patch: { applyBrand: true, slides: decorated, activeSlideIdx: 0, simpleProjectId: null } });
     dispatch({ type: 'set-view', view: 'carousel' });
   };
 

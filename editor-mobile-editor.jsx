@@ -3,15 +3,16 @@
 
 const { useState: meS, useEffect: meE, useRef: meR, useMemo: meM } = React;
 
-function MobileEditor() {
+function MobileEditor({ progressNav }) {
   const { state, dispatch } = useStore();
   const proj = activeProject(state);
   const canvas = activeCanvas(state);
+  const isSimpleCarousel = !!proj && state.carousel?.simpleProjectId === proj.id;
 
   const [openSheet, setOpenSheet] = meS(null); // 'templates'|'brand'|'text'|'shapes'|'images'|'icons'|'frames'|'bg'|'more'|'pages'|'layers'|'properties'|'menu'|'download'|'rename'
   const [longPressMenu, setLongPressMenu] = meS(false);
 
-  meE(() => { if (!state.tool) dispatch({ type: 'set-tool', tool: 'templates' }); }, []);
+  // Start with the canvas unobstructed; tools open only on request.
 
   // Regenerate thumbnail
   const thumbSig = proj ? sigForThumb(proj.canvases[0]) : '';
@@ -60,14 +61,15 @@ function MobileEditor() {
         canUndo={state.past.length > 0}
         canRedo={state.future.length > 0}
       />
-
-      {/* Pages strip */}
-      <MobilePagesStrip proj={proj} onOpen={() => setOpenSheet('pages')} />
+      {progressNav}
 
       {/* Canvas area */}
       <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
         <MobileCanvasArea onLongPress={() => setLongPressMenu(true)} />
       </div>
+
+      {/* Slide thumbnails belong beneath the canvas in the simple workflow. */}
+      <MobilePagesStrip proj={proj} onOpen={() => setOpenSheet('pages')} />
 
       {/* Selection properties bar */}
       {primaryEl && !openSheet && (
@@ -82,6 +84,7 @@ function MobileEditor() {
       {/* Bottom tool bar */}
       {!primaryEl && (
         <MobileEditorBottomBar activeTool={state.tool} onOpen={openTool}
+          hideText={isSimpleCarousel}
           onMore={() => setOpenSheet('more')} />
       )}
 
@@ -92,7 +95,7 @@ function MobileEditor() {
       <BottomSheet open={openSheet === 'brand'} onClose={closeSheet} title="Brand">
         <BrandPanel />
       </BottomSheet>
-      <BottomSheet open={openSheet === 'text'} onClose={closeSheet} title="Text">
+      <BottomSheet open={!isSimpleCarousel && openSheet === 'text'} onClose={closeSheet} title="Text">
         <TextPanel />
       </BottomSheet>
       <BottomSheet open={openSheet === 'shapes'} onClose={closeSheet} title="Shapes">
@@ -250,13 +253,22 @@ function MobileEditorTopBar({ proj, canvas, onBack, onMenu, onRename, onDownload
 
 function MobilePagesStrip({ proj, onOpen }) {
   const { dispatch } = useStore();
+  const activeIndex = Math.max(0, proj.canvases.findIndex(c => c.id === proj.activeCanvasId));
+  const go = (index) => dispatch({ type: 'set-active-canvas', id: proj.canvases[index].id });
+  const arrowStyle = {
+    flexShrink: 0, width: 36, height: 36, alignSelf: 'center', border: 0,
+    borderRadius: 18, background: 'rgba(255,255,255,.72)', color: 'var(--pink-600)',
+    fontSize: 22,
+  };
   return (
     <div style={{
       display: 'flex', gap: 6, overflowX: 'auto',
       padding: '8px 12px', background: 'white',
-      borderBottom: '1px solid var(--line)',
+      borderTop: '1px solid var(--line)',
       flexShrink: 0,
     }} className="scroll">
+      <button aria-label="Previous slide" disabled={activeIndex === 0}
+        onClick={() => go(activeIndex - 1)} style={{ ...arrowStyle, opacity: activeIndex === 0 ? .3 : 1 }}>‹</button>
       {proj.canvases.map((c, i) => {
         const active = c.id === proj.activeCanvasId;
         return (
@@ -281,6 +293,8 @@ function MobilePagesStrip({ proj, onOpen }) {
           </button>
         );
       })}
+      <button aria-label="Next slide" disabled={activeIndex >= proj.canvases.length - 1}
+        onClick={() => go(activeIndex + 1)} style={{ ...arrowStyle, opacity: activeIndex >= proj.canvases.length - 1 ? .3 : 1 }}>›</button>
       <button onClick={() => dispatch({ type: 'add-canvas' })}
         style={{
           padding: '0 12px', borderRadius: 6, background: 'transparent',
@@ -643,14 +657,14 @@ function MobileSelectionOverlay({ el, scale, onResize, onRotate }) {
   );
 }
 
-function MobileEditorBottomBar({ activeTool, onOpen, onMore }) {
+function MobileEditorBottomBar({ activeTool, onOpen, onMore, hideText = false }) {
   const tools = [
     { id: 'templates', icon: 'templates', label: 'Layout' },
     { id: 'text', icon: 'text', label: 'Text' },
     { id: 'shapes', icon: 'shapes', label: 'Shapes' },
     { id: 'images', icon: 'images', label: 'Image' },
     { id: 'icons', icon: 'icons', label: 'Icons' },
-  ];
+  ].filter(tool => !(hideText && tool.id === 'text'));
   return (
     <div className="safe-bottom" style={{
       display: 'flex', background: 'white',

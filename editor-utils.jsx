@@ -96,7 +96,7 @@ function reducer(state, action) {
   switch (action.type) {
     // ---------- App-level navigation ----------
     case 'open-project':
-      return { ...state, activeProjectId: action.id, past: [], future: [], selection: [] };
+      return { ...state, activeProjectId: action.id, tool: null, past: [], future: [], selection: [] };
     case 'close-project':
       return { ...state, activeProjectId: null, past: [], future: [], selection: [] };
 
@@ -106,7 +106,7 @@ function reducer(state, action) {
       return {
         ...state,
         projects: [proj, ...state.projects],
-        activeProjectId: proj.id,
+        activeProjectId: proj.id, tool: null,
         past: [], future: [], selection: [],
       };
     }
@@ -502,8 +502,8 @@ function rotatePoint(px, py, cx, cy, deg) {
 const StoreCtx = createContext(null);
 const useStore = () => useContext(StoreCtx);
 
-const STORAGE_KEY = 'wpr-studio-v1';
-const LEGACY_KEY = 'petal-editor-v2';
+const STORAGE_KEY = 'wpr-simple-preview-v1';
+const LEGACY_KEY = 'wpr-simple-preview-legacy';
 
 function migrateLegacy() {
   // Convert the old single-workspace to a single project.

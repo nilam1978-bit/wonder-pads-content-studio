@@ -174,18 +174,39 @@ function MobileCarouselMaker() {
   };
 
   const saveAsDesign = () => {
+    if (state.carousel.simpleProjectId && state.projects.some(p => p.id === state.carousel.simpleProjectId)) {
+      const existing = state.projects.find(p => p.id === state.carousel.simpleProjectId);
+      const mergedCanvases = canvases.map((fresh, canvasIndex) => {
+        const old = existing.canvases.find(c => c.__slideId === fresh.__slideId) || existing.canvases[canvasIndex];
+        if (!old) return fresh;
+        const freshText = fresh.elements.filter(el => el.type === 'text');
+        let textIndex = 0;
+        return { ...old, name: fresh.name, __slideId: fresh.__slideId,
+          elements: old.elements.map(el => {
+            if (el.type !== 'text') return el;
+            const next = freshText[textIndex++];
+            return next ? { ...el, text: next.text } : el;
+          }) };
+      });
+      dispatch({ type: 'update-project', id: existing.id, patch: {
+        name: (slides.find(s => s.kind !== 'outro')?.heading || existing.name).slice(0, 40),
+        canvases: mergedCanvases,
+        activeCanvasId: mergedCanvases.some(c => c.id === existing.activeCanvasId)
+          ? existing.activeCanvasId : mergedCanvases[0]?.id,
+      }});
+      dispatch({ type: 'open-project', id: state.carousel.simpleProjectId });
+      return;
+    }
     if (!canvases.length) { alert('Add some text first'); return; }
     setSaving(true);
     const name = (slides.find(s => s.kind !== 'outro')?.heading || 'Carousel').slice(0, 40);
-    const cleanCanvases = canvases.map(c => ({
-      ...c, __slideId: undefined,
-      elements: c.elements.map(el => { const { __role, ...rest } = el; return rest; }),
-    }));
+    const cleanCanvases = canvases;
     const proj = {
       id: uid(), name, createdAt: now(), updatedAt: now(), thumbnail: null,
       canvases: cleanCanvases, activeCanvasId: cleanCanvases[0].id,
     };
     dispatch({ type: 'create-project', project: proj });
+    dispatch({ type: 'update-carousel', patch: { simpleProjectId: proj.id } });
     setSaving(false);
   };
 
@@ -221,9 +242,9 @@ function MobileCarouselMaker() {
         borderBottom: '1px solid var(--line)', background: 'white', flexShrink: 0,
       }}>
         {[
-          { id: 'input', label: 'Input', icon: 'text' },
+          { id: 'input', label: 'Words', icon: 'text' },
+          { id: 'edit', label: 'Slide text', icon: 'templates' },
           { id: 'preview', label: 'Preview', icon: 'instagram' },
-          { id: 'edit', label: 'Edit', icon: 'templates' },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             style={{
@@ -242,6 +263,7 @@ function MobileCarouselMaker() {
           textLocal={textLocal} setTextLocal={setTextLocal}
           textDirty={textDirty} setTextDirty={setTextDirty}
           commitText={commitText} applyExample={applyExample}
+          clearCarousel={() => { if (confirm('Clear this carousel and start over?')) { dispatch({ type: 'reset-carousel' }); setTextLocal(''); setTextDirty(false); } }}
           carousel={carousel} setCarouselOption={setCarouselOption}
         />}
         {tab === 'preview' && <MobileCarouselPreview canvases={canvases}
@@ -270,7 +292,7 @@ function MobileCarouselMaker() {
 
 // ------- Input tab -------
 function MobileCarouselInput({ textLocal, setTextLocal, textDirty, setTextDirty,
-  commitText, applyExample, carousel, setCarouselOption }) {
+  commitText, applyExample, clearCarousel, carousel, setCarouselOption }) {
   return (
     <div style={{ padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -301,6 +323,10 @@ function MobileCarouselInput({ textLocal, setTextLocal, textDirty, setTextDirty,
           outline: 'none', boxSizing: 'border-box',
         }}
       />
+      <button className="btn btn-tonal" onClick={clearCarousel}
+        style={{ marginTop: 8, padding: '7px 12px', fontSize: 12 }}>
+        <Icon name="clear" size={13} /> Clear text and slides
+      </button>
       {textDirty && (
         <div style={{ display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' }}>
           <span style={{ flex: 1, fontSize: 11, color: 'var(--pink-500)' }}>Unsaved</span>

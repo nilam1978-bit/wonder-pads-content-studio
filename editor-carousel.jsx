@@ -57,7 +57,7 @@ function templateEditorial(slide, W, H, brand, isCover, isOutro) {
   const els = [];
   if (isOutro) {
     const size = Math.round(W * 0.28);
-    els.push(R('logo', newElement('image', { src: brand.logo, x: (W - size)/2, y: H*0.22, w: size, h: size })));
+    els.push(R('logo', newElement('image', { src: brand.logo, x: (W - size)/2, y: H*0.22, w: size, h: size, radius: 9999, fromBrand: true, role: 'logo' })));
     els.push(R('shopName', newElement('text', {
       text: brand.shopName, fontFamily: brand.fontHeading, fontSize: Math.round(W*0.055),
       color: ink, align: 'center', x: W*0.1, y: H*0.55, w: W*0.8, h: Math.round(W*0.08), lineHeight: 1.1,
@@ -119,7 +119,7 @@ function templateCoverList(slide, W, H, brand, isCover, isOutro, slideIdx, total
     // Soft pink outro — matches the rest of the deck instead of a jarring dark slide.
     const bg = brand.colors?.[0] || '#F7E1F0';
     const size = Math.round(W * 0.22);
-    els.push(R('logo', newElement('image', { src: brand.logo, x: (W - size)/2, y: H*0.22, w: size, h: size })));
+    els.push(R('logo', newElement('image', { src: brand.logo, x: (W - size)/2, y: H*0.22, w: size, h: size, radius: 9999, fromBrand: true, role: 'logo' })));
     els.push(R('shopName', newElement('text', {
       text: brand.shopName, fontFamily: brand.fontHeading, fontSize: Math.round(W*0.05),
       color: ink, align: 'center', x: W*0.1, y: H*0.5, w: W*0.8, h: Math.round(W*0.08),
@@ -184,7 +184,7 @@ function templateCoverList(slide, W, H, brand, isCover, isOutro, slideIdx, total
       letterSpacing: 3, fontWeight: 600,
     })));
     const lw = Math.round(W*0.09);
-    els.push(R('logo', newElement('image', { src: brand.logo, x: W*0.08, y: H*0.86 + (Math.round(W*0.08) - lw)/2, w: lw, h: lw, opacity: 0.85 })));
+    els.push(R('logo', newElement('image', { src: brand.logo, x: W*0.08, y: H*0.86 + (Math.round(W*0.08) - lw)/2, w: lw, h: lw, opacity: 0.85, radius: 9999, fromBrand: true, role: 'logo' })));
     return { elements: els, bg };
   }
 
@@ -235,7 +235,7 @@ function templateTestimonial(slide, W, H, brand, isCover, isOutro) {
   const els = [];
 
   if (isOutro) {
-    els.push(R('logo', newElement('image', { src: brand.logo, x: (W - W*0.24)/2, y: H*0.28, w: W*0.24, h: W*0.24 })));
+    els.push(R('logo', newElement('image', { src: brand.logo, x: (W - W*0.24)/2, y: H*0.28, w: W*0.24, h: W*0.24, radius: 9999, fromBrand: true, role: 'logo' })));
     els.push(R('shopName', newElement('text', {
       text: brand.shopName, fontFamily: brand.fontHeading, fontSize: Math.round(W*0.05),
       color: ink, align: 'center', x: W*0.1, y: H*0.58, w: W*0.8, h: Math.round(W*0.07),
@@ -269,7 +269,7 @@ function templateTestimonial(slide, W, H, brand, isCover, isOutro) {
   }
   const lw = Math.round(W*0.08);
   els.push(R('logo', newElement('image', {
-    src: brand.logo, x: W - W*0.08 - lw, y: H - W*0.08 - lw, w: lw, h: lw, opacity: 0.7,
+    src: brand.logo, x: W - W*0.08 - lw, y: H - W*0.08 - lw, w: lw, h: lw, opacity: 0.7, radius: 9999, fromBrand: true, role: 'logo',
   })));
   return { elements: els, bg };
 }
@@ -284,7 +284,7 @@ function templateTipCards(slide, W, H, brand, isCover, isOutro, slideIdx, totalC
   if (isOutro) {
     // Soft pink outro — matches the rest of the deck instead of a jarring dark slide.
     const dBg = brand.colors?.[0] || '#F7E1F0';
-    els.push(R('logo', newElement('image', { src: brand.logo, x: (W-W*0.22)/2, y: H*0.24, w: W*0.22, h: W*0.22 })));
+    els.push(R('logo', newElement('image', { src: brand.logo, x: (W-W*0.22)/2, y: H*0.24, w: W*0.22, h: W*0.22, radius: 9999, fromBrand: true, role: 'logo' })));
     els.push(R('shopName', newElement('text', {
       text: brand.shopName, fontFamily: brand.fontHeading, fontSize: Math.round(W*0.05),
       color: ink, align: 'center', x: W*0.1, y: H*0.52, w: W*0.8, h: Math.round(W*0.07),
@@ -686,14 +686,41 @@ function CarouselMakerScreen() {
   };
 
   const saveAsDesign = () => {
+    if (state.carousel.simpleProjectId && state.projects.some(p => p.id === state.carousel.simpleProjectId)) {
+      const existing = state.projects.find(p => p.id === state.carousel.simpleProjectId);
+      // Keep any positioning and styling already refined in Design, while
+      // bringing the latest carousel wording back into that same project.
+      const mergedCanvases = canvases.map((fresh, canvasIndex) => {
+        const old = existing.canvases.find(c => c.__slideId === fresh.__slideId) || existing.canvases[canvasIndex];
+        if (!old) return fresh;
+        const freshText = fresh.elements.filter(el => el.type === 'text');
+        let textIndex = 0;
+        return {
+          ...old,
+          name: fresh.name,
+          __slideId: fresh.__slideId,
+          elements: old.elements.map(el => {
+            if (el.type !== 'text') return el;
+            const next = freshText[textIndex++];
+            return next ? { ...el, text: next.text } : el;
+          }),
+        };
+      });
+      dispatch({ type: 'update-project', id: existing.id, patch: {
+        name: getCarouselTitle(carousel) || existing.name,
+        canvases: mergedCanvases,
+        activeCanvasId: mergedCanvases.some(c => c.id === existing.activeCanvasId)
+          ? existing.activeCanvasId : mergedCanvases[0]?.id,
+      }});
+      dispatch({ type: 'open-project', id: state.carousel.simpleProjectId });
+      return;
+    }
     if (!canvases.length) { alert('Add some text first!'); return; }
     setSaving(true);
     const name = getCarouselTitle(carousel) || 'Carousel';
-    // Strip __role and __slideId from canvases before saving
-    const cleanCanvases = canvases.map(c => ({
-      ...c, __slideId: undefined,
-      elements: c.elements.map(el => { const { __role, ...rest } = el; return rest; }),
-    }));
+    // Keep the slide identifiers privately so Words can update this same
+    // design later without creating a disconnected copy.
+    const cleanCanvases = canvases;
     const proj = {
       id: uid(),
       name,
@@ -704,6 +731,7 @@ function CarouselMakerScreen() {
       activeCanvasId: cleanCanvases[0].id,
     };
     dispatch({ type: 'create-project', project: proj });
+    dispatch({ type: 'update-carousel', patch: { simpleProjectId: proj.id } });
     dispatch({ type: 'set-view', view: 'editor' });
     setSaving(false);
   };
@@ -744,21 +772,18 @@ function CarouselMakerScreen() {
 
         <div style={{ flex: 1 }} />
 
-        <button className="btn btn-tonal" onClick={() => { if (confirm('Clear this carousel and start over?')) { dispatch({ type: 'reset-carousel' }); setTextLocal(''); setTextDirty(false); } }}>
-          <Icon name="clear" size={14} /> Clear
-        </button>
         <button className="btn btn-primary" onClick={saveAsDesign} disabled={saving || !canvases.length}>
-          Save & open in editor <Icon name="chevron_r" size={14} />
+          Continue to design <Icon name="chevron_r" size={14} />
         </button>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+      <div className="scroll" style={{ flex: 1, display: 'block', minHeight: 0, overflowY: 'auto' }}>
         {/* LEFT: input & config & slide editor */}
         <div style={{
-          width: 460, background: 'white', borderRight: '1px solid var(--line)',
-          display: 'flex', flexDirection: 'column', minHeight: 0,
+          width: '100%', background: 'white', borderBottom: '1px solid var(--line)',
+          display: 'block', minHeight: 0,
         }}>
-          <div className="scroll" style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
+          <div style={{ maxWidth: 920, margin: '0 auto', padding: 24 }}>
             {/* Text input */}
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
               <h2 style={{ margin: 0, fontFamily: 'DM Serif Display', fontWeight: 400, fontSize: 22 }}>Your text</h2>
@@ -786,6 +811,10 @@ function CarouselMakerScreen() {
                 outline: 'none', boxSizing: 'border-box',
               }}
             />
+            <button className="btn btn-tonal" onClick={() => { if (confirm('Clear this carousel and start over?')) { dispatch({ type: 'reset-carousel' }); setTextLocal(''); setTextDirty(false); } }}
+              style={{ marginTop: 8, padding: '7px 12px', fontSize: 12 }}>
+              <Icon name="clear" size={13} /> Clear text and slides
+            </button>
             {textDirty && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, fontSize: 11 }}>
                 <span style={{ color: 'var(--pink-500)' }}>Unsaved text changes</span>
@@ -937,24 +966,6 @@ function CarouselMakerScreen() {
           </div>
         </div>
 
-        {/* RIGHT: preview grid */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <div style={{
-            padding: '16px 28px', display: 'flex', alignItems: 'center', gap: 12,
-            borderBottom: '1px solid var(--line)', background: 'rgba(253,251,252,.6)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Icon name="instagram" size={16} style={{ color: 'var(--pink-500)' }} />
-              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink)' }}>Instagram preview</span>
-            </div>
-            <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>
-              Click any slide to edit its layout & elements
-            </span>
-          </div>
-          <div className="scroll" style={{ flex: 1, overflowY: 'auto', padding: '28px 28px 60px' }}>
-            <PreviewGrid canvases={canvases} onEdit={(canvas) => setFocusedSlideId(canvas.__slideId)} />
-          </div>
-        </div>
       </div>
 
       {/* Focused slide editor modal */}

@@ -316,7 +316,7 @@ function HistoryScreen() {
                     ? ['instagram-caption', 'instagram-carousel', 'tiktok-hook']
                     : ['instagram-caption', 'tiktok-hook', 'facebook-post'],
                 };
-                try { sessionStorage.setItem('wpr-repurpose-seed', JSON.stringify(seed)); } catch {}
+                try { sessionStorage.setItem('simple-preview-repurpose-seed', JSON.stringify(seed)); } catch {}
                 dispatch({ type: 'set-view', view: 'repurpose' });
               }}
             />
