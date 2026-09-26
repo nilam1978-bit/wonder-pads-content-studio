@@ -267,7 +267,7 @@ function MobileCarouselMaker() {
           carousel={carousel} setCarouselOption={setCarouselOption}
         />}
         {tab === 'preview' && <MobileCarouselPreview canvases={canvases}
-          onEdit={(canvas) => { setFocusedSlideId(canvas.__slideId); setTab('edit'); }} />}
+          onEdit={(canvas) => setFocusedSlideId(canvas.__slideId)} />}
         {tab === 'edit' && <MobileCarouselEdit slides={slides} defaultStyle={carousel.style}
           brandColors={brand.colors}
           onUpdate={updateSlide} onDelete={deleteSlide} onDuplicate={duplicateSlide}

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wonder-pads-content-studio-v14';
+const CACHE_NAME = 'wonder-pads-content-studio-v17';
 
 const APP_FILES = [
   './',
@@ -16,6 +16,7 @@ const APP_FILES = [
   './editor-icons.jsx',
   './editor-launch.jsx',
   './editor-mobile-carousel.jsx',
+  './simple-carousel.jsx',
   './editor-mobile-editor.jsx',
   './editor-mobile.jsx',
   './editor-panels.jsx',

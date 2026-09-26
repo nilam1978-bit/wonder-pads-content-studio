@@ -522,7 +522,7 @@ function App() {
   const isMobile = useIsMobile();
   const inEditor = !!state.activeProjectId && !!activeProject(state);
   if (inEditor) return <SimpleProjectWorkspace isMobile={isMobile} />;
-  if (state.view === 'carousel') return isMobile ? <MobileCarouselMaker /> : <CarouselMakerScreen />;
+  if (state.view === 'carousel') return <SimpleCarouselFlow />;
   if (state.view === 'repurpose') return <RepurposeScreen />;
   if (state.view === 'launch') return <LaunchScreen />;
   if (state.view === 'history') return <HistoryScreen />;

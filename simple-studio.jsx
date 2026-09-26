@@ -24,7 +24,10 @@ function SimpleStudioStyles() {
 
 function SimpleStudioHome() {
   const {state,dispatch}=useStore();
-  const [section,setSection]=React.useState(()=>sessionStorage.getItem('wpr-simple-section')||'home');
+  const [section,setSection]=React.useState(()=>{
+    const saved=sessionStorage.getItem('wpr-simple-section');
+    return ['create','work','brand'].includes(saved)?saved:'create';
+  });
   const [workTab,setWorkTab]=React.useState('designs');
   const [query,setQuery]=React.useState('');
   const go=view=>dispatch({type:'set-view',view});
@@ -42,19 +45,15 @@ function SimpleStudioHome() {
     p.activeCanvasId=p.canvases[0].id;dispatch({type:'create-project',project:p});
   };
   return <div className="simple-shell"><SimpleStudioStyles/>
-    <header className="simple-header"><div><strong>Wonder Pads Content Studio</strong><small>A little space for your handmade business</small></div><span className="simple-muted">Preview</span></header>
+    <header className="simple-header"><div><strong>Wonder Pads Content Studio</strong><small>A little space for your handmade business</small></div></header>
     <nav className="simple-nav" aria-label="Main navigation">
-      {[['home','Home'],['create','Create'],['work','My Work'],['calendar','Calendar'],['brand','My Brand']].map(([id,label])=><button key={id} aria-current={section===id} onClick={()=>id==='calendar'?go('calendar'):setSection(id)}>{label}</button>)}
+      {[['create','Create'],['work','My Work'],['brand','My Brand']].map(([id,label])=><button key={id} aria-current={section===id} onClick={()=>setSection(id)}>{label}</button>)}
     </nav>
     <main className="simple-content"><div className="simple-inner">
-      {section==='home'&&<><h1 className="simple-title">Pick up where you left off</h1><p className="simple-muted">Your words and designs, ready when you are.</p>
-        {projects.length?<div className="simple-grid">{projects.slice(0,3).map(projectCard)}</div>:<div className="simple-card"><h3>Your next post starts here</h3><p>Make something small today. You can always come back to it.</p></div>}
-      </>}
-      {(section==='home'||section==='create')&&<><h2 className="simple-title">What would you like to make?</h2><div className="simple-grid">
-        <button className="simple-card" onClick={makePost}><span>01 · A single image</span><h3>Make a post</h3><p>A product photo, care tip, quote or shop update. Start blank or use a template.</p><span>Choose your starting point →</span></button>
-        <button className="simple-card" onClick={()=>setSection('carousel')}><span>02 · A story in slides</span><h3>Make a carousel</h3><p>Paste your words, organise your slides, then finish the design. No AI needed to split text.</p><span>Prepare your slides →</span></button>
-        <button className="simple-card" onClick={()=>setSection('write')}><span>03 · A little writing help</span><h3>Help me write</h3><p>Turn an idea or customer question into captions, scripts or slide text.</p><span>Choose what to write →</span></button>
-      </div></>}
+      {section==='create'&&<><h1 className="simple-title">Create a carousel</h1><p className="simple-muted">Add new words or reuse older content with Gemini, review each slide, then design it.</p><div className="simple-grid">
+        <button className="simple-card" onClick={()=>go('carousel')}><span>YOUR EVERYDAY WORKFLOW</span><h3>Start creating</h3><p>New text and AI repurposing now live together in one simple flow.</p><span>Add your words →</span></button>
+        {state.carousel.slides?.length>0&&<button className="simple-card" onClick={()=>go('carousel')}><span>UNFINISHED DRAFT</span><h3>Continue your carousel</h3><p>{state.carousel.slides.length} slides are waiting for you.</p><span>Continue editing →</span></button>}
+      </div>{projects.length>0&&<><h2 className="simple-title" style={{marginTop:28}}>Recent work</h2><div className="simple-grid">{projects.slice(0,3).map(projectCard)}</div></>}</>}
       {section==='carousel'&&<><h1 className="simple-title">Your carousel</h1><div className="simple-grid">
         <button className="simple-card" onClick={()=>{dispatch({type:'reset-carousel'});go('carousel');}}><h3>Start a new carousel</h3><p>Start a fresh slide draft. Saved designs stay in My Work.</p></button>
         <button className="simple-card" onClick={()=>state.projects.some(p=>p.id===state.carousel.simpleProjectId)?open(state.carousel.simpleProjectId):go('carousel')}><h3>Continue your last carousel</h3><p>Return to your saved design or unfinished slide draft.</p></button>
@@ -64,13 +63,9 @@ function SimpleStudioHome() {
         <button className="simple-card" onClick={()=>go('launch')}><h3>A product launch</h3><p>Create a set of announcements for a product or restock.</p></button>
       </div></>}
       {section==='post'&&<><h1 className="simple-title">Make a post</h1><p className="simple-muted">Choose a size to start blank, or pick a ready-made layout below.</p><div className="simple-grid">{SIZE_PRESETS.slice(0,3).map(p=><button className="simple-card" key={p.id} onClick={()=>dispatch({type:'create-project',name:'My new post',preset:p})}><h3>{p.name}</h3><p>{p.w} × {p.h}</p></button>)}</div><h2>Start with a template</h2><div className="simple-grid">{STARTER_TEMPLATES.map(t=><button className="simple-card" key={t.name} onClick={()=>applyTemplate(t)}><h3>{t.name}</h3><p>Make it your own →</p></button>)}</div></>}
-      {section==='work'&&<><h1 className="simple-title">My Work</h1><div className="simple-nav">{['designs','writing','templates'].map(t=><button key={t} aria-current={workTab===t} onClick={()=>setWorkTab(t)}>{t[0].toUpperCase()+t.slice(1)}</button>)}</div>
-        {workTab==='designs'&&<><label className="simple-muted">Find a design <input aria-label="Find a design" value={query} onChange={e=>setQuery(e.target.value)} style={{padding:12,margin:12,borderRadius:10,border:'1px solid #dfcbd9'}}/></label><div className="simple-grid">{projects.filter(p=>p.name.toLowerCase().includes(query.toLowerCase())).map(projectCard)}</div>{!projects.length&&<p>No designs yet. Choose Create to start.</p>}<BackupRestoreCard/></>}
-        {workTab==='writing'&&<div className="simple-card"><h3>Your saved writing</h3><p>{state.savedRepurpose.length+state.savedLaunches.length} saved writing sessions</p><button className="simple-action" onClick={()=>go('history')}>Open saved writing</button></div>}
-        {workTab==='templates'&&<div className="simple-grid">{[...state.templates,...STARTER_TEMPLATES].map((t,i)=><button className="simple-card" key={t.id||i} onClick={()=>applyTemplate(t)}><h3>{t.name}</h3><p>Use as a starting point →</p></button>)}</div>}
-      </>}
+      {section==='work'&&<><h1 className="simple-title">My Work</h1><p className="simple-muted">Open a draft or finished carousel and continue where you left off.</p><label className="simple-muted">Find a design <input aria-label="Find a design" value={query} onChange={e=>setQuery(e.target.value)} style={{padding:12,margin:12,borderRadius:10,border:'1px solid #dfcbd9'}}/></label><div className="simple-grid">{projects.filter(p=>p.name.toLowerCase().includes(query.toLowerCase())).map(projectCard)}</div>{!projects.length&&<p>No carousels yet. Choose Create to start.</p>}<BackupRestoreCard/></>}
       {section==='brand'&&<><h1 className="simple-title">My Brand</h1><p className="simple-muted">Set this up once, then reuse it as you create.</p><BrandKitSection/></>}
-      <p className="simple-muted">Preview work saves separately in this browser. Your existing studio is untouched.</p>
+      <p className="simple-muted">Your work saves automatically in this browser. Keep an editable backup of anything important.</p>
     </div></main>
   </div>;
 }
@@ -108,7 +103,7 @@ function SimpleProjectWorkspace({isMobile}) {
   const {state,dispatch}=useStore();
   React.useEffect(()=>{dispatch({type:'set-tool',tool:null});},[]);
   const project=activeProject(state);
-  const isCarousel=state.carousel.simpleProjectId===project.id;
+  const isCarousel=project.projectType==='carousel'||state.carousel.simpleProjectId===project.id;
   React.useEffect(()=>{
     const canvases=project.canvases.map(c=>({...c,elements:c.elements.map(el=>{
       const isBrandLogo=el.type==='image'&&(el.__role==='logo'||el.role==='logo'||(state.brand.logo&&el.src===state.brand.logo));
