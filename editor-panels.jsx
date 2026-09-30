@@ -69,11 +69,6 @@ const RAIL_TOOLS = [
 
 function LeftRail() {
   const { state, dispatch } = useStore();
-  const project = activeProject(state);
-  const isSimpleCarousel = !!project && state.carousel?.simpleProjectId === project.id;
-  const visibleTools = isSimpleCarousel
-    ? RAIL_TOOLS.filter(tool => tool.id !== 'text')
-    : RAIL_TOOLS;
   return (
     <div style={{
       width: 84, background: 'var(--pink-100)',
@@ -81,7 +76,7 @@ function LeftRail() {
       display: 'flex', flexDirection: 'column',
       padding: '12px 0', gap: 4,
     }}>
-      {visibleTools.map(t => (
+      {RAIL_TOOLS.map(t => (
         <button key={t.id}
           onClick={() => dispatch({ type: 'set-tool', tool: state.tool === t.id ? null : t.id })}
           style={{
@@ -107,12 +102,7 @@ function LeftRail() {
 // ---------- LEFT PANEL ----------
 function LeftPanel() {
   const { state } = useStore();
-  const project = activeProject(state);
-  const isSimpleCarousel = !!project && state.carousel?.simpleProjectId === project.id;
   if (!state.tool) return null;
-  // Carousel copy is managed in 1 · Words. Design only formats text that is
-  // already on a slide, so do not expose a second add-text route here.
-  if (isSimpleCarousel && state.tool === 'text') return null;
 
   return (
     <div style={{
@@ -1310,6 +1300,11 @@ function TextProps({ el, update }) {
   return (
     <>
       <SectionLabel>Text</SectionLabel>
+      <textarea className="text-input" value={el.text || ''}
+        aria-label="Edit selected text"
+        onChange={e => update({ text: e.target.value })}
+        style={{ width: '100%', minHeight: 96, resize: 'vertical', lineHeight: 1.45,
+          padding: '10px 12px', boxSizing: 'border-box', marginBottom: 10 }} />
       <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 5 }}>Font library · {ALL_FONT_OPTIONS.length} fonts</div>
       <select className="pk-select" style={{ width: '100%', padding: '10px 24px 10px 12px', fontSize: 13, fontFamily: el.fontFamily }}
         value={el.fontFamily} onChange={e => update({ fontFamily: e.target.value })}>

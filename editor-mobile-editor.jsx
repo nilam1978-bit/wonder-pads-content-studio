@@ -7,7 +7,6 @@ function MobileEditor({ progressNav }) {
   const { state, dispatch } = useStore();
   const proj = activeProject(state);
   const canvas = activeCanvas(state);
-  const isSimpleCarousel = !!proj && state.carousel?.simpleProjectId === proj.id;
 
   const [openSheet, setOpenSheet] = meS(null); // 'templates'|'brand'|'text'|'shapes'|'images'|'icons'|'frames'|'bg'|'more'|'pages'|'layers'|'properties'|'menu'|'download'|'rename'
   const [longPressMenu, setLongPressMenu] = meS(false);
@@ -76,7 +75,7 @@ function MobileEditor({ progressNav }) {
         <MobileSelectionBar el={primaryEl}
           onOpenProperties={() => setOpenSheet('properties')}
           onDuplicate={() => dispatch({ type: 'duplicate-elements', ids: [primaryEl.id] })}
-          onDelete={() => dispatch({ type: 'delete-elements', ids: [primaryEl.id] })}
+          onMore={() => setLongPressMenu(true)}
           onDeselect={() => dispatch({ type: 'set-selection', ids: [] })}
         />
       )}
@@ -84,7 +83,6 @@ function MobileEditor({ progressNav }) {
       {/* Bottom tool bar */}
       {!primaryEl && (
         <MobileEditorBottomBar activeTool={state.tool} onOpen={openTool}
-          hideText={isSimpleCarousel}
           onMore={() => setOpenSheet('more')} />
       )}
 
@@ -95,7 +93,7 @@ function MobileEditor({ progressNav }) {
       <BottomSheet open={openSheet === 'brand'} onClose={closeSheet} title="Brand">
         <BrandPanel />
       </BottomSheet>
-      <BottomSheet open={!isSimpleCarousel && openSheet === 'text'} onClose={closeSheet} title="Text">
+      <BottomSheet open={openSheet === 'text'} onClose={closeSheet} title="Text">
         <TextPanel />
       </BottomSheet>
       <BottomSheet open={openSheet === 'shapes'} onClose={closeSheet} title="Shapes">
@@ -490,6 +488,43 @@ function MobileCanvasArea({ onLongPress }) {
     window.addEventListener('pointerup', up);
   };
 
+  const startRotate = (e, elId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const el = canvas.elements.find(x => x.id === elId);
+    if (!el || el.locked) return;
+    const point = e.touches ? e.touches[0] : e;
+    const stageRect = stageRef.current.getBoundingClientRect();
+    const centerX = stageRect.left + pan.x + (el.x + el.w / 2) * state.zoom;
+    const centerY = stageRect.top + pan.y + (el.y + el.h / 2) * state.zoom;
+    const startAngle = Math.atan2(point.clientY - centerY, point.clientX - centerX) * 180 / Math.PI;
+    const startData = {
+      startAngle,
+      startRotation: el.rot || 0,
+      canvasSnapshot: JSON.parse(JSON.stringify(activeProject(state))),
+    };
+    const move = (ev) => {
+      const p = ev.touches ? ev.touches[0] : ev;
+      if (!p) return;
+      if (ev.cancelable) ev.preventDefault();
+      const angle = Math.atan2(p.clientY - centerY, p.clientX - centerX) * 180 / Math.PI;
+      let rotation = startData.startRotation + angle - startData.startAngle;
+      if (ev.shiftKey) rotation = Math.round(rotation / 15) * 15;
+      dispatch({ type: 'update-element', id: elId, transient: true, patch: { rot: rotation } });
+    };
+    const up = () => {
+      dispatch({ type: 'commit-transient', snapshot: startData.canvasSnapshot });
+      window.removeEventListener('touchmove', move);
+      window.removeEventListener('touchend', up);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('touchmove', move, { passive: false });
+    window.addEventListener('touchend', up);
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
   // Stage-level touch (pinch zoom, pan, tap-empty to deselect)
   const onStageTouchStart = (e) => {
     if (e.target.dataset.canvasBg && e.touches.length === 1) {
@@ -598,7 +633,8 @@ function MobileCanvasArea({ onLongPress }) {
         {/* Selection overlay */}
         {primary && (
           <MobileSelectionOverlay el={primary} scale={state.zoom}
-            onResize={(handle, e) => startResize(e, primary.id, handle)} />
+            onResize={(handle, e) => startResize(e, primary.id, handle)}
+            onRotate={(e) => startRotate(e, primary.id)} />
         )}
       </div>
 
@@ -625,46 +661,59 @@ function MobileSelectionOverlay({ el, scale, onResize, onRotate }) {
     transformOrigin: 'center center',
     pointerEvents: 'none',
   };
-  // Only show 4 corner handles on mobile (bigger)
   const handles = [
-    { key: 'nw', style: { left: -9, top: -9, cursor: 'nwse-resize' } },
-    { key: 'ne', style: { right: -9, top: -9, cursor: 'nesw-resize' } },
-    { key: 'se', style: { right: -9, bottom: -9, cursor: 'nwse-resize' } },
-    { key: 'sw', style: { left: -9, bottom: -9, cursor: 'nesw-resize' } },
+    { key: 'nw', x: 0, y: 0, cursor: 'nwse-resize' },
+    { key: 'ne', x: '100%', y: 0, cursor: 'nesw-resize' },
+    { key: 'se', x: '100%', y: '100%', cursor: 'nwse-resize' },
+    { key: 'sw', x: 0, y: '100%', cursor: 'nesw-resize' },
+    ...(el.type === 'text' ? [
+      { key: 'e', x: '100%', y: '50%', cursor: 'ew-resize', side: true },
+      { key: 'w', x: 0, y: '50%', cursor: 'ew-resize', side: true },
+    ] : []),
   ];
   return (
     <div style={style}>
       <div style={{ position: 'absolute', inset: 0, outline: '2px solid var(--pink-500)' }} />
       {handles.map(h => (
-        <div key={h.key}
+        <button key={h.key} type="button" aria-label={`Resize ${h.key}`}
           style={{
-            position: 'absolute', width: 18, height: 18,
-            background: 'white', border: '2px solid var(--pink-500)',
-            borderRadius: 4, boxSizing: 'border-box',
-            boxShadow: '0 1px 3px rgba(0,0,0,.2)',
+            position: 'absolute', left: h.x, top: h.y,
+            width: h.side ? 34 : 38, height: h.side ? 48 : 38,
+            transform: 'translate(-50%,-50%)', padding: 0,
+            background: 'transparent', border: 0, boxShadow: 'none',
             pointerEvents: 'auto',
             touchAction: 'none',
-            ...h.style,
+            cursor: h.cursor,
           }}
           onTouchStart={(e) => { e.stopPropagation(); onResize(h.key, e); }}
           onPointerDown={(e) => { if (e.pointerType !== 'touch') { e.stopPropagation(); onResize(h.key, e); } }}
-        />
+        >
+          <span aria-hidden="true" style={{
+            position: 'absolute', left: '50%', top: '50%',
+            width: h.side ? 10 : 18, height: h.side ? 28 : 18,
+            transform: 'translate(-50%,-50%)',
+            background: 'white', border: '2px solid var(--pink-500)',
+            borderRadius: h.side ? 999 : 4, boxSizing: 'border-box',
+            boxShadow: '0 1px 3px rgba(0,0,0,.2)', pointerEvents: 'none',
+          }} />
+        </button>
       ))}
       {onRotate && <div className="rotate-handle"
-        style={{ left: '50%', top: -38, marginLeft: -10, width: 20, height: 20, pointerEvents: 'auto', touchAction: 'none' }}
-        onPointerDown={(e) => { e.stopPropagation(); onRotate(e); }} />}
+        style={{ left: '50%', top: -44, marginLeft: -14, width: 28, height: 28, pointerEvents: 'auto', touchAction: 'none' }}
+        onTouchStart={(e) => { e.stopPropagation(); onRotate(e); }}
+        onPointerDown={(e) => { if (e.pointerType !== 'touch') { e.stopPropagation(); onRotate(e); } }} />}
     </div>
   );
 }
 
-function MobileEditorBottomBar({ activeTool, onOpen, onMore, hideText = false }) {
+function MobileEditorBottomBar({ activeTool, onOpen, onMore }) {
   const tools = [
     { id: 'templates', icon: 'templates', label: 'Layout' },
     { id: 'text', icon: 'text', label: 'Text' },
     { id: 'shapes', icon: 'shapes', label: 'Shapes' },
     { id: 'images', icon: 'images', label: 'Image' },
     { id: 'icons', icon: 'icons', label: 'Icons' },
-  ].filter(tool => !(hideText && tool.id === 'text'));
+  ];
   return (
     <div className="safe-bottom" style={{
       display: 'flex', background: 'white',
@@ -697,7 +746,18 @@ function MobileEditorBottomBar({ activeTool, onOpen, onMore, hideText = false })
   );
 }
 
-function MobileSelectionBar({ el, onOpenProperties, onDuplicate, onDelete, onDeselect }) {
+function MobileSelectionBar({ el, onOpenProperties, onDuplicate, onMore, onDeselect }) {
+  const Action = ({ icon, label, onClick, primary }) => (
+    <button onClick={onClick} style={{
+      minWidth: primary ? 74 : 52, padding: '7px 6px', borderRadius: 10,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+      background: primary ? 'var(--pink-100)' : 'transparent',
+      color: primary ? 'var(--pink-600)' : 'var(--ink-2)',
+    }}>
+      <Icon name={icon} size={17} />
+      <span style={{ fontSize: 9, fontWeight: 600, whiteSpace: 'nowrap' }}>{label}</span>
+    </button>
+  );
   return (
     <div className="safe-bottom" style={{
       display: 'flex', gap: 4, padding: '8px 12px calc(8px + env(safe-area-inset-bottom, 0px))',
@@ -713,19 +773,11 @@ function MobileSelectionBar({ el, onOpenProperties, onDuplicate, onDelete, onDes
           {Math.round(el.w)}×{Math.round(el.h)}
         </div>
       </div>
-      <button className="icon-btn" onClick={onOpenProperties}
-        style={{ background: 'var(--pink-100)', color: 'var(--pink-600)' }}>
-        <Icon name="templates" size={18} />
-      </button>
-      <button className="icon-btn" onClick={onDuplicate}>
-        <Icon name="duplicate" size={18} />
-      </button>
-      <button className="icon-btn" onClick={onDelete}>
-        <Icon name="trash" size={18} />
-      </button>
-      <button className="icon-btn" onClick={onDeselect}>
-        <Icon name="x" size={18} />
-      </button>
+      <Action icon={el.type === 'text' ? 'text' : 'templates'}
+        label={el.type === 'text' ? 'Edit text' : 'Edit'} onClick={onOpenProperties} primary />
+      <Action icon="duplicate" label="Duplicate" onClick={onDuplicate} />
+      <Action icon="more" label="More" onClick={onMore} />
+      <Action icon="x" label="Done" onClick={onDeselect} />
     </div>
   );
 }

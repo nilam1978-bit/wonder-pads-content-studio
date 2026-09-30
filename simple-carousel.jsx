@@ -1,6 +1,45 @@
 // Simple carousel workflow: words -> slide cards -> design.
 const { useState: scS, useMemo: scM } = React;
 
+function mergeCarouselCanvasEdits(existing, freshCanvases) {
+  return freshCanvases.map((fresh, canvasIndex) => {
+    const old = existing.canvases.find(c => c.__slideId === fresh.__slideId)
+      || existing.canvases[canvasIndex];
+    if (!old || old.w !== fresh.w || old.h !== fresh.h) return fresh;
+
+    const freshText = fresh.elements.filter(el => el.type === 'text');
+    const usedFresh = new Set();
+    const byRole = new Map(freshText.filter(el => el.__role).map(el => [el.__role, el]));
+    const nextText = (oldEl) => {
+      if (oldEl.__role && byRole.has(oldEl.__role)) {
+        const match = byRole.get(oldEl.__role);
+        usedFresh.add(match.id);
+        return match;
+      }
+      const match = freshText.find(el => !usedFresh.has(el.id));
+      if (match) usedFresh.add(match.id);
+      return match;
+    };
+    const elements = old.elements.map(el => {
+      if (el.type !== 'text') return el;
+      const freshEl = nextText(el);
+      return freshEl ? { ...el, text: freshEl.text } : el;
+    });
+
+    // If the template gained a generated text role, add only that missing role.
+    freshText.forEach(el => {
+      if (!usedFresh.has(el.id) && el.__role) elements.push(el);
+    });
+
+    return {
+      ...old,
+      name: fresh.name,
+      __slideId: fresh.__slideId,
+      elements,
+    };
+  });
+}
+
 function SimpleCarouselFlow() {
   const { state, dispatch } = useStore();
   const carousel = state.carousel;
@@ -106,7 +145,14 @@ function SimpleCarouselFlow() {
     if (!canvases.length) { setMessage('Create at least one slide first.'); return; }
     const existing = state.projects.find(p => p.id === carousel.simpleProjectId);
     if (existing) {
-      dispatch({ type: 'update-project', id: existing.id, patch: { name: (slides.find(s => s.kind !== 'outro')?.heading || existing.name).slice(0, 50), canvases, projectType: 'carousel' } });
+      const mergedCanvases = mergeCarouselCanvasEdits(existing, canvases);
+      dispatch({ type: 'update-project', id: existing.id, patch: {
+        name: (slides.find(s => s.kind !== 'outro')?.heading || existing.name).slice(0, 50),
+        canvases: mergedCanvases,
+        projectType: 'carousel',
+        activeCanvasId: mergedCanvases.some(c => c.id === existing.activeCanvasId)
+          ? existing.activeCanvasId : mergedCanvases[0]?.id,
+      } });
       dispatch({ type: 'open-project', id: existing.id });
       return;
     }
