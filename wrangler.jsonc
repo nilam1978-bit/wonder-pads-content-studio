@@ -3,6 +3,9 @@
   "name": "wonder-pads-content-studio",
   "compatibility_date": "2026-09-13",
   "main": "./worker.js",
+  "placement": {
+    "region": "gcp:us-east4"
+  },
   "assets": {
     "directory": "./",
     "binding": "ASSETS",
