@@ -52,7 +52,7 @@ function ElementView({ el, selected, dispatch, scale, editing, setEditing }) {
             whiteSpace: 'pre-wrap',
           }}
         >
-          {el.text}
+          {editing ? el.text : textLayout(el).lines.join('\n')}
         </div>
       </div>
     );
@@ -259,13 +259,8 @@ function CanvasArea() {
   // Canva-like text boxes: height follows the content while width stays user-controlled.
   uLE(() => {
     if (!canvas || drag?.mode?.startsWith('resize')) return;
-    const nodes = stageRef.current?.querySelectorAll('[data-text-content-id]');
-    if (!nodes?.length) return;
-    const heights = new Map([...nodes].map(node => [node.dataset.textContentId, Math.ceil(node.scrollHeight)]));
     canvas.elements.filter(element => element.type === 'text').forEach(element => {
-      const measured = heights.get(element.id);
-      const minimum = Math.ceil((element.fontSize || 16) * (element.lineHeight || 1.2) + 8);
-      const height = Math.max(minimum, measured || 0);
+      const height = textLayout(element).height;
       if (height > 0 && Math.abs(height - element.h) > 1) {
         dispatch({ type: 'update-element', id: element.id, transient: true, patch: { h: height } });
       }

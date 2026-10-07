@@ -1,6 +1,8 @@
-const CACHE_NAME = 'wonder-pads-content-studio-v18';
+const CACHE_NAME = 'wonder-pads-content-studio-v19-final';
 
 const APP_FILES = [
+  './final-carousel.jsx',
+  './final-workspace.jsx',
   './',
   './index.html',
   './manifest.webmanifest',

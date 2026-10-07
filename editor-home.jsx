@@ -106,10 +106,9 @@ function MiniPreview({ canvas, maxW = 240, maxH = 240 }) {
     <div style={{
       width: w, height: h,
       background: canvas.bg?.value || '#FDFBFC',
-      backgroundImage: `url("${url}")`,
-      backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center',
       borderRadius: 6, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.02)',
-    }} />
+      overflow:'hidden', position:'relative',
+    }}><div style={{width:canvas.w,height:canvas.h,transform:`scale(${scale})`,transformOrigin:'top left'}} dangerouslySetInnerHTML={{__html:svg}}/></div>
   );
 }
 

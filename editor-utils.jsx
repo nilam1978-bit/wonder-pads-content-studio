@@ -234,7 +234,12 @@ function reducer(state, action) {
         const cId = proj.activeCanvasId;
         return patchCanvas(proj, cId, {
           elements: proj.canvases.find(c => c.id === cId).elements
-            .map(e => e.id === action.id ? deepMerge(e, action.patch) : e),
+            .map(e => {
+              if(e.id !== action.id) return e;
+              const merged=deepMerge(e,action.patch);
+              if(merged.type==='text') merged.h=textLayout(merged).height;
+              return merged;
+            }),
         });
       }, { transient: action.transient });
 

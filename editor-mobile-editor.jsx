@@ -76,12 +76,13 @@ function MobileEditor({ progressNav }) {
           onOpenProperties={() => setOpenSheet('properties')}
           onDuplicate={() => dispatch({ type: 'duplicate-elements', ids: [primaryEl.id] })}
           onMore={() => setLongPressMenu(true)}
+          onTool={setOpenSheet}
           onDeselect={() => dispatch({ type: 'set-selection', ids: [] })}
         />
       )}
 
       {/* Bottom tool bar */}
-      {!primaryEl && (
+      {!primaryEl && !openSheet && (
         <MobileEditorBottomBar activeTool={state.tool} onOpen={openTool}
           onMore={() => setOpenSheet('more')} />
       )}
@@ -113,6 +114,10 @@ function MobileEditor({ progressNav }) {
       </BottomSheet>
 
       {/* Properties sheet */}
+      <BottomSheet open={['words','font','size','colour','align','add'].includes(openSheet)} onClose={closeSheet}
+        title={openSheet==='add'?'Add to slide':openSheet} height="45vh">
+        {openSheet==='add'?<div style={{display:'grid',gap:10}}>{[['text','Text'],['images','Image'],['shapes','Shape'],['bg','Background']].map(([id,label])=><button className="btn btn-tonal" key={id} onClick={()=>openTool(id)}>{label}</button>)}</div>:primaryEl&&<MobileQuickProperties el={primaryEl} tool={openSheet}/>}
+      </BottomSheet>
       <BottomSheet open={openSheet === 'properties'} onClose={closeSheet}
         title={primaryEl ? typeLabel(primaryEl.type) : 'Properties'}>
         {primaryEl ? <ElementProperties el={primaryEl} /> : <CanvasProperties />}
@@ -133,6 +138,8 @@ function MobileEditor({ progressNav }) {
         <div style={{ display: 'grid', gap: 4, paddingBottom: 8 }}>
           <SheetAction icon="frames" label="Frames"
             onClick={() => { closeSheet(); setTimeout(() => openTool('frames'), 100); }} />
+          <SheetAction icon="icons" label="Icons" onClick={()=>openTool('icons')}/>
+          <SheetAction icon="shapes" label="Shapes" onClick={()=>openTool('shapes')}/>
           <SheetAction icon="bg" label="Background"
             onClick={() => { closeSheet(); setTimeout(() => openTool('bg'), 100); }} />
           <SheetAction icon="brand_kit" label="Brand kit"
@@ -142,6 +149,7 @@ function MobileEditor({ progressNav }) {
           <div style={{ height: 1, background: 'var(--line)', margin: '4px 0' }} />
           <SheetAction icon="layer" label="Layers"
             onClick={() => { closeSheet(); setTimeout(() => setOpenSheet('layers'), 100); }} />
+          <SheetAction icon="save" label="Editable backup" onClick={()=>exportProjectFile(proj)}/>
         </div>
       </BottomSheet>
 
@@ -172,6 +180,10 @@ function MobileEditor({ progressNav }) {
       </BottomSheet>
 
       {/* Download */}
+      <BottomSheet open={openSheet === 'save-template'} onClose={closeSheet} title="Save as template" height="auto">
+        <p>Download an editable copy, then import it from My Work whenever you want to reuse this design.</p>
+        <button className="btn btn-tonal" onClick={()=>{exportProjectFile(proj);closeSheet();}}>Save editable template</button>
+      </BottomSheet>
       <BottomSheet open={openSheet === 'download'} onClose={closeSheet}
         title="Download" height="auto">
         <MobileDownloadOptions proj={proj} canvas={canvas} onDone={closeSheet} />
@@ -198,6 +210,7 @@ function MobileEditor({ progressNav }) {
             <SheetAction icon="lock" label={primaryEl.locked ? 'Unlock' : 'Lock'}
               onClick={() => { dispatch({ type: 'update-element', id: primaryEl.id,
                 patch: { locked: !primaryEl.locked } }); setLongPressMenu(false); }} />
+            <SheetAction icon="eye" label={primaryEl.hidden?'Show':'Hide'} onClick={()=>{dispatch({type:'update-element',id:primaryEl.id,patch:{hidden:!primaryEl.hidden}});dispatch({type:'set-selection',ids:[]});setLongPressMenu(false);}}/>
             <div style={{ height: 1, background: 'var(--line)', margin: '4px 0' }} />
             <SheetAction icon="trash" label="Delete" danger
               onClick={() => { dispatch({ type: 'delete-elements', ids: [primaryEl.id] }); setLongPressMenu(false); }} />
@@ -283,7 +296,7 @@ function MobilePagesStrip({ proj, onOpen }) {
               border: active ? '2px solid var(--pink-500)' : '1px solid var(--line)',
               borderRadius: 4, overflow: 'hidden',
               boxShadow: active ? 'var(--shadow-sm)' : 'none',
-            }} />
+            }}><MiniPreview canvas={c} maxW={44} maxH={60}/></div>
             <div style={{ fontSize: 9, color: active ? 'var(--pink-500)' : 'var(--ink-3)',
               fontWeight: active ? 600 : 400, fontVariantNumeric: 'tabular-nums' }}>
               {i + 1}
@@ -708,11 +721,10 @@ function MobileSelectionOverlay({ el, scale, onResize, onRotate }) {
 
 function MobileEditorBottomBar({ activeTool, onOpen, onMore }) {
   const tools = [
-    { id: 'templates', icon: 'templates', label: 'Layout' },
     { id: 'text', icon: 'text', label: 'Text' },
-    { id: 'shapes', icon: 'shapes', label: 'Shapes' },
     { id: 'images', icon: 'images', label: 'Image' },
-    { id: 'icons', icon: 'icons', label: 'Icons' },
+    { id: 'bg', icon: 'bg', label: 'Background' },
+    { id: 'brand', icon: 'brand_kit', label: 'Brand' },
   ];
   return (
     <div className="safe-bottom" style={{
@@ -740,13 +752,13 @@ function MobileEditorBottomBar({ activeTool, onOpen, onMore }) {
           color: 'var(--ink-2)', background: 'transparent',
         }}>
         <Icon name="more" size={20} />
-        <span style={{ fontSize: 9, fontWeight: 500 }}>More</span>
+        <span style={{ fontSize: 9, fontWeight: 500 }}>More ☰</span>
       </button>
     </div>
   );
 }
 
-function MobileSelectionBar({ el, onOpenProperties, onDuplicate, onMore, onDeselect }) {
+function MobileSelectionBar({ el, onOpenProperties, onDuplicate, onMore, onDeselect, onTool }) {
   const Action = ({ icon, label, onClick, primary }) => (
     <button onClick={onClick} style={{
       minWidth: primary ? 74 : 52, padding: '7px 6px', borderRadius: 10,
@@ -762,9 +774,9 @@ function MobileSelectionBar({ el, onOpenProperties, onDuplicate, onMore, onDesel
     <div className="safe-bottom" style={{
       display: 'flex', gap: 4, padding: '8px 12px calc(8px + env(safe-area-inset-bottom, 0px))',
       background: 'white', borderTop: '1px solid var(--line)',
-      flexShrink: 0, alignItems: 'center', zIndex: 15,
+      flexShrink: 0, alignItems: 'center', zIndex: 15, overflowX:'auto',
     }}>
-      <div style={{ flex: 1, minWidth: 0, padding: '0 4px' }}>
+      <div style={{ display:'none' }}>
         <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink)',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {typeLabel(el.type)}
@@ -773,13 +785,29 @@ function MobileSelectionBar({ el, onOpenProperties, onDuplicate, onMore, onDesel
           {Math.round(el.w)}×{Math.round(el.h)}
         </div>
       </div>
-      <Action icon={el.type === 'text' ? 'text' : 'templates'}
-        label={el.type === 'text' ? 'Edit text' : 'Edit'} onClick={onOpenProperties} primary />
+      <Action icon="plus" label="Add" onClick={()=>onTool('add')}/>
+      {el.type==='text'?<>
+        <Action icon="text" label="Edit words" onClick={()=>onTool('words')} primary/>
+        <Action icon="text" label="Font" onClick={()=>onTool('font')}/>
+        <Action icon="text" label="Size" onClick={()=>onTool('size')}/>
+        <Action icon="bg" label="Colour" onClick={()=>onTool('colour')}/>
+        <Action icon="align_l" label="Align" onClick={()=>onTool('align')}/>
+      </>:<Action icon="templates" label="Edit" onClick={onOpenProperties} primary/>}
+      <Action icon="more" label="More ☰" onClick={onOpenProperties}/>
       <Action icon="duplicate" label="Duplicate" onClick={onDuplicate} />
-      <Action icon="more" label="More" onClick={onMore} />
-      <Action icon="x" label="Done" onClick={onDeselect} />
+      <Action icon="more" label="Actions" onClick={onMore} />
+      <Action icon="x" label="Deselect" onClick={onDeselect} />
     </div>
   );
+}
+
+function MobileQuickProperties({el,tool}){
+  const {state,dispatch}=useStore();const update=patch=>dispatch({type:'update-element',id:el.id,patch});
+  if(tool==='words')return <textarea aria-label="Edit selected words" value={el.text||''} onChange={e=>update({text:e.target.value})} style={{width:'100%',minHeight:140,fontSize:16,padding:12,boxSizing:'border-box'}}/>;
+  if(tool==='font')return <><select aria-label="Font" value={el.fontFamily} onChange={async e=>{const family=e.target.value;await document.fonts.load(`24px "${family}"`);update({fontFamily:family});}} style={{width:'100%',padding:14,fontSize:16}}>{ALL_FONT_OPTIONS.filter(f=>['DM Serif Display','Instrument Sans','Kalam'].includes(f.family)||f.family===el.fontFamily).map(f=><option key={f.family} value={f.family}>{f.label}</option>)}</select><p>The complete font library is kept in More ☰.</p></>;
+  if(tool==='size')return <><label>Font size<input type="number" min="6" aria-label="Font size" value={Math.round(el.fontSize)} onChange={e=>update({fontSize:Math.max(6,+e.target.value)})} style={{fontSize:18,padding:12,margin:12,width:100}}/></label><button className="btn btn-tonal" onClick={()=>update({fontSize:fitTextSize(el,Math.max(40,activeCanvas(state).h-el.y-150),el.fontSize)})}>Fit text inside slide</button></>;
+  if(tool==='colour')return <ColorPicker value={el.color} onChange={color=>update({color})}/>;
+  return <div style={{display:'flex',gap:12}}>{['left','center','right'].map(align=><button className="btn btn-tonal" key={align} onClick={()=>update({align})}>{align}</button>)}</div>;
 }
 
 function MobilePagesList({ onSwitch }) {

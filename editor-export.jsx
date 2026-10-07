@@ -2,6 +2,38 @@
 // All exports render into an offscreen SVG so PDFs stay vector.
 const { useEffect: xE, useState: xS, useRef: xR } = React;
 
+// Shared measured wrapping for canvas, preview and PNG output.
+let textMeasureContext;
+function textLayout(el) {
+  if (!textMeasureContext) textMeasureContext = document.createElement('canvas').getContext('2d');
+  const ctx=textMeasureContext, fs=el.fontSize||24;
+  ctx.font=`${el.italic?'italic':'normal'} ${el.fontWeight||400} ${fs}px "${el.fontFamily||'sans-serif'}"`;
+  const width=Math.max(1,el.w-8), spacing=el.letterSpacing||0;
+  const measure=s=>ctx.measureText(s).width+Math.max(0,Array.from(s).length-1)*spacing;
+  const lines=[];
+  for(const raw of String(el.text||'').split(/\r?\n/)){
+    if(!raw.trim()){lines.push('');continue;}
+    let line='';
+    for(const word of raw.trim().split(/\s+/)){
+      const candidate=line?line+' '+word:word;
+      if(measure(candidate)<=width){line=candidate;continue;}
+      if(line)lines.push(line);
+      line='';
+      for(const char of Array.from(word)){
+        if(line&&measure(line+char)>width){lines.push(line);line='';}
+        line+=char;
+      }
+    }
+    lines.push(line);
+  }
+  return {lines,height:lines.length*fs*(el.lineHeight||1.2)+8};
+}
+function fitTextSize(el,maxH,maxSize=el.fontSize||48){
+  let low=6,high=maxSize;
+  for(let i=0;i<16;i++){const mid=(low+high)/2;if(textLayout({...el,fontSize:mid}).height<=maxH)low=mid;else high=mid;}
+  return Math.floor(low);
+}
+
 // ---------- SVG builder (shared for PDF + PNG/JPEG raster fallback) ----------
 // Converts a canvas object into an SVG string that is a pixel-perfect
 // representation of the elements at their native size.
@@ -169,32 +201,11 @@ function elementToSVG(el, embedImages) {
     // Word-wrap each explicit line to element width so text stays visible in thumbnails + previews.
     // Uses an average-glyph-width heuristic tuned for the mix of serif/sans used in this app.
     const rawLines = String(el.text || '').split(/\r?\n/);
-    const avgCharW = fs * (el.italic ? 0.48 : 0.52) * (1 + (el.letterSpacing || 0) / fs);
-    const maxChars = Math.max(1, Math.floor((el.w - 8) / avgCharW));
-    const lines = [];
-    for (const raw of rawLines) {
-      if (raw.length <= maxChars) { lines.push(raw); continue; }
-      const words = raw.split(/(\s+)/); // keep whitespace
-      let cur = '';
-      for (const tok of words) {
-        if ((cur + tok).length <= maxChars) { cur += tok; continue; }
-        if (cur.trim()) lines.push(cur.trimEnd());
-        // Word alone longer than maxChars — hard-break it.
-        if (tok.length > maxChars && !/^\s+$/.test(tok)) {
-          let rem = tok;
-          while (rem.length > maxChars) { lines.push(rem.slice(0, maxChars)); rem = rem.slice(maxChars); }
-          cur = rem;
-        } else {
-          cur = /^\s+$/.test(tok) ? '' : tok;
-        }
-      }
-      if (cur.trim()) lines.push(cur.trimEnd());
-      if (!raw.trim() && cur === '') lines.push('');
-    }
+    const lines = textLayout(el).lines;
     const lh = fs * (el.lineHeight || 1.2);
     // Vertical center
     const totalH = lh * lines.length;
-    const startY = (el.h - totalH) / 2 + fs * 0.85;
+    const startY = 4 + (lh - fs) / 2 + fs * 0.8;
     const tspans = lines.map((ln, i) => `<tspan x="${anchorX}" y="${startY + i * lh}">${escapeText(ln)}</tspan>`).join('');
     return `<g transform="${t}"${op}><text font-family="${ff}" font-size="${fs}" font-weight="${fw}" font-style="${fst}" text-decoration="${dec}" letter-spacing="${el.letterSpacing || 0}" fill="${el.color}" text-anchor="${anchor}">${tspans}</text></g>`;
   }
@@ -276,15 +287,50 @@ async function rasterizeSVG(svgString, w, h, mime = 'image/png', quality = 0.92,
 }
 
 // ---------- Export orchestrator ----------
+async function rasterizeDesign(canvas,mime='image/png'){
+  await document.fonts.ready;
+  const embed=async src=>{
+    if(!src||src.startsWith('data:'))return src;
+    const response=await fetch(src);if(!response.ok)throw new Error('An image could not be loaded for download. Replace it and try again.');
+    const blob=await response.blob();return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob);});
+  };
+  const background=canvas.bg?.type==='image'?{...canvas.bg,value:await embed(canvas.bg.value)}:canvas.bg;
+  const output=document.createElement('canvas');output.width=canvas.w;output.height=canvas.h;
+  const ctx=output.getContext('2d');
+  const paintSVG=async svg=>{
+    const blob=await rasterizeSVG(svg,canvas.w,canvas.h,'image/png',1,1);
+    const url=URL.createObjectURL(blob);
+    try{const img=new Image();img.src=url;await img.decode();ctx.drawImage(img,0,0);}finally{URL.revokeObjectURL(url);}
+  };
+  await paintSVG(canvasToSVG({...canvas,bg:background,elements:[]}));
+  for(const el of canvas.elements){
+    if(el.hidden)continue;
+    if(el.type!=='text'){const embedded=el.src?{...el,src:await embed(el.src)}:el;await paintSVG(`<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.w}" height="${canvas.h}">${elementToSVG(embedded,true)}</svg>`);continue;}
+    ctx.save();ctx.translate(el.x+el.w/2,el.y+el.h/2);ctx.rotate((el.rot||0)*Math.PI/180);ctx.translate(-el.w/2,-el.h/2);
+    ctx.globalAlpha=el.opacity??1;ctx.fillStyle=el.color;ctx.font=`${el.italic?'italic':'normal'} ${el.fontWeight||400} ${el.fontSize}px "${el.fontFamily}"`;
+    if('letterSpacing' in ctx)ctx.letterSpacing=`${el.letterSpacing||0}px`;
+    ctx.textAlign=el.align==='center'?'center':el.align==='right'?'right':'left';ctx.textBaseline='alphabetic';
+    const x=el.align==='center'?el.w/2:el.align==='right'?el.w-4:4;
+    const lh=el.fontSize*(el.lineHeight||1.2),y=4+(lh-el.fontSize)/2+el.fontSize*.8;
+    textLayout(el).lines.forEach((line,i)=>{ctx.fillText(line,x,y+i*lh);if(el.underline){const width=ctx.measureText(line).width;const left=x-(el.align==='center'?width/2:el.align==='right'?width:0);ctx.fillRect(left,y+i*lh+el.fontSize*.1,width,Math.max(1,el.fontSize*.05));}});
+    ctx.restore();
+  }
+  return new Promise((resolve,reject)=>output.toBlob(blob=>blob?resolve(blob):reject(new Error('Could not prepare image')),mime,.95));
+}
 async function exportCanvases(canvases, format, filename = 'design') {
   if (format === 'png' || format === 'jpg') {
+    if(canvases.length>1){
+      const files=[];
+      for(let i=0;i<canvases.length;i++)files.push({name:`${String(i+1).padStart(2,'0')}.${format==='png'?'png':'jpg'}`,bytes:new Uint8Array(await (await rasterizeDesign(canvases[i],format==='png'?'image/png':'image/jpeg')).arrayBuffer())});
+      downloadBlob(makeImageZip(files),`${filename}-carousel.zip`);return;
+    }
     // Export current canvases as N images (or zip if >1). Here: one per file.
     for (let i = 0; i < canvases.length; i++) {
       const c = canvases[i];
       const svg = canvasToSVG(c);
       const mime = format === 'png' ? 'image/png' : 'image/jpeg';
       const ext = format === 'png' ? 'png' : 'jpg';
-      const blob = await rasterizeSVG(svg, c.w, c.h, mime, 0.92, 2);
+      const blob = await rasterizeDesign(c, mime);
       const suffix = canvases.length > 1 ? `-${String(i + 1).padStart(2, '0')}` : '';
       downloadBlob(blob, `${filename}${suffix}.${ext}`);
       // small pause so browsers don't merge downloads
@@ -312,6 +358,23 @@ async function exportCanvases(canvases, format, filename = 'design') {
     openPrintWindow(canvases, filename);
     return;
   }
+}
+
+// Stored ZIP: one ordered download, avoiding mobile multiple-download blocking.
+function makeImageZip(files){
+  const local=[],central=[];let offset=0;
+  const crc=bytes=>{let value=0xffffffff;for(const b of bytes){value^=b;for(let i=0;i<8;i++)value=(value>>>1)^((value&1)?0xedb88320:0);}return (value^0xffffffff)>>>0;};
+  for(const file of files){
+    const name=new TextEncoder().encode(file.name),sum=crc(file.bytes);
+    const header=new Uint8Array(30+name.length),h=new DataView(header.buffer);
+    h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint32(14,sum,true);h.setUint32(18,file.bytes.length,true);h.setUint32(22,file.bytes.length,true);h.setUint16(26,name.length,true);header.set(name,30);
+    const directory=new Uint8Array(46+name.length),d=new DataView(directory.buffer);
+    d.setUint32(0,0x02014b50,true);d.setUint16(4,20,true);d.setUint16(6,20,true);d.setUint32(16,sum,true);d.setUint32(20,file.bytes.length,true);d.setUint32(24,file.bytes.length,true);d.setUint16(28,name.length,true);d.setUint32(42,offset,true);directory.set(name,46);
+    local.push(header,file.bytes);central.push(directory);offset+=header.length+file.bytes.length;
+  }
+  const centralLength=central.reduce((n,b)=>n+b.length,0),end=new Uint8Array(22),e=new DataView(end.buffer);
+  e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,centralLength,true);e.setUint32(16,offset,true);
+  return new Blob([...local,...central,end],{type:'application/zip'});
 }
 
 function openPrintWindow(canvases, filename) {

@@ -69,6 +69,7 @@ const RAIL_TOOLS = [
 
 function LeftRail() {
   const { state, dispatch } = useStore();
+  const [more,setMore]=React.useState(false);
   return (
     <div style={{
       width: 84, background: 'var(--pink-100)',
@@ -76,7 +77,7 @@ function LeftRail() {
       display: 'flex', flexDirection: 'column',
       padding: '12px 0', gap: 4,
     }}>
-      {RAIL_TOOLS.map(t => (
+      {RAIL_TOOLS.filter(t=>more||['text','images','brand','bg'].includes(t.id)).map(t => (
         <button key={t.id}
           onClick={() => dispatch({ type: 'set-tool', tool: state.tool === t.id ? null : t.id })}
           style={{
@@ -95,6 +96,7 @@ function LeftRail() {
           <span style={{ fontSize: 10, fontWeight: 500 }}>{t.label}</span>
         </button>
       ))}
+      <button className="btn-ghost" style={{padding:12}} onClick={()=>setMore(v=>!v)}>☰ More</button>
     </div>
   );
 }
@@ -1131,6 +1133,7 @@ function ElementProperties({ el }) {
       <PanelHeader title={typeLabel(el.type)} subtitle={`${Math.round(el.w)} × ${Math.round(el.h)}`} />
 
       {/* Position & size */}
+      <details><summary style={{padding:'10px 0',cursor:'pointer'}}>More ☰ · Position & size</summary>
       <SectionLabel>Position</SectionLabel>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <LabeledInput label="X" value={Math.round(el.x)} onChange={v => update({ x: +v })} />
@@ -1145,6 +1148,7 @@ function ElementProperties({ el }) {
       {/* Position on page — 6 quick-align buttons. Distinct from text alignment. */}
       <SectionLabel>Position on page</SectionLabel>
       <PagePositionControls />
+      </details>
 
       {/* Text-specific */}
       {el.type === 'text' && <TextProps el={el} update={update} />}
@@ -1161,6 +1165,7 @@ function ElementProperties({ el }) {
       {el.type === 'frame' && <FrameProps el={el} update={update} />}
 
       {/* Opacity */}
+      <details><summary style={{padding:'10px 0',cursor:'pointer'}}>More ☰ · Arrange & actions</summary>
       <SectionLabel>Opacity</SectionLabel>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <input type="range" min="0" max="1" step="0.01"
@@ -1186,6 +1191,7 @@ function ElementProperties({ el }) {
           <Icon name="trash" size={14} /> Delete
         </button>
       </div>
+      </details>
     </>
   );
 }
@@ -1297,6 +1303,13 @@ function ColorPicker({ label, value, onChange }) {
 }
 
 function TextProps({ el, update }) {
+  const {state}=useStore();
+  const [aiBusy,setAiBusy]=React.useState(false),[aiError,setAiError]=React.useState('');
+  const improve=async()=>{
+    if(!confirm('Rewrite this selected text? The other elements and slides will stay unchanged.'))return;
+    setAiBusy(true);setAiError('');
+    try{const text=await aiGenerate({brand:state.brand,vocab:state.vocab,provider:'gemini',task:'Improve this one carousel text element. Keep the meaning. Return only the revised words, without labels or commentary.',input:el.text,platform:'Instagram carousel'});if(text?.trim())update({text:text.trim()});else throw new Error('No revised text returned.');}catch(e){setAiError(e.message);}finally{setAiBusy(false);}
+  };
   return (
     <>
       <SectionLabel>Text</SectionLabel>
@@ -1305,6 +1318,15 @@ function TextProps({ el, update }) {
         onChange={e => update({ text: e.target.value })}
         style={{ width: '100%', minHeight: 96, resize: 'vertical', lineHeight: 1.45,
           padding: '10px 12px', boxSizing: 'border-box', marginBottom: 10 }} />
+      <select aria-label="Basic font" className="pk-select" value={el.fontFamily} onChange={async e=>{const family=e.target.value;await document.fonts.load(`24px "${family}"`);update({fontFamily:family});}} style={{width:'100%',padding:12,marginBottom:10}}>
+        {ALL_FONT_OPTIONS.filter(f=>['DM Serif Display','Instrument Sans','Kalam'].includes(f.family)||f.family===el.fontFamily).map(f=><option key={f.family} value={f.family}>{f.label}</option>)}
+      </select>
+      <LabeledInput label="Font size" value={Math.round(el.fontSize)} onChange={v=>update({fontSize:Math.max(6,+v)})}/>
+      <div style={{display:'flex',gap:8,margin:'12px 0'}}>{['left','center','right'].map(align=><button className="btn btn-tonal" key={align} onClick={()=>update({align})}>{align}</button>)}</div>
+      <ColorPicker value={el.color} onChange={color=>update({color})}/>
+      <details><summary style={{padding:'14px 0',cursor:'pointer'}}>More ☰ · All fonts & styling</summary>
+      <button className="btn btn-tonal" disabled={aiBusy} onClick={improve}>{aiBusy?'Improving…':'Improve selected text with AI'}</button>
+      {aiError&&<p role="alert">{aiError}</p>}
       <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 5 }}>Font library · {ALL_FONT_OPTIONS.length} fonts</div>
       <select className="pk-select" style={{ width: '100%', padding: '10px 24px 10px 12px', fontSize: 13, fontFamily: el.fontFamily }}
         value={el.fontFamily} onChange={e => update({ fontFamily: e.target.value })}>
@@ -1421,6 +1443,7 @@ function TextProps({ el, update }) {
 
       <SectionLabel>Color</SectionLabel>
       <ColorPicker value={el.color} onChange={v => update({ color: v })} />
+      </details>
     </>
   );
 }
