@@ -199,7 +199,7 @@ function TemplatesPanel() {
       ...canvas.elements.filter(e=>!e.fromBrand),
       ...branding.filter(e=>e.type!=='rect'),
     ] : tpl.els.map(e => newElement(e.type, e.patch));
-    dispatch({ type: 'update-canvas', id: canvas.id, patch: { elements, bg: { type: 'color', value: tpl.bg } } });
+    dispatch({ type: 'update-canvas', id: canvas.id, patch: { elements:cleanSlideSwipe(elements,canvas), bg: { type: 'color', value: tpl.bg } } });
     // Track which starter is now applied so the chip in the top bar updates.
     if (proj) {
       dispatch({ type: 'update-project', id: proj.id, patch: { appliedStarter: tpl.name } });
@@ -425,9 +425,9 @@ function TextPanel() {
   };
 
   const presets = [
-    { label: 'Add a heading', fontFamily: 'DM Serif Display', fontSize: 96, text: 'Heading' },
-    { label: 'Add a subheading', fontFamily: 'Instrument Serif', fontSize: 56, text: 'Subheading', italic: true },
-    { label: 'Add body text', fontFamily: 'Instrument Sans', fontSize: 32, text: 'A little body text goes here' },
+    { ...SLIDE_TEXT_STYLES.h1, label: 'Add a heading', textStyle:'h1', text: 'Heading' },
+    { ...SLIDE_TEXT_STYLES.h2, label: 'Add a subheading', textStyle:'h2', text: 'Subheading' },
+    { ...SLIDE_TEXT_STYLES.body, label: 'Add body text', textStyle:'body', text: 'A little body text goes here' },
   ];
 
   const [showMoreFonts, setShowMoreFonts] = pS(false);
@@ -1312,6 +1312,16 @@ function ColorPicker({ label, value, onChange }) {
   );
 }
 
+function SlideTextStyleControls({el,update}) {
+  const {state,dispatch}=useStore(),canvas=activeCanvas(state);
+  const [busy,setBusy]=React.useState(false);
+  const load=()=>Promise.all([document.fonts.load('600 76px "Cormorant Garamond"'),document.fonts.load('400 46px "Montserrat"'),document.fonts.load('500 30px "Montserrat"')]);
+  const apply=async scope=>{setBusy(true);try{await load();dispatch({type:'apply-slide-text-styles',scope});}finally{setBusy(false);}};
+  return <div style={{marginBottom:16}}><label>Text style<select aria-label="Text style" className="pk-select" style={{width:'100%',padding:12,margin:'6px 0'}} value={slideTextRole(el,canvas)} onChange={async e=>{
+    const role=e.target.value;await load();const patch={...SLIDE_TEXT_STYLES[role],textStyle:role,fontSize:SLIDE_TEXT_STYLES[role].fontSize*Math.min(canvas.w,canvas.h)/1080};delete patch.label;update(patch);
+  }}>{Object.entries(SLIDE_TEXT_STYLES).map(([key,s])=><option key={key} value={key}>{s.label}</option>)}</select></label><div style={{display:'flex',flexWrap:'wrap',gap:8}}><button className="btn btn-tonal" disabled={busy} onClick={()=>apply('current')}>Apply styles to this slide</button><button className="btn btn-tonal" disabled={busy} onClick={()=>apply('all')}>Apply styles to all slides</button></div><p style={{fontSize:12}}>Uses each text role. Keeps your words, colours and branding. Undo is available.</p></div>;
+}
+
 function TextProps({ el, update }) {
   const {state}=useStore();
   const [aiBusy,setAiBusy]=React.useState(false),[aiError,setAiError]=React.useState('');
@@ -1323,13 +1333,14 @@ function TextProps({ el, update }) {
   return (
     <>
       <SectionLabel>Text</SectionLabel>
+      <SlideTextStyleControls el={el} update={update}/>
       <textarea className="text-input" value={el.text || ''}
         aria-label="Edit selected text"
         onChange={e => update({ text: e.target.value })}
         style={{ width: '100%', minHeight: 96, resize: 'vertical', lineHeight: 1.45,
           padding: '10px 12px', boxSizing: 'border-box', marginBottom: 10 }} />
       <select aria-label="Basic font" className="pk-select" value={el.fontFamily} onChange={async e=>{const family=e.target.value;await document.fonts.load(`24px "${family}"`);update({fontFamily:family});}} style={{width:'100%',padding:12,marginBottom:10}}>
-        {ALL_FONT_OPTIONS.filter(f=>['DM Serif Display','Instrument Sans','Kalam'].includes(f.family)||f.family===el.fontFamily).map(f=><option key={f.family} value={f.family}>{f.label}</option>)}
+        {ALL_FONT_OPTIONS.filter(f=>['Cormorant Garamond','Montserrat','Kalam'].includes(f.family)||f.family===el.fontFamily).map(f=><option key={f.family} value={f.family}>{f.label}</option>)}
       </select>
       <LabeledInput label="Font size" value={Math.round(el.fontSize)} onChange={v=>update({fontSize:Math.max(6,+v)})}/>
       <div style={{display:'flex',gap:8,margin:'12px 0'}}>{['left','center','right'].map(align=><button className="btn btn-tonal" key={align} onClick={()=>update({align})}>{align}</button>)}</div>

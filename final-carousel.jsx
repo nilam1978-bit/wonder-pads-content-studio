@@ -20,14 +20,15 @@ function createSimpleCanvases(text,s,brand){
   const chunks=distributeCarouselText(text,s.count?Number(s.count)-(s.outro?1:0):0,s.cover);
   const result=chunks.map((chunk,i)=>{
     const cover=s.cover&&i===0,els=[];
-    const add=(role,words,y,maxH,fs,font='Instrument Sans',align='left')=>{
+    const add=(role,words,y,maxH,fs,font='Montserrat',align='left')=>{
       if(!words)return;
-      const el=newElement('text',{text:words,x:86,y,w:908,h:maxH,fontFamily:font,fontSize:fs,lineHeight:1.25,align,color:'#2A1F2A',__role:role});
-      el.fontSize=fitTextSize(el,maxH,fs);el.h=textLayout(el).height;els.push(el);return el;
+      const textStyle=role==='heading'?(cover?'h1':'h2'):role==='number'?'label':role==='handle'?'handle':'body';
+      const el=newElement('text',{text:words,x:86,y,w:908,h:maxH,...SLIDE_TEXT_STYLES[textStyle],textStyle,align,color:'#2A1F2A',__role:role});
+      delete el.label;el.h=textLayout(el).height;els.push(el);return el;
     };
-    const lines=chunk.trim().split('\n'),short=lines[0].length<80;
-    const heading=short?lines[0].replace(/^[A-Z][A-Z0-9 ·-]{2,20}:\s+/,''):'';
-    const body=short?lines.slice(1).join('\n'):chunk;
+    const lines=chunk.trim().split('\n');
+    const heading=lines[0].replace(/^[A-Z][A-Z0-9 ·-]{2,20}:\s+/,'');
+    const body=lines.slice(1).join('\n').trim();
     if(s.numbers)add('number',String(i+1).padStart(2,'0'),65,75,44);
     let y=160;const title=add('heading',heading,y,body?H*.24:H*.65,cover?88:68,'DM Serif Display');
     if(title)y+=title.h+42;
@@ -35,14 +36,14 @@ function createSimpleCanvases(text,s,brand){
     if(s.logo&&brand.logo)els.push(newElement('image',{src:brand.logo,x:86,y:H-125,w:76,h:76,radius:9999,role:'logo',fromBrand:true}));
     if(s.handles)add('handle',brand.handles?.[0]?.value||brand.shopName||'',H-55,40,24);
     if(s.swipe&&(i<chunks.length-1||s.outro))els.push(newElement('text',{text:'Swipe →',x:800,y:H-90,w:190,h:42,fontFamily:'Instrument Sans',fontSize:26,color:'#963d80'}));
-    return {id:uid(),name:cover?'Cover':`Slide ${i+1}`,w:W,h:H,bg:{type:'color',value:cover?(brand.colors?.[0]||'#f1cfea'):'#FDFBFC'},elements:els};
+    return {id:uid(),name:cover?'Cover':`Slide ${i+1}`,w:W,h:H,bg:{type:'color',value:cover?(brand.colors?.[0]||'#f1cfea'):'#FDFBFC'},elements:cleanSlideSwipe(els,{w:W,h:H})};
   });
   if(s.outro){
     const elements=[];
     if(s.logo&&brand.logo)elements.push(newElement('image',{src:brand.logo,x:440,y:160,w:200,h:200,radius:9999,role:'logo',fromBrand:true}));
     const words=[brand.shopName||'Thank you for reading','Save this post for later',...(s.handles?(brand.handles||[]).map(h=>h.value):[])].join('\n\n');
-    const el=newElement('text',{text:words,x:100,y:430,w:880,h:H-550,fontFamily:'Instrument Sans',fontSize:48,lineHeight:1.4,align:'center',color:'#2A1F2A'});
-    el.fontSize=fitTextSize(el,el.h,48);el.h=textLayout(el).height;elements.push(el);
+    const el=newElement('text',{text:words,x:100,y:430,w:880,h:H-550,...SLIDE_TEXT_STYLES.body,textStyle:'body',align:'center',color:'#2A1F2A'});
+    delete el.label;el.h=textLayout(el).height;elements.push(el);
     result.push({id:uid(),name:'Closing slide',w:W,h:H,bg:{type:'color',value:brand.colors?.[0]||'#f1cfea'},elements});
   }
   return result;
@@ -56,7 +57,7 @@ function FinalCarouselFlow(){
     if(!input.trim()){setError('Add your words first.');return;}
     setBusy(true);setError('');
     try{
-      await document.fonts.ready;let text=input;
+      await Promise.all([document.fonts.load('600 76px "Cormorant Garamond"'),document.fonts.load('400 46px "Montserrat"'),document.fonts.load('500 30px "Montserrat"')]);let text=input;
       if(reuse){const r=await aiRepurposeAll({brand:state.brand,vocab:state.vocab,input,platforms:['instagram-carousel'],counts:{'instagram-carousel':s.count?+s.count-(s.outro?1:0):7},provider:'gemini'});text=r['instagram-carousel']||'';}
       if(!text.trim())throw new Error('No text was returned. Try without AI.');
       const canvases=createSimpleCanvases(text,s,state.brand);

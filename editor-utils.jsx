@@ -34,7 +34,7 @@ const newElement = (type, patch = {}) => {
     rot: 0, opacity: 1, locked: false, hidden: false,
   };
   const defaults = {
-    text: { text: 'Add your text', fontFamily: 'DM Serif Display', fontSize: 64, fontWeight: 400, italic: false, underline: false, align: 'center', color: '#2A1F2A', letterSpacing: 0, lineHeight: 1.2 },
+    text: { text: 'Add your text', fontFamily: 'Montserrat', fontSize: 46, fontWeight: 400, italic: false, underline: false, align: 'center', color: '#2A1F2A', letterSpacing: 0, lineHeight: 1.2 },
     rect: { fill: '#F1CFEA', stroke: 'transparent', strokeWidth: 0, radius: 12 },
     circle: { fill: '#D98BC6', stroke: 'transparent', strokeWidth: 0 },
     triangle: { fill: '#E8B8DC', stroke: 'transparent', strokeWidth: 0 },
@@ -68,6 +68,7 @@ function brandBackgroundElements(kind, canvas, brand = defaultBrand()) {
   const text = (slot, value, x, y, w, size, align = 'left', tone = color) => add(slot, 'text', {
     text: value, x, y, w, h: size * 1.35, fontSize: size, color: tone, align,
     fontFamily: slot === 'shopName' ? (brand.fontHeading || 'DM Serif Display') : (brand.fontBody || 'Instrument Sans'),
+    fontWeight: slot === 'shopName' ? 600 : 500,
     lineHeight: 1.2, letterSpacing: 0,
   });
   const image = (x, y) => add('logo', 'image', { src: brand.logo, x, y, w: logo, h: logo, radius: 9999 });
@@ -122,6 +123,43 @@ function reflowBrandBackground(canvas, W, H, brand) {
     if (el.type === 'text') patch.fontSize = el.fontSize * scale;
     return {...el,...patch};
   });
+}
+
+const SLIDE_TEXT_STYLES = {
+  label:{label:'Label',fontFamily:'Montserrat',fontSize:30,fontWeight:500,lineHeight:1.3},
+  h1:{label:'H1 · Cover title',fontFamily:'Cormorant Garamond',fontSize:96,fontWeight:600,lineHeight:1.1},
+  h2:{label:'H2 · Slide heading',fontFamily:'Cormorant Garamond',fontSize:76,fontWeight:600,lineHeight:1.15},
+  body:{label:'Body',fontFamily:'Montserrat',fontSize:46,fontWeight:400,lineHeight:1.4},
+  handle:{label:'Contact details',fontFamily:'Montserrat',fontSize:32,fontWeight:500,lineHeight:1.3},
+};
+function slideTextRole(el,canvas) {
+  if(el.textStyle) return el.textStyle;
+  const role=el.__role || el.role;
+  if(role==='heading') return canvas.name==='Cover'?'h1':'h2';
+  if(role==='number'||role==='label'||role==='swipe'||el.text==='Swipe →') return 'label';
+  if(role==='handle'||role==='website'||role==='instagram') return 'handle';
+  return 'body';
+}
+function styleSlideText(canvas) {
+  const scale=Math.min(canvas.w,canvas.h)/1080;
+  let elements=canvas.elements.map(el=>{
+    if(el.type!=='text'||el.fromBrand)return el;
+    const role=slideTextRole(el,canvas),style=SLIDE_TEXT_STYLES[role]||SLIDE_TEXT_STYLES.body;
+    const next={...el,...style,textStyle:role,fontSize:style.fontSize*scale};
+    delete next.label;
+    next.h=textLayout(next).height;
+    return next;
+  });
+  const title=elements.find(e=>e.__role==='heading');
+  if(title)elements=elements.map(e=>e.__role==='body'?{...e,y:title.y+title.h+42*scale}:e);
+  return {...canvas,elements:cleanSlideSwipe(elements,canvas)};
+}
+function cleanSlideSwipe(elements,canvas) {
+  const scale=Math.min(canvas.w,canvas.h)/1080;
+  const branded=elements.some(e=>e.brandLayout);
+  const y=canvas.h-(branded?260:140)*scale;
+  const contentBottom=Math.max(0,...elements.filter(e=>e.type==='text'&&!e.fromBrand&&!e.hidden&&e.text!=='Swipe →'&&e.__role!=='handle'&&e.__role!=='number').map(e=>e.y+textLayout(e).height));
+  return elements.map(e=>e.text==='Swipe →'?{...e,__role:'swipe',textStyle:'label',x:canvas.w-280*scale,y,w:194*scale,h:40*scale,fontFamily:'Montserrat',fontWeight:500,fontSize:30*scale,hidden:contentBottom+24*scale>y}:e);
 }
 
 // -------------- Project factory --------------
@@ -251,6 +289,9 @@ function reducer(state, action) {
         }
         return patchCanvas(proj, action.id, patch);
       });
+
+    case 'apply-slide-text-styles':
+      return activeProjectMutate(proj=>({...proj,canvases:proj.canvases.map(c=>action.scope==='all'||c.id===proj.activeCanvasId?styleSlideText(c):c)}));
 
     case 'add-canvas': {
       const preset = action.preset || SIZE_PRESETS[0];
@@ -614,8 +655,8 @@ const defaultBrand = () => ({
   tagline: 'Your one stop shop for healthy menstruation',
   aboutLine: 'handmade reusable cloth pads, made with love — cotton woven tops, bamboo hemp cores, soft fleece backing.',
   logo: 'assets/wpr-logo.png',
-  fontHeading: 'DM Serif Display',
-  fontBody: 'Instrument Sans',
+  fontHeading: 'Cormorant Garamond',
+  fontBody: 'Montserrat',
   handles: [
     { id: uid(), platform: 'instagram', value: '@ecoclothpad' },
     { id: uid(), platform: 'website',   value: 'wonder-pads.com' },
@@ -716,6 +757,8 @@ function StoreProvider({ children }) {
         if (!saved.brand) saved.brand = defaultBrand();
         else saved.brand = { ...defaultBrand(), ...saved.brand };
         // Correct only obsolete shipped defaults; keep custom brand data intact.
+        if(saved.brand.fontHeading==='DM Serif Display')saved.brand.fontHeading='Cormorant Garamond';
+        if(saved.brand.fontBody==='Instrument Sans')saved.brand.fontBody='Montserrat';
         saved.brand.handles = (saved.brand.handles || defaultBrand().handles).map(h => ({...h,
           value: h.value === '@wonderpadsreusables' ? '@ecoclothpad' : h.value === 'wonderpadsreusables.com' ? 'wonder-pads.com' : h.value,
         }));
@@ -874,6 +917,7 @@ function parseEditableProjectFile(text) {
 Object.assign(window, {
   uid, clamp, now, SIZE_PRESETS, defaultCanvas, newElement, newProject, defaultBrand, defaultCarousel,
   reducer, initialState, computeSnapGuides, rotatePoint, brandBackgroundElements, reflowBrandBackground,
+  SLIDE_TEXT_STYLES, slideTextRole, styleSlideText, cleanSlideSwipe,
   StoreCtx, useStore, StoreProvider, activeProject, activeCanvas,
   useMediaQuery, useIsMobile, alignElementsToPage,
   exportEditableProjectFile, parseEditableProjectFile, STORAGE_KEY,

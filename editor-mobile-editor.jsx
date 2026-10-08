@@ -114,7 +114,7 @@ function MobileEditor({ progressNav }) {
       </BottomSheet>
 
       {/* Properties sheet */}
-      <BottomSheet open={['words','font','size','colour','align','add'].includes(openSheet)} onClose={closeSheet}
+      <BottomSheet open={['words','font','styles','size','colour','align','add'].includes(openSheet)} onClose={closeSheet}
         title={openSheet==='add'?'Add to slide':openSheet} height="45vh">
         {openSheet==='add'?<div style={{display:'grid',gap:10}}>{[['text','Text'],['images','Image'],['shapes','Shape'],['bg','Background']].map(([id,label])=><button className="btn btn-tonal" key={id} onClick={()=>openTool(id)}>{label}</button>)}</div>:primaryEl&&<MobileQuickProperties el={primaryEl} tool={openSheet}/>}
       </BottomSheet>
@@ -789,6 +789,7 @@ function MobileSelectionBar({ el, onOpenProperties, onDuplicate, onMore, onDesel
       {el.type==='text'?<>
         <Action icon="text" label="Edit words" onClick={()=>onTool('words')} primary/>
         <Action icon="text" label="Font" onClick={()=>onTool('font')}/>
+        <Action icon="text" label="Styles" onClick={()=>onTool('styles')}/>
         <Action icon="text" label="Size" onClick={()=>onTool('size')}/>
         <Action icon="bg" label="Colour" onClick={()=>onTool('colour')}/>
         <Action icon="align_l" label="Align" onClick={()=>onTool('align')}/>
@@ -803,8 +804,9 @@ function MobileSelectionBar({ el, onOpenProperties, onDuplicate, onMore, onDesel
 
 function MobileQuickProperties({el,tool}){
   const {state,dispatch}=useStore();const update=patch=>dispatch({type:'update-element',id:el.id,patch});
+  if(tool==='styles')return <SlideTextStyleControls el={el} update={update}/>;
   if(tool==='words')return <textarea aria-label="Edit selected words" value={el.text||''} onChange={e=>update({text:e.target.value})} style={{width:'100%',minHeight:140,fontSize:16,padding:12,boxSizing:'border-box'}}/>;
-  if(tool==='font')return <><select aria-label="Font" value={el.fontFamily} onChange={async e=>{const family=e.target.value;await document.fonts.load(`24px "${family}"`);update({fontFamily:family});}} style={{width:'100%',padding:14,fontSize:16}}>{ALL_FONT_OPTIONS.filter(f=>['DM Serif Display','Instrument Sans','Kalam'].includes(f.family)||f.family===el.fontFamily).map(f=><option key={f.family} value={f.family}>{f.label}</option>)}</select><p>The complete font library is kept in More ☰.</p></>;
+  if(tool==='font')return <><select aria-label="Font" value={el.fontFamily} onChange={async e=>{const family=e.target.value;await document.fonts.load(`24px "${family}"`);update({fontFamily:family});}} style={{width:'100%',padding:14,fontSize:16}}>{ALL_FONT_OPTIONS.filter(f=>['Cormorant Garamond','Montserrat','Kalam'].includes(f.family)||f.family===el.fontFamily).map(f=><option key={f.family} value={f.family}>{f.label}</option>)}</select><p>The complete font library is kept in More ☰.</p></>;
   if(tool==='size')return <><label>Font size<input type="number" min="6" aria-label="Font size" value={Math.round(el.fontSize)} onChange={e=>update({fontSize:Math.max(6,+e.target.value)})} style={{fontSize:18,padding:12,margin:12,width:100}}/></label><button className="btn btn-tonal" onClick={()=>update({fontSize:fitTextSize(el,Math.max(40,activeCanvas(state).h-el.y-150),el.fontSize)})}>Fit text inside slide</button></>;
   if(tool==='colour')return <ColorPicker value={el.color} onChange={color=>update({color})}/>;
   return <div style={{display:'flex',gap:12}}>{['left','center','right'].map(align=><button className="btn btn-tonal" key={align} onClick={()=>update({align})}>{align}</button>)}</div>;
