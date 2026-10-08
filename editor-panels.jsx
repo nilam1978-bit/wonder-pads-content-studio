@@ -193,7 +193,12 @@ function TemplatesPanel() {
 
   const applyTemplate = (tpl) => {
     const canvas = activeCanvas(state);
-    const elements = tpl.els.map(e => newElement(e.type, e.patch));
+    const branding = tpl.brandLayout ? brandBackgroundElements(tpl.brandLayout, canvas, state.brand) : [];
+    const elements = tpl.brandLayout ? [
+      ...branding.filter(e=>e.type==='rect'),
+      ...canvas.elements.filter(e=>!e.fromBrand),
+      ...branding.filter(e=>e.type!=='rect'),
+    ] : tpl.els.map(e => newElement(e.type, e.patch));
     dispatch({ type: 'update-canvas', id: canvas.id, patch: { elements, bg: { type: 'color', value: tpl.bg } } });
     // Track which starter is now applied so the chip in the top bar updates.
     if (proj) {
@@ -202,7 +207,7 @@ function TemplatesPanel() {
   };
   return (
     <>
-      <PanelHeader title="Templates" subtitle="Start from a curated design" />
+      <PanelHeader title="Branded backgrounds" subtitle="Blank space for your words · adapts to your slide size" />
 
       {/* Tabs — Templates | Blank pages */}
       <div style={{
@@ -250,6 +255,9 @@ function TemplatesPanel() {
 // Colored card with the name inside + palette dots at the bottom.
 // Kept as its own component so hooks stay stable across tab switches.
 function TemplateRow({ template, active, onApply }) {
+  const {state} = useStore();
+  const preset = template.preset || SIZE_PRESETS[0];
+  const preview = {w:preset.w,h:preset.h,bg:{type:'color',value:template.bg},elements:template.brandLayout ? brandBackgroundElements(template.brandLayout,preset,state.brand) : template.els.map(e=>newElement(e.type,e.patch))};
   const isPortrait = template.preset && template.preset.h > template.preset.w;
   return (
     <button onClick={onApply}
@@ -268,6 +276,7 @@ function TemplateRow({ template, active, onApply }) {
       onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
       onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
     >
+      <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}><MiniPreview canvas={preview} maxW={160} maxH={180}/></div>
       {active && (
         <div style={{
           position: 'absolute', top: 5, right: 5, zIndex: 2,
@@ -285,6 +294,7 @@ function TemplateRow({ template, active, onApply }) {
         boxSizing: 'border-box',
       }}>
         <div style={{
+          position:'relative',background:'rgba(253,251,252,.94)',borderRadius:4,padding:4,
           fontFamily: 'DM Serif Display', fontSize: 12, color: 'var(--ink)',
           lineHeight: 1.15,
           overflow: 'hidden', display: '-webkit-box',

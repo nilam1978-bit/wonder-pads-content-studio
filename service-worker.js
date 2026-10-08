@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wonder-pads-content-studio-v19-final';
+const CACHE_NAME = 'wonder-pads-content-studio-v20-branded-backgrounds';
 
 const APP_FILES = [
   './final-carousel.jsx',

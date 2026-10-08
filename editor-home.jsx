@@ -1,84 +1,15 @@
 // Home dashboard — Recent designs, New from preset, My templates, Starter templates
 const { useState: hS, useRef: hR, useEffect: hE, useMemo: hM } = React;
 
-// Wonder Pads starter templates — actual shop moments a small handmade-pad business posts about.
-// Real products, real language, real turnaround times. Not generic quote cards.
+// Blank brand backgrounds: keep the familiar Wonder Pads palette, not sample claims.
 const STARTER_TEMPLATES = [
-  // 1. Restock drop — the "new drop Friday" post every handmade shop makes weekly
-  { name: 'New Drop Friday', preset: SIZE_PRESETS[0], bg: '#F7E1F0', accent: '#C260A8',
-    els: [
-      { type: 'text', patch: { text: 'FRIDAY · 8PM SGT', fontFamily: 'Instrument Sans', fontSize: 28, color: '#C260A8', x: 100, y: 130, w: 880, h: 40, align: 'left', letterSpacing: 8, fontWeight: 700 } },
-      { type: 'text', patch: { text: 'new drop\nis coming.', fontFamily: 'DM Serif Display', fontSize: 180, color: '#2A1F2A', x: 100, y: 220, w: 880, h: 460, align: 'left', lineHeight: 1.05 } },
-      { type: 'rect', patch: { fill: '#D98BC6', x: 100, y: 720, w: 80, h: 5, radius: 4 } },
-      { type: 'text', patch: { text: '6 new prints. made-to-order.\nships in 2 weeks.', fontFamily: 'Instrument Sans', fontSize: 34, color: '#56454F', x: 100, y: 760, w: 880, h: 160, align: 'left', lineHeight: 1.45 } },
-    ],
-  },
-
-  // 2. Made-to-order explainer — the #1 FAQ every handmade seller answers
-  { name: 'Made-to-Order', preset: SIZE_PRESETS[0], bg: '#FDFBFC', accent: '#F1CFEA',
-    els: [
-      { type: 'rect', patch: { fill: '#F1CFEA', x: 0, y: 0, w: 1080, h: 380, radius: 0 } },
-      { type: 'text', patch: { text: 'MADE-TO-ORDER', fontFamily: 'Instrument Sans', fontSize: 28, color: '#7d2960', x: 100, y: 150, w: 880, h: 40, align: 'left', letterSpacing: 8, fontWeight: 700 } },
-      { type: 'text', patch: { text: 'why it takes\n4–6 weeks.', fontFamily: 'DM Serif Display', fontSize: 100, color: '#2A1F2A', x: 100, y: 210, w: 880, h: 260, italic: true, align: 'left', lineHeight: 1.1 } },
-      { type: 'text', patch: { text: 'every pad is cut, sewn and packed by me. one woman, one studio, one order at a time.\n\nit means longer waits. it also means each one is made just for you.', fontFamily: 'Instrument Sans', fontSize: 32, color: '#56454F', x: 100, y: 540, w: 880, h: 400, align: 'left', lineHeight: 1.55 } },
-    ],
-  },
-
-  // 3. Absorbency guide — the "which size do I need?" question, visualised
-  { name: 'Absorbency Guide', preset: SIZE_PRESETS[0], bg: '#FBF0F7', accent: '#7d2960',
-    els: [
-      { type: 'text', patch: { text: 'THE GUIDE', fontFamily: 'Instrument Sans', fontSize: 24, color: '#C260A8', x: 100, y: 110, w: 880, h: 40, align: 'center', letterSpacing: 8, fontWeight: 700 } },
-      { type: 'text', patch: { text: 'which absorbency\ndo you need?', fontFamily: 'DM Serif Display', fontSize: 90, color: '#2A1F2A', x: 80, y: 180, w: 920, h: 220, align: 'center', lineHeight: 1.1 } },
-      { type: 'rect', patch: { fill: 'white', x: 100, y: 430, w: 880, h: 90, radius: 12 } },
-      { type: 'text', patch: { text: 'liner', fontFamily: 'DM Serif Display', fontSize: 40, color: '#7d2960', x: 130, y: 450, w: 200, h: 50, align: 'left' } },
-      { type: 'text', patch: { text: 'spotting, discharge, cup backup', fontFamily: 'Instrument Sans', fontSize: 26, color: '#56454F', x: 350, y: 460, w: 620, h: 40, align: 'left' } },
-      { type: 'rect', patch: { fill: 'white', x: 100, y: 540, w: 880, h: 90, radius: 12 } },
-      { type: 'text', patch: { text: 'light', fontFamily: 'DM Serif Display', fontSize: 40, color: '#7d2960', x: 130, y: 560, w: 200, h: 50, align: 'left' } },
-      { type: 'text', patch: { text: 'light days, teens, tweens', fontFamily: 'Instrument Sans', fontSize: 26, color: '#56454F', x: 350, y: 570, w: 620, h: 40, align: 'left' } },
-      { type: 'rect', patch: { fill: 'white', x: 100, y: 650, w: 880, h: 90, radius: 12 } },
-      { type: 'text', patch: { text: 'regular', fontFamily: 'DM Serif Display', fontSize: 40, color: '#7d2960', x: 130, y: 670, w: 240, h: 50, align: 'left' } },
-      { type: 'text', patch: { text: 'most days for most bodies', fontFamily: 'Instrument Sans', fontSize: 26, color: '#56454F', x: 380, y: 680, w: 590, h: 40, align: 'left' } },
-      { type: 'rect', patch: { fill: 'white', x: 100, y: 760, w: 880, h: 90, radius: 12 } },
-      { type: 'text', patch: { text: 'heavy', fontFamily: 'DM Serif Display', fontSize: 40, color: '#7d2960', x: 130, y: 780, w: 200, h: 50, align: 'left' } },
-      { type: 'text', patch: { text: 'heavy days, postpartum start', fontFamily: 'Instrument Sans', fontSize: 26, color: '#56454F', x: 350, y: 790, w: 620, h: 40, align: 'left' } },
-      { type: 'text', patch: { text: 'not sure? most people love a set with 2 regulars + 1 heavy + 1 overnight.', fontFamily: 'Instrument Sans', fontSize: 22, color: '#8A7684', x: 100, y: 900, w: 880, h: 60, align: 'center', italic: true, lineHeight: 1.4 } },
-    ],
-  },
-
-  // 4. Product highlight — spotlighting the everyday regular (bestseller)
-  { name: 'Product Spotlight', preset: SIZE_PRESETS[0], bg: '#D98BC6', accent: '#FDFBFC',
-    els: [
-      { type: 'text', patch: { text: 'BESTSELLER', fontFamily: 'Instrument Sans', fontSize: 24, color: '#FDFBFC', x: 100, y: 130, w: 880, h: 40, align: 'left', letterSpacing: 8, fontWeight: 700 } },
-      { type: 'text', patch: { text: 'everyday\nregular.', fontFamily: 'DM Serif Display', fontSize: 200, color: '#FDFBFC', x: 100, y: 200, w: 880, h: 460, align: 'left', italic: true, lineHeight: 1.05 } },
-      { type: 'rect', patch: { fill: '#FDFBFC', x: 100, y: 720, w: 880, h: 1, radius: 0 } },
-      { type: 'text', patch: { text: '10"  ·  cotton woven top  ·  bamboo hemp core', fontFamily: 'Instrument Sans', fontSize: 28, color: '#FDFBFC', x: 100, y: 760, w: 880, h: 40, align: 'left', letterSpacing: 1 } },
-      { type: 'text', patch: { text: '$18', fontFamily: 'DM Serif Display', fontSize: 120, color: '#FDFBFC', x: 100, y: 820, w: 400, h: 140, align: 'left' } },
-      { type: 'text', patch: { text: 'wonder-pads.com', fontFamily: 'Instrument Sans', fontSize: 26, color: '#FDFBFC', x: 480, y: 880, w: 500, h: 40, align: 'right', letterSpacing: 2 } },
-    ],
-  },
-
-  // 5. Customer thank-you / review card — engagement post
-  { name: 'Thank You Card', preset: SIZE_PRESETS[0], bg: '#F1CFEA', accent: '#7d2960',
-    els: [
-      { type: 'text', patch: { text: '"', fontFamily: 'DM Serif Display', fontSize: 400, color: '#D98BC6', x: 80, y: 60, w: 300, h: 400, align: 'left' } },
-      { type: 'text', patch: { text: 'switched to cloth\nsix months ago.\nI\'m never going\nback.', fontFamily: 'DM Serif Display', fontSize: 84, color: '#2A1F2A', x: 100, y: 340, w: 880, h: 460, italic: true, align: 'left', lineHeight: 1.2 } },
-      { type: 'rect', patch: { fill: '#7d2960', x: 100, y: 840, w: 60, h: 3, radius: 2 } },
-      { type: 'text', patch: { text: '— a wonder pads customer', fontFamily: 'Instrument Sans', fontSize: 24, color: '#56454F', x: 100, y: 870, w: 500, h: 40, align: 'left', letterSpacing: 3 } },
-      { type: 'text', patch: { text: 'thank you.', fontFamily: 'Caveat', fontSize: 64, color: '#C260A8', x: 700, y: 850, w: 280, h: 80, align: 'right', italic: true } },
-    ],
-  },
-
-  // 6. Story-format announcement — story-sized (Portrait 1080x1350)
-  { name: 'Story Announcement', preset: SIZE_PRESETS[1], bg: '#7d2960', accent: '#FDFBFC',
-    els: [
-      { type: 'text', patch: { text: 'WONDER PADS  ·  RESTOCK', fontFamily: 'Instrument Sans', fontSize: 26, color: '#F1CFEA', x: 80, y: 100, w: 920, h: 40, align: 'left', letterSpacing: 6, fontWeight: 600 } },
-      { type: 'text', patch: { text: 'back in\nstock.', fontFamily: 'DM Serif Display', fontSize: 260, color: '#FDFBFC', x: 80, y: 380, w: 920, h: 620, align: 'left', italic: true, lineHeight: 1 } },
-      { type: 'rect', patch: { fill: '#D98BC6', x: 80, y: 1050, w: 100, h: 6, radius: 4 } },
-      { type: 'text', patch: { text: 'orders open now.\nships in 4–6 weeks.', fontFamily: 'Instrument Sans', fontSize: 36, color: '#F1CFEA', x: 80, y: 1090, w: 920, h: 140, align: 'left', lineHeight: 1.45 } },
-      { type: 'text', patch: { text: '↑ swipe up', fontFamily: 'Instrument Sans', fontSize: 24, color: '#FDFBFC', x: 80, y: 1260, w: 920, h: 40, align: 'center', letterSpacing: 4, fontWeight: 600 } },
-    ],
-  },
-];
+  {name:'Blush · Corner branding',preset:SIZE_PRESETS[0],bg:'#F7E1F0',accent:'#C260A8',brandLayout:'corner'},
+  {name:'Cream · Header bar',preset:SIZE_PRESETS[0],bg:'#FDFBFC',accent:'#F1CFEA',brandLayout:'header'},
+  {name:'Soft blush · Handle strip',preset:SIZE_PRESETS[0],bg:'#FBF0F7',accent:'#7d2960',brandLayout:'strip'},
+  {name:'Orchid · Footer bar',preset:SIZE_PRESETS[0],bg:'#D98BC6',accent:'#FDFBFC',brandLayout:'footer'},
+  {name:'Pink · Signature',preset:SIZE_PRESETS[0],bg:'#F1CFEA',accent:'#7d2960',brandLayout:'signature'},
+  {name:'Plum · Writing frame',preset:SIZE_PRESETS[1],bg:'#7d2960',accent:'#FDFBFC',brandLayout:'frame'},
+].map(t => ({...t,els:brandBackgroundElements(t.brandLayout,t.preset).map(el=>({type:el.type,patch:el}))}));
 
 function timeAgo(ts) {
   if (!ts) return '';
@@ -265,6 +196,7 @@ function HomeScreen() {
     const seed = tpl.els.map(e => ({ type: e.type, patch: e.patch }));
     const proj = newProject(tpl.name, tpl.preset, seed);
     proj.canvases[0].bg = { type: 'color', value: tpl.bg };
+    if(tpl.brandLayout) proj.canvases[0].elements = brandBackgroundElements(tpl.brandLayout,proj.canvases[0],state.brand);
     // Remember which starter this came from so the editor can show a "you're editing X" chip.
     proj.appliedStarter = tpl.name;
     dispatch({ type: 'create-project', project: proj });
@@ -678,7 +610,7 @@ function HomeScreen() {
       )}
 
       {/* Starter templates */}
-      <SectionHome title="Starter templates" subtitle="Curated for Wonder Pads Reusables">
+      <SectionHome title="Branded backgrounds" subtitle="Blank Wonder Pads layouts for your own words">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 22 }}>
           {STARTER_TEMPLATES.map((t, i) => (
             <TemplateCard key={i} template={{

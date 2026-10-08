@@ -51,6 +51,79 @@ const newElement = (type, patch = {}) => {
   return { ...base, ...defaults[type], ...patch };
 };
 
+// Branded backgrounds use the short side for readable type and square logos.
+// Semantic slots let ratio changes reflow branding without resetting user edits.
+function brandBackgroundElements(kind, canvas, brand = defaultBrand()) {
+  const W = canvas.w, H = canvas.h, s = Math.min(W, H) / 1080;
+  const m = 64 * s, logo = 104 * s, band = 190 * s;
+  const ink = '#2A1F2A', cream = '#FDFBFC';
+  const dark = kind === 'footer' || kind === 'frame';
+  const color = dark ? cream : ink;
+  const website = brand.handles?.find(h => h.platform === 'website')?.value || 'wonder-pads.com';
+  const social = brand.handles?.find(h => h.platform === 'instagram')?.value || '@ecoclothpad';
+  const els = [];
+  const add = (slot, type, patch) => els.push(newElement(type, {
+    ...patch, fromBrand: true, role: slot, brandLayout: kind, brandSlot: slot,
+  }));
+  const text = (slot, value, x, y, w, size, align = 'left', tone = color) => add(slot, 'text', {
+    text: value, x, y, w, h: size * 1.35, fontSize: size, color: tone, align,
+    fontFamily: slot === 'shopName' ? (brand.fontHeading || 'DM Serif Display') : (brand.fontBody || 'Instrument Sans'),
+    lineHeight: 1.2, letterSpacing: 0,
+  });
+  const image = (x, y) => add('logo', 'image', { src: brand.logo, x, y, w: logo, h: logo, radius: 9999 });
+  const rect = (slot, x, y, w, h, fill) => add(slot, 'rect', {x,y,w,h,fill,radius:0});
+  const contacts = (y, tone = color) => {
+    text('website', website, m, y, (W - 2*m)/2, 34*s, 'left', tone);
+    text('instagram', social, W/2, y, W/2-m, 34*s, 'right', tone);
+  };
+  if (kind === 'header') {
+    rect('brandBar',0,0,W,band,'#F1CFEA');
+    image(m,43*s);
+    text('shopName',brand.shopName,m+logo+24*s,48*s,W-2*m-logo-24*s,44*s);
+    text('website',website,m+logo+24*s,112*s,(W-2*m-logo-24*s)/2,32*s);
+    text('instagram',social,W*.65,112*s,W*.35-m,32*s,'right');
+  } else if (kind === 'footer' || kind === 'frame') {
+    if (kind === 'frame') rect('writingPanel',32*s,32*s,W-64*s,H-band-48*s,cream);
+    else rect('brandBar',0,H-band,W,band,ink);
+    image(m,H-band+40*s);
+    text('shopName',brand.shopName,m+logo+24*s,H-band+42*s,W-2*m-logo-24*s,44*s);
+    text('website',website,m+logo+24*s,H-band+108*s,(W-2*m-logo-24*s)/2,32*s);
+    text('instagram',social,W*.65,H-band+108*s,W*.35-m,32*s,'right');
+  } else if (kind === 'strip') {
+    rect('brandBar',0,H-band,W,band,cream);
+    image(m,H-band+40*s);
+    text('shopName',brand.shopName,m+logo+24*s,H-band+42*s,W-2*m-logo-24*s,44*s);
+    contacts(H-62*s,ink);
+  } else {
+    const y = kind === 'signature' ? H-band-30*s : m;
+    image(m,y);
+    text('shopName',brand.shopName,m+logo+24*s,y+26*s,W-2*m-logo-24*s,44*s);
+    rect('divider',m,H-112*s,W-2*m,2*s,'#C260A8');
+    contacts(H-80*s);
+  }
+  return els;
+}
+
+function reflowBrandBackground(canvas, W, H, brand) {
+  const layouts = [...new Set(canvas.elements.map(e => e.brandLayout).filter(Boolean))];
+  const maps = new Map(layouts.map(kind => [kind, {
+    old: brandBackgroundElements(kind, canvas, brand),
+    next: brandBackgroundElements(kind, {w:W,h:H}, brand),
+  }]));
+  const scale = Math.min(W,H)/Math.min(canvas.w,canvas.h);
+  return canvas.elements.map(el => {
+    const map = maps.get(el.brandLayout);
+    if (!map) return el;
+    const old = map.old.find(e => e.brandSlot === el.brandSlot);
+    const next = map.next.find(e => e.brandSlot === el.brandSlot);
+    if (!old || !next) return el;
+    const patch = {};
+    for (const key of ['x','y','w','h']) patch[key] = next[key] + (el[key]-old[key])*scale;
+    if (el.type === 'text') patch.fontSize = el.fontSize * scale;
+    return {...el,...patch};
+  });
+}
+
 // -------------- Project factory --------------
 const newProject = (name, preset = SIZE_PRESETS[0], seedElements = []) => {
   const canvas = defaultCanvas('Page 1', preset);
@@ -170,7 +243,14 @@ function reducer(state, action) {
 
     // ---------- Canvas within active project ----------
     case 'update-canvas':
-      return activeProjectMutate(proj => patchCanvas(proj, action.id, action.patch));
+      return activeProjectMutate(proj => {
+        const c = proj.canvases.find(c => c.id === action.id);
+        const patch = {...action.patch};
+        if (c && (patch.w || patch.h) && !patch.elements) {
+          patch.elements = reflowBrandBackground(c, patch.w || c.w, patch.h || c.h, state.brand);
+        }
+        return patchCanvas(proj, action.id, patch);
+      });
 
     case 'add-canvas': {
       const preset = action.preset || SIZE_PRESETS[0];
@@ -537,8 +617,8 @@ const defaultBrand = () => ({
   fontHeading: 'DM Serif Display',
   fontBody: 'Instrument Sans',
   handles: [
-    { id: uid(), platform: 'instagram', value: '@wonderpadsreusables' },
-    { id: uid(), platform: 'website',   value: 'wonderpadsreusables.com' },
+    { id: uid(), platform: 'instagram', value: '@ecoclothpad' },
+    { id: uid(), platform: 'website',   value: 'wonder-pads.com' },
   ],
   colors: ['#F1CFEA', '#E8B8DC', '#D98BC6', '#C260A8', '#2A1F2A', '#FDFBFC'],
   // AI voice
@@ -635,6 +715,10 @@ function StoreProvider({ children }) {
         // Backfill brand + carousel if missing (older data)
         if (!saved.brand) saved.brand = defaultBrand();
         else saved.brand = { ...defaultBrand(), ...saved.brand };
+        // Correct only obsolete shipped defaults; keep custom brand data intact.
+        saved.brand.handles = (saved.brand.handles || defaultBrand().handles).map(h => ({...h,
+          value: h.value === '@wonderpadsreusables' ? '@ecoclothpad' : h.value === 'wonderpadsreusables.com' ? 'wonder-pads.com' : h.value,
+        }));
         if (!saved.carousel) saved.carousel = defaultCarousel();
         else saved.carousel = { ...defaultCarousel(), ...saved.carousel };
         // Backfill Content Repurposer data
@@ -789,7 +873,7 @@ function parseEditableProjectFile(text) {
 
 Object.assign(window, {
   uid, clamp, now, SIZE_PRESETS, defaultCanvas, newElement, newProject, defaultBrand, defaultCarousel,
-  reducer, initialState, computeSnapGuides, rotatePoint,
+  reducer, initialState, computeSnapGuides, rotatePoint, brandBackgroundElements, reflowBrandBackground,
   StoreCtx, useStore, StoreProvider, activeProject, activeCanvas,
   useMediaQuery, useIsMobile, alignElementsToPage,
   exportEditableProjectFile, parseEditableProjectFile, STORAGE_KEY,
