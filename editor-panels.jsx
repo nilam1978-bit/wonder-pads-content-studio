@@ -193,13 +193,22 @@ function TemplatesPanel() {
 
   const applyTemplate = (tpl) => {
     const canvas = activeCanvas(state);
-    const branding = tpl.brandLayout ? brandBackgroundElements(tpl.brandLayout, canvas, state.brand) : [];
+    const isHook=tpl.slideKind==='hook'||(!tpl.slideKind&&(canvas.slideKind==='hook'||canvas.name==='Cover'));
+    const isCta=tpl.slideKind==='cta'||(!tpl.slideKind&&(canvas.slideKind==='cta'||canvas.name==='Closing slide'));
+    const branding = tpl.brandLayout ? brandBackgroundElements(isHook?'hook':isCta?'signature':tpl.brandLayout, canvas, state.brand) : [];
     const elements = tpl.brandLayout ? [
       ...branding.filter(e=>e.type==='rect'),
       ...canvas.elements.filter(e=>!e.fromBrand),
       ...branding.filter(e=>e.type!=='rect'),
     ] : tpl.els.map(e => newElement(e.type, e.patch));
-    dispatch({ type: 'update-canvas', id: canvas.id, patch: { elements:cleanSlideSwipe(elements,canvas), bg: { type: 'color', value: tpl.bg } } });
+    if(tpl.slideKind&&!elements.some(e=>e.type==='text'&&!e.fromBrand)) elements.push(...starterBackgroundElements(tpl,canvas,state.brand).filter(e=>!e.fromBrand));
+    dispatch({ type: 'update-canvas', id: canvas.id, patch: { elements:cleanSlideSwipe(elements,canvas), ...(tpl.slideKind?{slideKind:tpl.slideKind}:{}), bg: { type: 'color', value: tpl.bg } } });
+    if(tpl.brandLayout&&(isHook||isCta)&&proj){
+      for(const other of proj.canvases){
+        if(other.id!==canvas.id&&(other.slideKind==='hook'||other.slideKind==='cta'||other.name==='Cover'||other.name==='Closing slide'))
+          dispatch({type:'update-canvas',id:other.id,patch:{bg:{type:'color',value:tpl.bg}}});
+      }
+    }
     // Track which starter is now applied so the chip in the top bar updates.
     if (proj) {
       dispatch({ type: 'update-project', id: proj.id, patch: { appliedStarter: tpl.name } });
@@ -257,7 +266,7 @@ function TemplatesPanel() {
 function TemplateRow({ template, active, onApply }) {
   const {state} = useStore();
   const preset = template.preset || SIZE_PRESETS[0];
-  const preview = {w:preset.w,h:preset.h,bg:{type:'color',value:template.bg},elements:template.brandLayout ? brandBackgroundElements(template.brandLayout,preset,state.brand) : template.els.map(e=>newElement(e.type,e.patch))};
+  const preview = {w:preset.w,h:preset.h,bg:{type:'color',value:template.bg},elements:template.brandLayout ? starterBackgroundElements(template,preset,state.brand) : template.els.map(e=>newElement(e.type,e.patch))};
   const isPortrait = template.preset && template.preset.h > template.preset.w;
   return (
     <button onClick={onApply}

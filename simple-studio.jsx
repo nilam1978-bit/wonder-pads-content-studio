@@ -43,7 +43,7 @@ function SimpleStudioHome() {
     const p=t.canvases?{id:uid(),name:t.name,createdAt:now(),updatedAt:now(),canvases:JSON.parse(JSON.stringify(t.canvases)).map(c=>({...c,id:uid(),elements:c.elements.map(e=>({...e,id:uid()}))}))}:newProject(t.name,t.preset,t.els.map(e=>({type:e.type,patch:e.patch})));
     if(!t.canvases){
       p.canvases[0].bg={type:'color',value:t.bg};
-      if(t.brandLayout)p.canvases[0].elements=brandBackgroundElements(t.brandLayout,p.canvases[0],state.brand);
+      if(t.brandLayout){p.canvases[0].elements=starterBackgroundElements(t,p.canvases[0],state.brand);p.canvases[0].slideKind=t.slideKind;}
     }
     p.activeCanvasId=p.canvases[0].id;dispatch({type:'create-project',project:p});
   };

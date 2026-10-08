@@ -54,53 +54,36 @@ const newElement = (type, patch = {}) => {
 // Branded backgrounds use the short side for readable type and square logos.
 // Semantic slots let ratio changes reflow branding without resetting user edits.
 function brandBackgroundElements(kind, canvas, brand = defaultBrand()) {
-  const W = canvas.w, H = canvas.h, s = Math.min(W, H) / 1080;
-  const m = 64 * s, logo = 104 * s, band = 190 * s;
-  const ink = '#2A1F2A', cream = '#FDFBFC';
-  const dark = kind === 'footer' || kind === 'frame';
-  const color = dark ? cream : ink;
-  const website = brand.handles?.find(h => h.platform === 'website')?.value || 'wonder-pads.com';
-  const social = brand.handles?.find(h => h.platform === 'instagram')?.value || '@ecoclothpad';
-  const els = [];
-  const add = (slot, type, patch) => els.push(newElement(type, {
-    ...patch, fromBrand: true, role: slot, brandLayout: kind, brandSlot: slot,
-  }));
-  const text = (slot, value, x, y, w, size, align = 'left', tone = color) => add(slot, 'text', {
-    text: value, x, y, w, h: size * 1.35, fontSize: size, color: tone, align,
-    fontFamily: slot === 'shopName' ? (brand.fontHeading || 'DM Serif Display') : (brand.fontBody || 'Instrument Sans'),
-    fontWeight: slot === 'shopName' ? 600 : 500,
-    lineHeight: 1.2, letterSpacing: 0,
-  });
-  const image = (x, y) => add('logo', 'image', { src: brand.logo, x, y, w: logo, h: logo, radius: 9999 });
-  const rect = (slot, x, y, w, h, fill) => add(slot, 'rect', {x,y,w,h,fill,radius:0});
-  const contacts = (y, tone = color) => {
-    text('website', website, m, y, (W - 2*m)/2, 34*s, 'left', tone);
-    text('instagram', social, W/2, y, W/2-m, 34*s, 'right', tone);
+  const W=canvas.w,H=canvas.h,s=Math.min(W,H)/1080,m=64*s,logo=80*s,band=140*s;
+  const ink='#2A1F2A',cream='#FDFBFC',dark=kind==='footer'||kind==='frame',color=dark?cream:ink;
+  const website=brand.handles?.find(h=>h.platform==='website')?.value||'wonder-pads.com';
+  const social=brand.handles?.find(h=>h.platform==='instagram')?.value||'@ecoclothpad';
+  const els=[];
+  const add=(slot,type,patch)=>els.push(newElement(type,{...patch,fromBrand:true,role:slot,brandLayout:kind,brandSlot:slot}));
+  const text=(slot,value,x,y,w,align='left',tone=color)=>add(slot,'text',{text:value,x,y,w,h:44*s,fontSize:32*s,fontFamily:brand.fontBody||'Montserrat',fontWeight:500,lineHeight:1.3,align,color:tone});
+  const image=(x,y)=>{if(brand.logo)add('logo','image',{src:brand.logo,x,y,w:logo,h:logo,radius:9999});};
+  const rect=(slot,x,y,w,h,fill)=>add(slot,'rect',{x,y,w,h,fill,radius:0});
+  const compact=(y,tone=color)=>{
+    image(m,y+30*s);
+    const x=m+logo+28*s,w=W-x-m;
+    text('instagram',social,x,y+26*s,w,'left',tone);
+    text('website',website,x,y+73*s,w,'left',tone);
   };
-  if (kind === 'header') {
-    rect('brandBar',0,0,W,band,'#F1CFEA');
-    image(m,43*s);
-    text('shopName',brand.shopName,m+logo+24*s,48*s,W-2*m-logo-24*s,44*s);
-    text('website',website,m+logo+24*s,112*s,(W-2*m-logo-24*s)/2,32*s);
-    text('instagram',social,W*.65,112*s,W*.35-m,32*s,'right');
-  } else if (kind === 'footer' || kind === 'frame') {
-    if (kind === 'frame') rect('writingPanel',32*s,32*s,W-64*s,H-band-48*s,cream);
+  if(kind==='hook'){image(m,m);return els;}
+  if(kind==='header'){
+    rect('brandBar',0,0,W,band,'#F1CFEA');compact(0);
+  }else if(kind==='footer'||kind==='frame'){
+    if(kind==='frame')rect('writingPanel',32*s,32*s,W-64*s,H-band-48*s,cream);
     else rect('brandBar',0,H-band,W,band,ink);
-    image(m,H-band+40*s);
-    text('shopName',brand.shopName,m+logo+24*s,H-band+42*s,W-2*m-logo-24*s,44*s);
-    text('website',website,m+logo+24*s,H-band+108*s,(W-2*m-logo-24*s)/2,32*s);
-    text('instagram',social,W*.65,H-band+108*s,W*.35-m,32*s,'right');
-  } else if (kind === 'strip') {
-    rect('brandBar',0,H-band,W,band,cream);
-    image(m,H-band+40*s);
-    text('shopName',brand.shopName,m+logo+24*s,H-band+42*s,W-2*m-logo-24*s,44*s);
-    contacts(H-62*s,ink);
-  } else {
-    const y = kind === 'signature' ? H-band-30*s : m;
-    image(m,y);
-    text('shopName',brand.shopName,m+logo+24*s,y+26*s,W-2*m-logo-24*s,44*s);
+    compact(H-band);
+  }else if(kind==='strip'||kind==='signature'){
+    if(kind==='strip')rect('brandBar',0,H-band,W,band,cream);
+    compact(H-band,ink);
+  }else{
+    image(m,m);
     rect('divider',m,H-112*s,W-2*m,2*s,'#C260A8');
-    contacts(H-80*s);
+    text('website',website,m,H-80*s,(W-2*m)/2);
+    text('instagram',social,W/2,H-80*s,W/2-m,'right');
   }
   return els;
 }
@@ -132,6 +115,20 @@ const SLIDE_TEXT_STYLES = {
   body:{label:'Body',fontFamily:'Montserrat',fontSize:46,fontWeight:400,lineHeight:1.4},
   handle:{label:'Contact details',fontFamily:'Montserrat',fontSize:32,fontWeight:500,lineHeight:1.3},
 };
+function starterBackgroundElements(template, canvas, brand = defaultBrand()) {
+  const els=brandBackgroundElements(template.brandLayout,canvas,brand);
+  if(template.slideKind){
+    const scale=Math.min(canvas.w,canvas.h)/1080;
+    const title=newElement('text',{...SLIDE_TEXT_STYLES.h1,textStyle:'h1',__role:'heading',
+      text:template.slideKind==='hook'?'Your hook goes here':'Save this for later',
+      x:86*scale,y:canvas.h*(template.slideKind==='hook'?.25:.3),w:canvas.w-172*scale,
+      fontSize:96*scale,align:template.slideKind==='cta'?'center':'left'});
+    delete title.label;title.h=textLayout(title).height;
+    els.push(title);
+  }
+  return els;
+}
+
 function slideTextRole(el,canvas) {
   if(el.textStyle) return el.textStyle;
   const role=el.__role || el.role;
@@ -917,7 +914,7 @@ function parseEditableProjectFile(text) {
 Object.assign(window, {
   uid, clamp, now, SIZE_PRESETS, defaultCanvas, newElement, newProject, defaultBrand, defaultCarousel,
   reducer, initialState, computeSnapGuides, rotatePoint, brandBackgroundElements, reflowBrandBackground,
-  SLIDE_TEXT_STYLES, slideTextRole, styleSlideText, cleanSlideSwipe,
+  SLIDE_TEXT_STYLES, slideTextRole, styleSlideText, cleanSlideSwipe, starterBackgroundElements,
   StoreCtx, useStore, StoreProvider, activeProject, activeCanvas,
   useMediaQuery, useIsMobile, alignElementsToPage,
   exportEditableProjectFile, parseEditableProjectFile, STORAGE_KEY,

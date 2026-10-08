@@ -3,13 +3,17 @@ const { useState: hS, useRef: hR, useEffect: hE, useMemo: hM } = React;
 
 // Blank brand backgrounds: keep the familiar Wonder Pads palette, not sample claims.
 const STARTER_TEMPLATES = [
+  {name:'Hook · Blush',preset:SIZE_PRESETS[0],bg:'#F1CFEA',accent:'#C260A8',brandLayout:'hook',slideKind:'hook'},
+  {name:'Closing CTA · Blush',preset:SIZE_PRESETS[0],bg:'#F1CFEA',accent:'#C260A8',brandLayout:'signature',slideKind:'cta'},
+  {name:'Hook · Cream',preset:SIZE_PRESETS[1],bg:'#FDFBFC',accent:'#C260A8',brandLayout:'hook',slideKind:'hook'},
+  {name:'Closing CTA · Cream',preset:SIZE_PRESETS[1],bg:'#FDFBFC',accent:'#C260A8',brandLayout:'signature',slideKind:'cta'},
   {name:'Blush · Corner branding',preset:SIZE_PRESETS[0],bg:'#F7E1F0',accent:'#C260A8',brandLayout:'corner'},
   {name:'Cream · Header bar',preset:SIZE_PRESETS[0],bg:'#FDFBFC',accent:'#F1CFEA',brandLayout:'header'},
   {name:'Soft blush · Handle strip',preset:SIZE_PRESETS[0],bg:'#FBF0F7',accent:'#7d2960',brandLayout:'strip'},
   {name:'Orchid · Footer bar',preset:SIZE_PRESETS[0],bg:'#D98BC6',accent:'#FDFBFC',brandLayout:'footer'},
   {name:'Pink · Signature',preset:SIZE_PRESETS[0],bg:'#F1CFEA',accent:'#7d2960',brandLayout:'signature'},
   {name:'Plum · Writing frame',preset:SIZE_PRESETS[1],bg:'#7d2960',accent:'#FDFBFC',brandLayout:'frame'},
-].map(t => ({...t,els:brandBackgroundElements(t.brandLayout,t.preset).map(el=>({type:el.type,patch:el}))}));
+].map(t => ({...t,els:starterBackgroundElements(t,t.preset).map(el=>({type:el.type,patch:el}))}));
 
 function timeAgo(ts) {
   if (!ts) return '';
@@ -196,7 +200,7 @@ function HomeScreen() {
     const seed = tpl.els.map(e => ({ type: e.type, patch: e.patch }));
     const proj = newProject(tpl.name, tpl.preset, seed);
     proj.canvases[0].bg = { type: 'color', value: tpl.bg };
-    if(tpl.brandLayout) proj.canvases[0].elements = brandBackgroundElements(tpl.brandLayout,proj.canvases[0],state.brand);
+    if(tpl.brandLayout) {proj.canvases[0].elements = starterBackgroundElements(tpl,proj.canvases[0],state.brand);proj.canvases[0].slideKind=tpl.slideKind;}
     // Remember which starter this came from so the editor can show a "you're editing X" chip.
     proj.appliedStarter = tpl.name;
     dispatch({ type: 'create-project', project: proj });

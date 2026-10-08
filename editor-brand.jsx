@@ -17,6 +17,8 @@ const platformById = (id) => HANDLE_PLATFORMS.find(p => p.id === id) || HANDLE_P
 // -------------- PLACEMENT GENERATORS --------------
 // Each returns an array of elements to add to the current canvas.
 function placementElements(kind, canvas, brand) {
+  const compactKinds={'header-bar':'header','footer-bar':'footer','handle-strip':'strip'};
+  if(compactKinds[kind]) return brandBackgroundElements(compactKinds[kind],canvas,brand);
   const W = canvas.w, H = canvas.h;
   const primary = brand.colors?.[0] || '#F1CFEA';
   const accent  = brand.colors?.[2] || '#D98BC6';
