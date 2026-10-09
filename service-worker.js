@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wonder-pads-content-studio-v26-single-page';
+const CACHE_NAME = 'wonder-pads-content-studio-v27-inline-footer';
 
 const APP_FILES = [
   './final-carousel.jsx',

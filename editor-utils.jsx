@@ -61,13 +61,14 @@ function brandBackgroundElements(kind, canvas, brand = defaultBrand()) {
   const els=[];
   const add=(slot,type,patch)=>els.push(newElement(type,{...patch,fromBrand:true,role:slot,brandLayout:kind,brandSlot:slot}));
   const text=(slot,value,x,y,w,align='left',tone=color)=>add(slot,'text',{text:value,x,y,w,h:44*s,fontSize:32*s,fontFamily:brand.fontBody||'Montserrat',fontWeight:500,lineHeight:1.3,align,color:tone});
-  const image=(x,y)=>{if(brand.logo)add('logo','image',{src:brand.logo,x,y,w:logo,h:logo,radius:9999});};
+  const image=(x,y,size=logo)=>{if(brand.logo)add('logo','image',{src:brand.logo,x,y,w:size,h:size,radius:9999});};
   const rect=(slot,x,y,w,h,fill)=>add(slot,'rect',{x,y,w,h,fill,radius:0});
   const compact=(y,tone=color)=>{
-    image(m,y+30*s);
-    const x=m+logo+28*s,w=W-x-m;
-    text('instagram',social,x,y+26*s,w,'left',tone);
-    text('website',website,x,y+73*s,w,'left',tone);
+    const footerLogo=108*s;
+    image(m,y+16*s,footerLogo);
+    const x=m+footerLogo+28*s,w=W-x-m,gap=28*s,col=(w-gap)/2;
+    text('instagram',social,x,y+48*s,col,'left',tone);
+    text('website',website,x+col+gap,y+48*s,col,'left',tone);
   };
   if(kind==='hook'){image(m,m);return els;}
   if(kind==='header'){
