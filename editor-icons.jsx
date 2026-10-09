@@ -29,6 +29,9 @@ const ICONS = {
   fit: '<path d="M4 9V5a1 1 0 011-1h4M20 9V5a1 1 0 00-1-1h-4M4 15v4a1 1 0 001 1h4M20 15v4a1 1 0 01-1 1h-4"/>',
   play: '<polygon points="6 4 20 12 6 20 6 4"/>',
   share: '<path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/>',
+  bookmark: '<path d="M6 3h12v18l-6-4-6 4V3z"/>',
+  user_plus: '<circle cx="9" cy="7" r="4"/><path d="M2 21v-3a7 7 0 0114 0v3M20 8v8M16 12h8"/>',
+  shop: '<path d="M4 8h16l-1 13H5L4 8zM8 8V6a4 4 0 018 0v2"/>',
   more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
 
   // panel actions

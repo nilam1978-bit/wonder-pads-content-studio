@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wonder-pads-content-studio-v22-hook-cta';
+const CACHE_NAME = 'wonder-pads-content-studio-v23-style-pairs';
 
 const APP_FILES = [
   './final-carousel.jsx',
