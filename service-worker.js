@@ -1,7 +1,9 @@
-const CACHE_NAME = 'wonder-pads-content-studio-v23-style-pairs';
+const CACHE_NAME = 'wonder-pads-content-studio-v25-cta-icons';
 
 const APP_FILES = [
   './final-carousel.jsx',
+  './ready-content-data.js',
+  './ready-content.jsx',
   './final-workspace.jsx',
   './',
   './index.html',

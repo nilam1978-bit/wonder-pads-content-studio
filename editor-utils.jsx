@@ -96,6 +96,11 @@ function reflowBrandBackground(canvas, W, H, brand) {
   }]));
   const scale = Math.min(W,H)/Math.min(canvas.w,canvas.h);
   return canvas.elements.map(el => {
+    if(el.engagementAction){
+      const old=ctaEngagementElements(canvas).find(e=>e.type===el.type&&e.engagementAction===el.engagementAction);
+      const next=ctaEngagementElements({...canvas,w:W,h:H}).find(e=>e.type===el.type&&e.engagementAction===el.engagementAction);
+      if(old&&next){const patch={};for(const key of ['x','y','w','h'])patch[key]=next[key]+(el[key]-old[key])*scale;if(el.type==='text')patch.fontSize=el.fontSize*scale;return {...el,...patch};}
+    }
     const map = maps.get(el.brandLayout);
     if (!map) return el;
     const old = map.old.find(e => e.brandSlot === el.brandSlot);
@@ -115,6 +120,14 @@ const SLIDE_TEXT_STYLES = {
   body:{label:'Body',fontFamily:'Montserrat',fontSize:46,fontWeight:400,lineHeight:1.4},
   handle:{label:'Contact details',fontFamily:'Montserrat',fontSize:32,fontWeight:500,lineHeight:1.3},
 };
+function ctaEngagementElements(canvas,color='#2A1F2A') {
+  const scale=Math.min(canvas.w,canvas.h)/1080,y=canvas.h-310*scale;
+  return [['save','bookmark','Save'],['share','share','Share'],['follow','user_plus','Follow']].flatMap(([action,name,label],i)=>{
+    const x=canvas.w*(.22+i*.28);
+    return [newElement('icon',{name,x:x-27*scale,y,w:54*scale,h:54*scale,color,strokeWidth:1.8,__role:'engagementIcon',engagementAction:action}),
+      newElement('text',{...SLIDE_TEXT_STYLES.label,text:label,x:x-80*scale,y:y+68*scale,w:160*scale,h:42*scale,fontSize:30*scale,color,align:'center',textStyle:'label',__role:'engagementLabel',engagementAction:action})];
+  });
+}
 function starterBackgroundElements(template, canvas, brand = defaultBrand()) {
   const els=brandBackgroundElements(template.brandLayout,canvas,brand);
   if(template.slideKind){
@@ -125,6 +138,7 @@ function starterBackgroundElements(template, canvas, brand = defaultBrand()) {
       fontSize:96*scale,align:template.slideKind==='cta'?'center':'left'});
     delete title.label;title.h=textLayout(title).height;
     els.push(title);
+    if(template.slideKind==='cta')els.push(...ctaEngagementElements(canvas));
   }
   return els;
 }
@@ -202,6 +216,11 @@ function reducer(state, action) {
   });
 
   switch (action.type) {
+    case 'import-ready-posts': {
+      const existing=new Set((state.calendar||[]).map(p=>p.id));
+      const added=action.posts.filter(p=>!existing.has(p.id)).map(p=>({...p,packId:'wp-weeks-1-8',ts:new Date(p.date+'T12:00:00').getTime(),platform:p.format==='Carousel'?'instagram-carousel':'instagram-caption',text:p.caption+'\n\n'+p.hashtags,status:'queued',confirmed:false}));
+      return added.length?{...state,calendar:[...(state.calendar||[]),...added]}:state;
+    }
     // ---------- App-level navigation ----------
     case 'open-project':
       return { ...state, activeProjectId: action.id, tool: null, past: [], future: [], selection: [] };

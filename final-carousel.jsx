@@ -57,15 +57,7 @@ function endpointSlide(kind,heading,body,label,s,brand,W,H){
     if(s.swipe)els.push(newElement('text',{text:'Swipe →',x:W-280,y:H-100,w:194,h:40,...SLIDE_TEXT_STYLES.label,__role:'swipe',textStyle:'label',color:pair.split?'#2A1F2A':pair.ink}));
     c.elements=cleanSlideSwipe(els,c);
   }else{
-    const choice=CAROUSEL_CTA_CHOICES[s.cta]||CAROUSEL_CTA_CHOICES.save;
-    const rowY=Math.max((supporting?supporting.y+supporting.h:y)+45,H*.64);
-    const footerTop=H-150,hasRoom=rowY+104<footerTop-24;
-    if(hasRoom){
-      els.push(newElement('circle',{x:m,y:rowY,w:84,h:84,fill:pair.split?'#F1CFEA':pair.id==='colourful'?'#963d80':'#E8B8DC',endpointDecoration:true}));
-      els.push(newElement('icon',{name:choice.icon,x:m+20,y:rowY+20,w:44,h:44,color:pair.split?'#2A1F2A':pair.ink,strokeWidth:1.8,__role:'ctaIcon'}));
-      const action=addText('label',choice.label,rowY+20,32,W-m*2-110,'left',m+110);
-      if(pair.split)action.color='#2A1F2A';
-    }
+    els.push(...ctaEngagementElements(c,pair.split?'#2A1F2A':pair.ink));
     const branding=brandBackgroundElements('signature',c,{...brand,logo:s.logo?brand.logo:''});
     for(const el of branding)if(el.type==='text')el.color=pair.split?'#2A1F2A':pair.ink;
     els.push(...branding);

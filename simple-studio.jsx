@@ -55,6 +55,7 @@ function SimpleStudioHome() {
     <main className="simple-content"><div className="simple-inner">
       {section==='create'&&<><h1 className="simple-title">Create a carousel</h1><p className="simple-muted">Add your words, choose the size and slide count, then edit directly on the canvas.</p><div className="simple-grid">
         <button className="simple-card" onClick={()=>go('carousel')}><span>YOUR EVERYDAY WORKFLOW</span><h3>Start creating</h3><p>New text and AI repurposing now live together in one simple flow.</p><span>Add your words →</span></button>
+        <button className="simple-card" onClick={()=>go('ready-content')}><span>YOUR EIGHT-WEEK PLAN</span><h3>Content Plan</h3><p>32 written posts with captions, exact carousel slides and filming notes.</p><span>Choose a ready-written post →</span></button>
         {state.carousel.slides?.length>0&&<button className="simple-card" onClick={()=>go('carousel')}><span>UNFINISHED DRAFT</span><h3>Continue your carousel</h3><p>{state.carousel.slides.length} slides are waiting for you.</p><span>Continue editing →</span></button>}
       </div>{projects.length>0&&<><h2 className="simple-title" style={{marginTop:28}}>Recent work</h2><div className="simple-grid">{projects.slice(0,3).map(projectCard)}</div></>}</>}
       {section==='carousel'&&<><h1 className="simple-title">Your carousel</h1><div className="simple-grid">
