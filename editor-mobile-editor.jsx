@@ -626,6 +626,12 @@ function MobileCanvasArea({ onLongPress }) {
               <ElementView el={el} selected={state.selection.includes(el.id)}
                 dispatch={dispatch} scale={state.zoom}
                 editing={editingId === el.id} setEditing={setEditingId} />
+              {el.type==='image'&&(el.role==='logo'||el.brandSlot==='logo')&&!el.hidden&&<button
+                aria-label="Select brand logo" aria-pressed={state.selection.includes(el.id)}
+                title="Tap to edit logo" style={logoHitTarget(el,state.zoom)}
+                onTouchStart={e=>{e.stopPropagation();if(el.locked)dispatch({type:'set-selection',ids:[el.id]});else startElementDrag(e,el.id);}}
+                onPointerDown={e=>{e.stopPropagation();if(e.pointerType!=='touch'){if(el.locked)dispatch({type:'set-selection',ids:[el.id]});else startElementDrag(e,el.id);}}}
+                onClick={e=>{e.stopPropagation();dispatch({type:'set-selection',ids:[el.id]});}} />}
             </div>
           ))}
           {guides.map((g, i) => g.type === 'v' ? (
@@ -793,7 +799,7 @@ function MobileSelectionBar({ el, onOpenProperties, onDuplicate, onMore, onDesel
         <Action icon="text" label="Size" onClick={()=>onTool('size')}/>
         <Action icon="bg" label="Colour" onClick={()=>onTool('colour')}/>
         <Action icon="align_l" label="Align" onClick={()=>onTool('align')}/>
-      </>:<Action icon="templates" label="Edit" onClick={onOpenProperties} primary/>}
+      </>:<Action icon="templates" label={el.role==='logo'||el.brandSlot==='logo'?'Edit logo':'Edit'} onClick={onOpenProperties} primary/>}
       <Action icon="more" label="More ☰" onClick={onOpenProperties}/>
       <Action icon="duplicate" label="Duplicate" onClick={onDuplicate} />
       <Action icon="more" label="Actions" onClick={onMore} />

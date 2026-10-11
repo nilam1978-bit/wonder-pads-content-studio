@@ -67,10 +67,11 @@ function brandBackgroundElements(kind, canvas, brand = defaultBrand()) {
     const footerLogo=108*s;
     image(m,y+16*s,footerLogo);
     const x=m+footerLogo+28*s,w=W-x-m,gap=28*s,col=(w-gap)/2;
-    text('instagram',social,x,y+48*s,col,'left',tone);
-    text('website',website,x+col+gap,y+48*s,col,'left',tone);
+    text('instagram',social,x,y+45*s,col,'left',tone);
+    text('website',website,x+col+gap,y+45*s,col,'left',tone);
+    for(const el of els.filter(e=>e.type==='text'))el.h=50*s;
   };
-  if(kind==='hook'){image(m,m);return els;}
+  if(kind==='hook'){image(W-160*s,50*s,96*s);return els;}
   if(kind==='header'){
     rect('brandBar',0,0,W,band,'#F1CFEA');compact(0);
   }else if(kind==='footer'||kind==='frame'){
@@ -81,12 +82,29 @@ function brandBackgroundElements(kind, canvas, brand = defaultBrand()) {
     if(kind==='strip')rect('brandBar',0,H-band,W,band,cream);
     compact(H-band,ink);
   }else{
-    image(m,m);
-    rect('divider',m,H-112*s,W-2*m,2*s,'#C260A8');
-    text('website',website,m,H-80*s,(W-2*m)/2);
-    text('instagram',social,W/2,H-80*s,W/2-m,'right');
+    compact(H-band,ink);
   }
   return els;
+}
+
+// Tiny logos still get a finger-sized target. This never changes artwork/export.
+function logoHitTarget(el,zoom){
+  const padX=Math.max(0,(44/Math.max(.05,zoom)-el.w)/2);
+  const padY=Math.max(0,(44/Math.max(.05,zoom)-el.h)/2);
+  return {position:'absolute',left:el.x-padX,top:el.y-padY,width:el.w+2*padX,height:el.h+2*padY,
+    transform:`rotate(${el.rot||0}deg)`,background:'transparent',border:0,padding:0,touchAction:'none',cursor:el.locked?'not-allowed':'move'};
+}
+function refreshStockHookLogos(saved){
+  for(const project of saved.projects||[])for(const canvas of project.canvases||[]){
+    const s=Math.min(canvas.w,canvas.h)/1080;
+    for(const el of canvas.elements||[]){
+      if(el.type!=='image'||el.brandLayout!=='hook'||el.brandSlot!=='logo'||el.locked)continue;
+      // Upgrade only untouched old placement; preserve uploaded source and edits.
+      if(Math.abs(el.w-64*s)<.01&&Math.abs(el.h-64*s)<.01&&Math.abs(el.x-(canvas.w-150*s))<.01&&Math.abs(el.y-50*s)<.01){
+        el.x=canvas.w-160*s;el.w=el.h=96*s;
+      }
+    }
+  }
 }
 
 function reflowBrandBackground(canvas, W, H, brand) {
@@ -219,8 +237,25 @@ function reducer(state, action) {
   switch (action.type) {
     case 'import-ready-posts': {
       const existing=new Set((state.calendar||[]).map(p=>p.id));
-      const added=action.posts.filter(p=>!existing.has(p.id)).map(p=>({...p,packId:'wp-weeks-1-8',ts:new Date(p.date+'T12:00:00').getTime(),platform:p.format==='Carousel'?'instagram-carousel':'instagram-caption',text:p.caption+'\n\n'+p.hashtags,status:'queued',confirmed:false}));
-      return added.length?{...state,calendar:[...(state.calendar||[]),...added]}:state;
+      const added=action.posts.filter(p=>!existing.has(p.id)).map(p=>({...p,packId:'wp-weeks-1-8',ts:p.date?new Date(p.date+'T12:00:00').getTime():Date.now(),platform:p.format==='Carousel'?'instagram-carousel':'instagram-caption',text:p.caption+'\n\n'+p.hashtags,status:'queued',confirmed:false}));
+      // Correct only unchanged stock copy. Never overwrite the user's words,
+      // posted entries, or existing canvas designs.
+      let updated=false;
+      const calendar=(state.calendar||[]).map(entry=>{
+        if(entry.packId!=='wp-weeks-1-8')return entry;
+        const source=action.posts.find(p=>p.id===entry.id),patch={};
+        if(!source)return entry;
+        for(const key of ['librarySection','priority','stylePair','middleStyle','defaultSize','archived'])
+          if(entry[key]===undefined&&source[key]!==undefined)patch[key]=source[key];
+        for(const [key,old] of Object.entries(entry.status==='posted'?{}:source.previousCopy||{}))
+          if(JSON.stringify(entry[key])===JSON.stringify(old))patch[key]=source[key];
+        if(!Object.keys(patch).length)return entry;
+        updated=true;
+        const next={...entry,...patch};
+        if(patch.caption!==undefined)next.text=next.caption+'\n\n'+next.hashtags;
+        return next;
+      });
+      return added.length||updated?{...state,calendar:[...calendar,...added]}:state;
     }
     // ---------- App-level navigation ----------
     case 'open-project':
@@ -670,7 +705,7 @@ function migrateLegacy() {
 const defaultBrand = () => ({
   shopName: 'Wonder Pads Reusables',
   tagline: 'Your one stop shop for healthy menstruation',
-  aboutLine: 'handmade reusable cloth pads, made with love — cotton woven tops, bamboo hemp cores, soft fleece backing.',
+  aboutLine: 'Handmade reusable cloth pads with printed cotton toppers, with organic solid cotton toppers available as options.',
   logo: 'assets/wpr-logo.png',
   fontHeading: 'Cormorant Garamond',
   fontBody: 'Montserrat',
@@ -790,6 +825,8 @@ function StoreProvider({ children }) {
         if (!saved.savedLaunches) saved.savedLaunches = [];
         if (!saved.calendar) saved.calendar = [];
         if (!saved.savedBackgrounds) saved.savedBackgrounds = [];
+        if(typeof refreshWonderBrandCopy==='function')refreshWonderBrandCopy(saved);
+        refreshStockHookLogos(saved);
         // Always land on home when reloading
         saved.view = 'home';
         dispatch({ type: 'load-state', state: { ...saved, past: [], future: [], selection: [], saveStatus: 'idle' } });

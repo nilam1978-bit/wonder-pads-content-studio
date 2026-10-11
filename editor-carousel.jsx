@@ -383,7 +383,26 @@ function renderSlideToCanvas(slide, opts) {
     ? brand
     : { ...brand, logo: '', shopName: '', tagline: '', handles: [] };
 
-  const { elements: baseEls, bg } = styleDef.render(slide, W, H, brandForRender, isCover, isOutro, slideIdx, totalContent, carousel);
+  const rendered = styleDef.render(slide, W, H, brandForRender, isCover, isOutro, slideIdx, totalContent, carousel);
+  const bg=rendered.bg,scale=Math.min(W,H)/1080;
+  // Older saved carousel builders use the same branding geometry as the
+  // current creator. Content and explicit per-element edits stay editable.
+  const baseEls=rendered.elements.filter(el=>!['logo','shopName','handles'].includes(el.__role)&&!/^handle(?:Icon|Text)\d+$/.test(el.__role||''));
+  const brandCanvas={w:W,h:H};
+  if(carousel.applyBrand){
+    baseEls.push(...brandBackgroundElements(isCover?'hook':'signature',brandCanvas,brand).map(el=>({...el,__role:el.brandSlot})));
+  }
+  if(isOutro){
+    const cta=baseEls.find(el=>el.__role==='outroCta');
+    if(cta){
+      Object.assign(cta,SLIDE_TEXT_STYLES.h1,{textStyle:'h1',x:86*scale,y:H*.28,w:W-172*scale,fontSize:84*scale,letterSpacing:0,color:'#2A1F2A',align:'left'});
+      delete cta.label;cta.h=textLayout(cta).height;
+    }
+    baseEls.push(...ctaEngagementElements(brandCanvas));
+  }
+  if(carousel.applyBrand&&!isCover){
+    for(const el of baseEls.filter(el=>['counter','swipe'].includes(el.__role)))el.y=Math.min(el.y,H-220*scale);
+  }
 
   // Apply per-element overrides
   const overrides = slide.elementOverrides || {};
@@ -427,7 +446,7 @@ function buildCarouselCanvases(carousel, brand) {
   if (scale !== 1) {
     for (const cv of canvases) {
       cv.elements = cv.elements.map(el => {
-        if (el.type !== 'text' || !el.fontSize) return el;
+        if (el.type !== 'text' || !el.fontSize || el.fromBrand || el.engagementAction) return el;
         const nextFs = Math.max(6, Math.round(el.fontSize * scale));
         // Grow the box vertically a touch when scaling up so wrapped text still fits.
         const nextH = scale > 1 ? Math.round(el.h * scale) : el.h;

@@ -21,49 +21,49 @@ const CONTENT_SEED = {
     "no jargon without explaining it",
     "avoid pink-tax pastels-only aesthetic clichés",
   ],
-  aboutLine: 'handmade reusable cloth pads, made with love — cotton woven tops, bamboo hemp cores, soft fleece backing.',
+  aboutLine: 'Handmade reusable cloth pads with printed cotton toppers, with organic solid cotton toppers available as options.',
 
   vocab: [
     { id: 'v1', term: 'cloth pad', def: 'reusable cotton menstrual pad' },
     { id: 'v2', term: 'reusable pad', def: "same thing, different name — often used by folks new to cloth" },
-    { id: 'v3', term: 'topper', def: 'the top layer that touches your skin — ours is cotton woven' },
-    { id: 'v4', term: 'core', def: 'the absorbent layers in the middle — ours is bamboo hemp fleece' },
-    { id: 'v5', term: 'backing', def: 'the outside/back layer — ours is soft shell fleece with hidden PUL' },
-    { id: 'v6', term: 'PUL', def: 'polyurethane laminate — thin waterproof layer inside the backing' },
+    { id: 'v3', term: 'topper', def: 'the layer that touches your skin: printed cotton, with organic solid cotton options' },
+    { id: 'v4', term: 'core', def: 'the absorbent layers in the middle; use the selected product specifications, not an assumed material' },
+    { id: 'v5', term: 'backing', def: 'the layer facing your underwear; confirm the selected product construction before naming its materials' },
+    { id: 'v6', term: 'PUL', def: 'polyurethane laminate; only mention it when confirmed for the selected product' },
     { id: 'v7', term: 'wing', def: 'the flaps that wrap under your undies with a snap' },
     { id: 'v8', term: 'snap width', def: 'distance from snap to snap when the wings are open' },
     { id: 'v9', term: 'length', def: 'from tip to tip along the pad' },
     { id: 'v10', term: 'absorbency', def: 'how much liquid the pad holds — liner / light / reg / heavy / overnight' },
-    { id: 'v11', term: 'postpartum', def: 'the weeks after giving birth — needs heaviest absorbency' },
+    { id: 'v11', term: 'postpartum', def: 'the weeks after giving birth; do not give blanket product or medical guidance' },
     { id: 'v12', term: 'made-to-order', def: 'each pad sewn after you buy it, not from a warehouse' },
   ],
 
   copyBlocks: [
     { id: 'wash-basic', title: 'how to wash your pads', category: 'care',
-      content: "hi! so — rinse in cold water right after use (this is the trick that keeps stains away). then toss in with your regular wash on cold or warm, mild detergent, no fabric softener. line dry if you can, tumble low if you can't. that's it. no soaking, no stress. your pads will last for years." },
+      content: "Follow the care instructions supplied with your Wonder Pads for rinsing, washing and complete drying. Avoid promising that a routine removes every stain, and do not recommend a washing temperature or tumble dryer unless the care card allows it." },
     { id: 'absorbency', title: 'which absorbency do i need?', category: 'education',
-      content: "quick guide:\n• liner — spotting, discharge, backup\n• light — light days, teens, tweens\n• regular — most days for most bodies\n• heavy — heavy days, postpartum start of period\n• overnight — sleep, super heavy days, postpartum\n\nnot sure? most people love a set with 2 regulars + 1 heavy + 1 overnight to cover a whole cycle." },
+      content: "Choose absorbency for your flow, coverage for where you need it, and a changing routine that suits you. A liner is not a substitute for a pad on heavy days. Ask @ecoclothpad about the current options rather than assuming a fixed number of pads covers a cycle." },
     { id: 'day-vs-night', title: 'day pad vs night pad', category: 'education',
-      content: "day pads are shorter (usually 8–10\") so they sit comfy while you're moving around. night pads are longer (12–14\") with extra core in the back — because gravity is real when you sleep! both have the same soft cotton top and leakproof backing. it's really just about length + how much you bleed." },
+      content: "Length, coverage, fit and absorbency all matter. Choose for your own daytime or overnight flow. Check the current Wonder Pads options rather than assuming every night pad has a particular length or construction." },
     { id: 'first-time', title: 'new to cloth pads?', category: 'education',
-      content: "welcome!! okay so here's the honest truth: it's easier than you think. you snap it around your undies just like a disposable, wear it, rinse it after, wash it with your regular laundry. no special products. no soaking bin (unless you want one). the switch takes about one cycle to feel totally normal. and your body will thank you — no more that plastic-y feeling." },
+      content: "Start with one pad on a day that feels manageable. The topper faces your body, and the wings snap underneath your underwear. Follow your supplied care instructions when washing. You can use cloth and disposable pads together while you find your routine." },
     { id: 'shipping', title: 'shipping & turnaround', category: 'logistics',
-      content: "each pad is made by me, one at a time, so orders ship in 2–3 weeks. i'll email you when yours ships. custom orders take a little longer (3–4 weeks) — worth the wait, promise." },
+      content: "Each pad is made by hand. Check wonder-pads.com or message @ecoclothpad for current availability and turnaround; do not quote an unconfirmed shipping time." },
     { id: 'materials', title: 'what are these made of?', category: 'education',
-      content: "top layer → 100% cotton woven (soft, breathable, gentle on skin)\ncore → bamboo hemp fleece (bamboo wicks moisture, hemp is antimicrobial, together they hold a LOT)\nbacking → soft shell fleece with a hidden PUL layer (waterproof but breathable)\n\nno plastic against your skin. ever." },
+      content: "The topper is the layer that touches your skin. Wonder Pads offers printed cotton toppers, with organic solid cotton options. The topper, absorbent core and backing do different jobs. Confirm core and backing specifications for the particular pad before describing them." },
     { id: 'stains', title: 'what about stains?', category: 'care',
-      content: "real talk — some staining is normal and totally fine. it doesn't affect how the pad works. but if you want them looking fresh: rinse in cold water immediately (never hot — hot sets blood stains), and lay them in the sun for a few hours after washing. sunshine bleaches stains like magic. no lie." },
+      content: "Printed cotton is not a promise of stain-free fabric or a print that never fades. Follow the supplied care instructions. Do not promise perfect stain removal, or treat appearance alone as proof of cleanliness. Choose a print you enjoy, or ask about organic solid cotton options." },
   ],
 
   products: [
     { id: 'p1', name: 'everyday regular', absorbency: 'regular', length: "10\"", snapWidth: "2.75\"",
-      fabric: 'cotton woven top, bamboo hemp core, soft shell fleece back', price: 18,
+      fabric: 'Printed cotton topper, with organic solid cotton options; confirm core and backing for this product', price: 18,
       notes: 'our bestseller — most people order 3–5 of these' },
     { id: 'p2', name: 'overnight long', absorbency: 'overnight', length: "14\"", snapWidth: "2.75\"",
-      fabric: 'cotton woven top, double bamboo hemp core, soft shell fleece back', price: 26,
+      fabric: 'Printed cotton topper, with organic solid cotton options; confirm core and backing for this product', price: 26,
       notes: 'extra core in the back third for sleeping' },
     { id: 'p3', name: 'petite liner', absorbency: 'liner', length: "7\"", snapWidth: "2.25\"",
-      fabric: 'cotton woven top, single bamboo layer, soft shell fleece back', price: 12,
+      fabric: 'Printed cotton topper, with organic solid cotton options; confirm core and backing for this product', price: 12,
       notes: 'for spotting, discharge, or backup with a cup' },
   ],
 
@@ -109,6 +109,24 @@ async function aiComplete({ messages, provider = 'built-in' }) {
   return window.genspark.complete({ messages });
 }
 
+// Refresh only exact shipped defaults; leave personalised copy and designs alone.
+const WONDER_PREVIOUS_COPY = {"aboutLine":"handmade reusable cloth pads, made with love — cotton woven tops, bamboo hemp cores, soft fleece backing.","vocab":[{"term":"cloth pad","def":"reusable cotton menstrual pad"},{"term":"reusable pad","def":"same thing, different name — often used by folks new to cloth"},{"term":"topper","def":"the top layer that touches your skin — ours is cotton woven"},{"term":"core","def":"the absorbent layers in the middle — ours is bamboo hemp fleece"},{"term":"backing","def":"the outside/back layer — ours is soft shell fleece with hidden PUL"},{"term":"PUL","def":"polyurethane laminate — thin waterproof layer inside the backing"},{"term":"wing","def":"the flaps that wrap under your undies with a snap"},{"term":"snap width","def":"distance from snap to snap when the wings are open"},{"term":"length","def":"from tip to tip along the pad"},{"term":"absorbency","def":"how much liquid the pad holds — liner / light / reg / heavy / overnight"},{"term":"postpartum","def":"the weeks after giving birth — needs heaviest absorbency"},{"term":"made-to-order","def":"each pad sewn after you buy it, not from a warehouse"}],"copyBlocks":[{"id":"wash-basic","content":"hi! so — rinse in cold water right after use (this is the trick that keeps stains away). then toss in with your regular wash on cold or warm, mild detergent, no fabric softener. line dry if you can, tumble low if you can't. that's it. no soaking, no stress. your pads will last for years."},{"id":"absorbency","content":"quick guide:\n• liner — spotting, discharge, backup\n• light — light days, teens, tweens\n• regular — most days for most bodies\n• heavy — heavy days, postpartum start of period\n• overnight — sleep, super heavy days, postpartum\n\nnot sure? most people love a set with 2 regulars + 1 heavy + 1 overnight to cover a whole cycle."},{"id":"day-vs-night","content":"day pads are shorter (usually 8–10\") so they sit comfy while you're moving around. night pads are longer (12–14\") with extra core in the back — because gravity is real when you sleep! both have the same soft cotton top and leakproof backing. it's really just about length + how much you bleed."},{"id":"first-time","content":"welcome!! okay so here's the honest truth: it's easier than you think. you snap it around your undies just like a disposable, wear it, rinse it after, wash it with your regular laundry. no special products. no soaking bin (unless you want one). the switch takes about one cycle to feel totally normal. and your body will thank you — no more that plastic-y feeling."},{"id":"shipping","content":"each pad is made by me, one at a time, so orders ship in 2–3 weeks. i'll email you when yours ships. custom orders take a little longer (3–4 weeks) — worth the wait, promise."},{"id":"materials","content":"top layer → 100% cotton woven (soft, breathable, gentle on skin)\ncore → bamboo hemp fleece (bamboo wicks moisture, hemp is antimicrobial, together they hold a LOT)\nbacking → soft shell fleece with a hidden PUL layer (waterproof but breathable)\n\nno plastic against your skin. ever."},{"id":"stains","content":"real talk — some staining is normal and totally fine. it doesn't affect how the pad works. but if you want them looking fresh: rinse in cold water immediately (never hot — hot sets blood stains), and lay them in the sun for a few hours after washing. sunshine bleaches stains like magic. no lie."}],"productFabrics":["cotton woven top, bamboo hemp core, soft shell fleece back","cotton woven top, double bamboo hemp core, soft shell fleece back","cotton woven top, single bamboo layer, soft shell fleece back"]};
+function refreshWonderBrandCopy(saved){
+  if(saved.brand?.aboutLine===WONDER_PREVIOUS_COPY.aboutLine)saved.brand.aboutLine=CONTENT_SEED.aboutLine;
+  saved.vocab=(saved.vocab||[]).map(v=>{
+    const old=WONDER_PREVIOUS_COPY.vocab.find(x=>x.term===v.term&&x.def===v.def);
+    const replacement=old&&CONTENT_SEED.vocab.find(x=>x.term===v.term);
+    return replacement?{...v,def:replacement.def}:v;
+  });
+  saved.copyBlocks=(saved.copyBlocks||[]).map(b=>{
+    const old=WONDER_PREVIOUS_COPY.copyBlocks.find(x=>x.id===b.id&&x.content===b.content);
+    const replacement=old&&CONTENT_SEED.copyBlocks.find(x=>x.id===b.id);
+    return replacement?{...b,content:replacement.content}:b;
+  });
+  saved.products=(saved.products||[]).map(p=>WONDER_PREVIOUS_COPY.productFabrics.includes(p.fabric)?
+    {...p,fabric:CONTENT_SEED.products[0].fabric}:p);
+  return saved;
+}
 function buildBrandContext(brand, vocab) {
   const voiceDo = (brand.voiceDo || []).map(x => `- ${x}`).join('\n');
   const voiceDont = (brand.voiceDont || []).map(x => `- ${x}`).join('\n');
@@ -140,6 +158,17 @@ function buildBrandContext(brand, vocab) {
 
 TAGLINE: ${tagline}
 ABOUT: ${aboutLine}
+
+CONFIRMED WONDER PADS FACTS (take precedence over older saved examples and vocabulary):
+- Website: wonder-pads.com. Instagram: @ecoclothpad.
+- The topper is the skin-facing layer. Topper choices are printed cotton, with organic solid cotton options. Do not imply every cotton print is organic, or confuse the topper with the absorbent core or backing.
+- Many fabrics are sourced from brands such as Moda and Riley Blake. Do not turn US sourcing into a US-manufacturing claim or imply all prints come from these brands.
+- Nilam washes every topper fabric at least once before sewing, with water only and no detergent. This includes printed cotton and organic solid cotton options. Do not claim colour-run checks, sanitising, dye testing or complete residue removal.
+- Do not infer dye chemistry, bleaching, colourfastness, OEKO-TEX/GOTS certification, hypoallergenic or antimicrobial properties. Organic cotton does not by itself prove a dye-free or irritation-free finished fabric.
+- Do not describe all printed cotton as safe or unsafe. Safety and suitability claims require evidence for the specific fabric. Never invent certificates or testing.
+- Avoid stain-free, leakproof or guaranteed comfort claims. Follow the supplied care card rather than inventing washing, drying or storage instructions.
+- Old built-in product examples are not verified stock, prices, dimensions, materials or shipping times. Only use these details when explicitly confirmed in the current request; otherwise omit them or ask.
+- Do not invent the maker's personal story or claim to speak for most cloth-pad makers.
 
 VOICE (${tags}):
 DO:

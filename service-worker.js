@@ -1,8 +1,9 @@
-const CACHE_NAME = 'wonder-pads-content-studio-v27-inline-footer';
+const CACHE_NAME = 'wonder-pads-content-studio-v32-logo-export-and-tap';
 
 const APP_FILES = [
   './final-carousel.jsx',
   './ready-content-data.js',
+  './library-content-data.js',
   './ready-content.jsx',
   './final-workspace.jsx',
   './',

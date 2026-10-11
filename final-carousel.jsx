@@ -35,7 +35,7 @@ function endpointSlide(kind,heading,body,label,s,brand,W,H){
   const addText=(role,text,y,size,w=W-2*m,align='left',x=m,extra={})=>{
     if(!text)return null;
     const style=role==='heading'?'h1':role==='label'?'label':'body';
-    const el=newElement('text',{...SLIDE_TEXT_STYLES[style],textStyle:style,__role:role,text,x,y,w,fontSize:size,align,color:pair.ink,...extra});
+    const el=newElement('text',{...SLIDE_TEXT_STYLES[style],textStyle:style,__role:role,text,x,y,w,fontSize:Math.round(size*(s.textScale||1)),align,color:pair.ink,...extra});
     delete el.label;el.h=textLayout(el).height;els.push(el);return el;
   };
   const top=pair.split?112:Math.round(H*.18);
@@ -53,7 +53,7 @@ function endpointSlide(kind,heading,body,label,s,brand,W,H){
   const supporting=addText('body',body,y,42);
   if(pair.split&&supporting)supporting.color='#2A1F2A';
   if(kind==='hook'){
-    if(s.logo&&brand.logo)els.push(newElement('image',{src:brand.logo,x:W-150,y:50,w:64,h:64,radius:9999,fromBrand:true,role:'logo',brandLayout:'hook',brandSlot:'logo'}));
+    if(s.logo)els.push(...brandBackgroundElements('hook',c,brand));
     if(s.swipe)els.push(newElement('text',{text:'Swipe →',x:W-280,y:H-100,w:194,h:40,...SLIDE_TEXT_STYLES.label,__role:'swipe',textStyle:'label',color:pair.split?'#2A1F2A':pair.ink}));
     c.elements=cleanSlideSwipe(els,c);
   }else{

@@ -305,6 +305,19 @@ async function rasterizeDesign(canvas,mime='image/png'){
   await paintSVG(canvasToSVG({...canvas,bg:background,elements:[]}));
   for(const el of canvas.elements){
     if(el.hidden)continue;
+    if(el.type==='image'&&el.src){
+      // Draw the original upload directly at final pixel size, not a preview
+      // thumbnail or a second, intermediate full-slide raster.
+      const img=new Image();img.src=await embed(el.src);await img.decode();
+      ctx.save();ctx.translate(el.x+el.w/2,el.y+el.h/2);ctx.rotate((el.rot||0)*Math.PI/180);ctx.translate(-el.w/2,-el.h/2);
+      ctx.globalAlpha=el.opacity??1;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+      const f=el.filter||{};
+      ctx.filter=`brightness(${f.brightness??100}%) contrast(${f.contrast??100}%) saturate(${f.saturate??100}%) blur(${f.blur||0}px)`;
+      if(el.radius){ctx.beginPath();ctx.roundRect(0,0,el.w,el.h,Math.min(el.radius,el.w/2,el.h/2));ctx.clip();}
+      const fit=Math.max(el.w/img.naturalWidth,el.h/img.naturalHeight),sw=el.w/fit,sh=el.h/fit;
+      ctx.drawImage(img,(img.naturalWidth-sw)/2,(img.naturalHeight-sh)/2,sw,sh,0,0,el.w,el.h);
+      ctx.restore();continue;
+    }
     if(el.type!=='text'){const embedded=el.src?{...el,src:await embed(el.src)}:el;await paintSVG(`<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.w}" height="${canvas.h}">${elementToSVG(embedded,true)}</svg>`);continue;}
     ctx.save();ctx.translate(el.x+el.w/2,el.y+el.h/2);ctx.rotate((el.rot||0)*Math.PI/180);ctx.translate(-el.w/2,-el.h/2);
     ctx.globalAlpha=el.opacity??1;ctx.fillStyle=el.color;ctx.font=`${el.italic?'italic':'normal'} ${el.fontWeight||400} ${el.fontSize}px "${el.fontFamily}"`;

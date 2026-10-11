@@ -564,6 +564,11 @@ function CanvasArea() {
             >
               <ElementView el={el} selected={state.selection.includes(el.id)}
                 dispatch={dispatch} scale={state.zoom} editing={editing === el.id} setEditing={setEditing} />
+              {el.type==='image'&&(el.role==='logo'||el.brandSlot==='logo')&& !el.hidden&&<button
+                aria-label="Select brand logo" aria-pressed={state.selection.includes(el.id)}
+                title="Select logo to resize, move or replace it" style={logoHitTarget(el,state.zoom)}
+                onPointerDown={e=>{if(space)return;if(el.locked){e.stopPropagation();dispatch({type:'set-selection',ids:[el.id]});}else startInteract(e,'drag',el.id);}}
+                onClick={e=>{e.stopPropagation();dispatch({type:'set-selection',ids:[el.id]});}} />}
             </div>
           ))}
 
