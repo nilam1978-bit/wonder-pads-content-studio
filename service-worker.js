@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wonder-pads-content-studio-v32-logo-export-and-tap';
+const CACHE_NAME = 'wonder-pads-content-studio-v33-posting-tools';
 
 const APP_FILES = [
   './final-carousel.jsx',
