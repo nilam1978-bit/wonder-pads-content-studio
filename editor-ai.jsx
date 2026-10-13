@@ -91,15 +91,17 @@ const CONTENT_SEED = {
 // ==================== AI WRAPPERS ====================
 async function aiComplete({ messages, provider = 'built-in' }) {
   if (provider === 'gemini') {
-    const response = await fetch('/api/gemini', {
+    let response;
+    try { response = await fetch('/api/gemini', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages }),
-    });
+      signal: AbortSignal.timeout(100000),
+    }); } catch { throw new Error('Gemini could not be reached or timed out. Your words are safe; try again shortly.'); }
     let payload = {};
     try { payload = await response.json(); } catch {}
     if (!response.ok) {
-      throw new Error(payload.error || 'Gemini is not connected yet.');
+      throw new Error(payload.error || (response.status===404?'This preview has no Gemini API server. Open the deployed app or connect the local AI server.':'Gemini is not connected yet.'));
     }
     return payload.text || '';
   }

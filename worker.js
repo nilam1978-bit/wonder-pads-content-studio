@@ -8,7 +8,7 @@ export default {
       if (request.method === 'POST') {
         return handleGeminiPost({ request, env });
       }
-      return handleGeminiOther();
+      return handleGeminiOther({ request, env });
     }
 
     return env.ASSETS.fetch(request);

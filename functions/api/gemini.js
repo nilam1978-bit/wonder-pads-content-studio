@@ -40,6 +40,7 @@ export async function onRequestPost({ request, env }) {
         'Content-Type': 'application/json',
         'x-goog-api-key': env.GEMINI_API_KEY,
       },
+      signal: AbortSignal.timeout(30000),
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: { temperature: 0.72, maxOutputTokens: 8192 },
@@ -59,6 +60,7 @@ export async function onRequestPost({ request, env }) {
         lastStatus = upstream.status;
         const retryable = [429, 500, 502, 503, 504].includes(upstream.status)
           || /high demand|overload|unavailable|try again/i.test(lastDetail);
+        if (upstream.status === 404 && model !== fallbackModel) continue;
         if (!retryable) return json({ error: lastDetail }, upstream.status);
       }
     } catch {
@@ -72,6 +74,7 @@ export async function onRequestPost({ request, env }) {
   return json({ error: `${lastDetail} Both Gemini models are temporarily unavailable.` }, lastStatus);
 }
 
-export function onRequest() {
+export function onRequest({ request, env } = {}) {
+  if (request?.method === 'GET') return json({ configured: !!env?.GEMINI_API_KEY, ...(!env?.GEMINI_API_KEY ? { error: 'Gemini is not connected. Add the GEMINI_API_KEY secret to the app server.' } : {}) });
   return json({ error: 'Method not allowed.' }, 405);
 }

@@ -4,8 +4,8 @@ function FinalProjectWorkspace({isMobile}){
   const [copyFallback,setCopyFallback]=React.useState(null),[copyNotice,setCopyNotice]=React.useState('');
   const fallbackRef=React.useRef(null);
   const copyForPosting=async(kind)=>{
-    const words=kind==='caption'?postCaption:canvasSlideText(project.canvases);
-    const label=kind==='caption'?'Caption & hashtags':'All slide text';
+    const words=kind==='caption'?postCaption:kind==='slides'?canvasSlideText(project.canvases):project.socialCopies?.[kind];
+    const label=kind==='caption'?'Caption & hashtags':kind==='slides'?'All slide text':kind==='facebook-post'?'Facebook post':'TikTok hook & script';
     setCopyNotice('');setCopyFallback(null);
     if(!words?.trim()){setCopyNotice(kind==='caption'?'This design has no saved caption.':'There is no slide text to copy.');return;}
     let timer;
@@ -29,6 +29,7 @@ function FinalProjectWorkspace({isMobile}){
   return <div className="simple-workspace"><SimpleStudioStyles/><style>{`.final-progress{justify-content:flex-start!important;padding:6px!important;gap:2px!important}.final-progress button{padding:10px 8px!important;font-size:13px!important}.final-review{display:flex;flex-direction:column;align-items:center;gap:16px}.final-review button{min-height:44px}.final-review .preview-buttons{display:flex;align-items:center;gap:20px}.final-review .preview-image{max-width:100%;overflow:hidden}`}</style>
     <style>{`.posting-tools{width:100%;max-width:680px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px}.posting-copy-buttons{display:flex;gap:10px;flex-wrap:wrap}.posting-copy-buttons button{flex:1 1 220px}.posting-tools textarea{display:block;width:100%;box-sizing:border-box;min-height:180px;font:16px/1.6 Montserrat,sans-serif}`}</style>
     {crowded.length>0&&<div role="status" style={{padding:'6px 12px',background:'#fff3d6',fontSize:12}}>Check slides {crowded.join(', ')}: some text is very small or extends outside the page. Resize it or use Fit text.</div>}
+    {project.aiError&&<p role="alert" style={{margin:0,padding:'8px 12px',background:'#fff3d6',fontSize:13}}>{project.aiError}</p>}
     {step==='design'?<div className="simple-design">{isMobile?<MobileEditor progressNav={nav}/>:<EditorScreen progressNav={nav}/>}</div>:<>{nav}<main className="simple-content"><div className="final-review">
       <h2 style={{margin:0}}>Preview your carousel</h2><p className="simple-muted" style={{margin:0}}>{canvas.w} × {canvas.h} · saved automatically in this browser</p>
       <div className="preview-image" onTouchStart={e=>{touch.current=e.touches[0].clientX;}} onTouchEnd={e=>{if(touch.current==null)return;const dx=e.changedTouches[0].clientX-touch.current;if(Math.abs(dx)>40)go(index+(dx<0?1:-1));touch.current=null;}}><MiniPreview canvas={canvas} maxW={Math.min(440,window.innerWidth-48)} maxH={Math.min(540,window.innerHeight*.56)}/></div>
@@ -40,7 +41,8 @@ function FinalProjectWorkspace({isMobile}){
         {!postCaption?.trim()&&<p className="simple-muted">This design has no saved caption. You can copy its slide text instead.</p>}
         {copyNotice&&<p role="status" aria-live="polite" style={{margin:0}}>{copyNotice}</p>}
         {copyFallback&&<div><label>{copyFallback.label}<textarea ref={fallbackRef} aria-label={`${copyFallback.label} to copy`} readOnly value={copyFallback.words} onFocus={e=>e.target.select()} /></label><button onClick={()=>{fallbackRef.current?.focus();fallbackRef.current?.select();}}>Select all</button><button onClick={()=>{setCopyFallback(null);setCopyNotice('');}}>Close copy text</button></div>}
-        <button className="sc-link" onClick={()=>exportProjectFile(project)}>Save editable backup</button><p className="simple-muted">Download the images, then select them in order when making your Instagram post.</p>{error&&<p role="alert">{error}</p>}
+        {Object.entries(project.socialCopies||{}).map(([key,words])=><div key={key}><h3>{key==='facebook-post'?'Facebook post':'TikTok hook & script'}</h3><textarea aria-label={key==='facebook-post'?'Facebook post text':'TikTok script text'} value={words} onChange={e=>dispatch({type:'update-project',id:project.id,patch:{socialCopies:{...project.socialCopies,[key]:e.target.value}}})}/><button className="simple-action simple-secondary" onClick={()=>copyForPosting(key)}>Copy {key==='facebook-post'?'Facebook post':'TikTok script'}</button></div>)}
+        <button className="sc-link" onClick={()=>exportProjectFile(project)}>Save editable backup</button><p className="simple-muted">Download the images, then select them in order when making your Instagram post. Other social versions are copyable text—not automatically published posts or videos.</p>{error&&<p role="alert">{error}</p>}
       </section>
     </div></main></>}
   </div>;
