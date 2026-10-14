@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wonder-pads-content-studio-v34-social-create';
+const CACHE_NAME = 'wonder-pads-content-studio-v36-clear-actions';
 
 const APP_FILES = [
   './final-carousel.jsx',

@@ -1151,24 +1151,6 @@ function ElementProperties({ el }) {
     <>
       <PanelHeader title={typeLabel(el.type)} subtitle={`${Math.round(el.w)} × ${Math.round(el.h)}`} />
 
-      {/* Position & size */}
-      <details><summary style={{padding:'10px 0',cursor:'pointer'}}>More ☰ · Position & size</summary>
-      <SectionLabel>Position</SectionLabel>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        <LabeledInput label="X" value={Math.round(el.x)} onChange={v => update({ x: +v })} />
-        <LabeledInput label="Y" value={Math.round(el.y)} onChange={v => update({ y: +v })} />
-        <LabeledInput label="W" value={Math.round(el.w)} onChange={v => update({ w: Math.max(10, +v) })} />
-        <LabeledInput label="H" value={Math.round(el.h)} onChange={v => update({ h: Math.max(10, +v) })} />
-      </div>
-      <div style={{ marginTop: 10 }}>
-        <LabeledInput label="Rotation" value={Math.round(el.rot)} suffix="°" onChange={v => update({ rot: +v })} />
-      </div>
-
-      {/* Position on page — 6 quick-align buttons. Distinct from text alignment. */}
-      <SectionLabel>Position on page</SectionLabel>
-      <PagePositionControls />
-      </details>
-
       {/* Text-specific */}
       {el.type === 'text' && <TextProps el={el} update={update} />}
 
@@ -1184,7 +1166,26 @@ function ElementProperties({ el }) {
       {el.type === 'frame' && <FrameProps el={el} update={update} />}
 
       {/* Opacity */}
-      <details><summary style={{padding:'10px 0',cursor:'pointer'}}>More ☰ · Arrange & actions</summary>
+      <details><summary style={{padding:'14px 0',cursor:'pointer'}}>Advanced</summary>
+      {/* Position & size */}
+      <SectionLabel>Position</SectionLabel>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <LabeledInput label="X" value={Math.round(el.x)} onChange={v => update({ x: +v })} />
+        <LabeledInput label="Y" value={Math.round(el.y)} onChange={v => update({ y: +v })} />
+        <LabeledInput label="W" value={Math.round(el.w)} onChange={v => update({ w: Math.max(10, +v) })} />
+        <LabeledInput label="H" value={Math.round(el.h)} onChange={v => update({ h: Math.max(10, +v) })} />
+      </div>
+      <div style={{ marginTop: 10 }}>
+        <LabeledInput label="Rotation" value={Math.round(el.rot)} suffix="°" onChange={v => update({ rot: +v })} />
+      </div>
+
+      {/* Position on page — 6 quick-align buttons. Distinct from text alignment. */}
+      <SectionLabel>Position on page</SectionLabel>
+      <PagePositionControls />
+
+
+
+      {el.type==='text'&&<TextProps el={el} update={update} mode="advanced"/>}
       <SectionLabel>Opacity</SectionLabel>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <input type="range" min="0" max="1" step="0.01"
@@ -1203,11 +1204,11 @@ function ElementProperties({ el }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <button className="btn btn-tonal" style={{ justifyContent: 'center' }}
           onClick={() => dispatch({ type: 'duplicate-elements', ids: [el.id] })}>
-          <Icon name="duplicate" size={14} /> Duplicate
+          <Icon name="duplicate" size={14} /> Duplicate element
         </button>
         <button className="btn btn-tonal" style={{ justifyContent: 'center', color: 'var(--pink-600)' }}
           onClick={() => dispatch({ type: 'delete-elements', ids: [el.id] })}>
-          <Icon name="trash" size={14} /> Delete
+          <Icon name="trash" size={14} /> Delete element
         </button>
       </div>
       </details>
@@ -1331,7 +1332,7 @@ function SlideTextStyleControls({el,update}) {
   }}>{Object.entries(SLIDE_TEXT_STYLES).map(([key,s])=><option key={key} value={key}>{s.label}</option>)}</select></label><div style={{display:'flex',flexWrap:'wrap',gap:8}}><button className="btn btn-tonal" disabled={busy} onClick={()=>apply('current')}>Apply styles to this slide</button><button className="btn btn-tonal" disabled={busy} onClick={()=>apply('all')}>Apply styles to all slides</button></div><p style={{fontSize:12}}>Uses each text role. Keeps your words, colours and branding. Undo is available.</p></div>;
 }
 
-function TextProps({ el, update }) {
+function TextProps({ el, update, mode='basic' }) {
   const {state}=useStore();
   const [aiBusy,setAiBusy]=React.useState(false),[aiError,setAiError]=React.useState('');
   const improve=async()=>{
@@ -1341,6 +1342,7 @@ function TextProps({ el, update }) {
   };
   return (
     <>
+      {mode==='basic'&&<>
       <SectionLabel>Text</SectionLabel>
       <SlideTextStyleControls el={el} update={update}/>
       <textarea className="text-input" value={el.text || ''}
@@ -1354,7 +1356,9 @@ function TextProps({ el, update }) {
       <LabeledInput label="Font size" value={Math.round(el.fontSize)} onChange={v=>update({fontSize:Math.max(6,+v)})}/>
       <div style={{display:'flex',gap:8,margin:'12px 0'}}>{['left','center','right'].map(align=><button className="btn btn-tonal" key={align} onClick={()=>update({align})}>{align}</button>)}</div>
       <ColorPicker value={el.color} onChange={color=>update({color})}/>
-      <details><summary style={{padding:'14px 0',cursor:'pointer'}}>More ☰ · All fonts & styling</summary>
+      <div style={{display:'flex',gap:8,margin:'12px 0'}}><button className="btn btn-tonal" aria-pressed={Number(el.fontWeight)>=600} onClick={()=>update({fontWeight:Number(el.fontWeight)>=600?400:700})}>Bold</button><button className="btn btn-tonal" aria-pressed={!!el.italic} onClick={()=>update({italic:!el.italic})}>Italic</button></div>
+      </>}
+      {mode==='advanced'&&<>
       <button className="btn btn-tonal" disabled={aiBusy} onClick={improve}>{aiBusy?'Improving…':'Improve selected text with AI'}</button>
       {aiError&&<p role="alert">{aiError}</p>}
       <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 5 }}>Font library · {ALL_FONT_OPTIONS.length} fonts</div>
@@ -1473,7 +1477,7 @@ function TextProps({ el, update }) {
 
       <SectionLabel>Color</SectionLabel>
       <ColorPicker value={el.color} onChange={v => update({ color: v })} />
-      </details>
+      </>}
     </>
   );
 }

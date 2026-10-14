@@ -19,6 +19,7 @@ function FinalProjectWorkspace({isMobile}){
   React.useEffect(()=>{dispatch({type:'set-tool',tool:null});},[project.id]);
   const index=Math.max(0,project.canvases.findIndex(c=>c.id===project.activeCanvasId));
   const canvas=project.canvases[index];
+  const slideActions=<div aria-label="Slide actions" style={{display:'flex',gap:8,padding:'6px 12px',alignItems:'center',flexWrap:'wrap',background:'#fff'}}><span>Slide {index+1} / {project.canvases.length}</span><button onClick={()=>dispatch({type:'add-canvas'})}>+ Add slide</button><details style={{position:'relative'}}><summary style={{cursor:'pointer',padding:8}}>Slide actions</summary><div style={{position:'absolute',right:0,top:'100%',zIndex:100,background:'white',padding:12,boxShadow:'0 4px 20px #0003',minWidth:190,display:'grid',gap:8}}><button onClick={()=>dispatch({type:'duplicate-canvas',id:canvas.id})}>Duplicate slide</button><button disabled={index===0} onClick={()=>dispatch({type:'reorder-canvas',from:index,to:index-1})}>Move slide earlier</button><button disabled={index===project.canvases.length-1} onClick={()=>dispatch({type:'reorder-canvas',from:index,to:index+1})}>Move slide later</button><button disabled={project.canvases.length===1} onClick={()=>{if(confirm('Delete this slide? You can restore it with Undo.'))dispatch({type:'delete-canvas',id:canvas.id});}}>Delete slide</button>{project.canvases.length===1&&<small>Keep one slide, or delete the whole design in My Work.</small>}</div></details></div>;
   const contentEntry=(state.calendar||[]).find(e=>e.id===project.contentEntryId);
   const postCaption=contentEntry?[contentEntry.caption,contentEntry.hashtags].filter(Boolean).join('\n\n'):project.caption;
   const crowded=project.canvases.flatMap((c,i)=>c.elements.some(e=>e.type==='text'&&!e.hidden&&(e.y+textLayout(e).height>c.h||e.x+e.w>c.w||e.x<0||e.y<0||e.fontSize<24))?[i+1]:[]);
@@ -30,6 +31,7 @@ function FinalProjectWorkspace({isMobile}){
     <style>{`.posting-tools{width:100%;max-width:680px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px}.posting-copy-buttons{display:flex;gap:10px;flex-wrap:wrap}.posting-copy-buttons button{flex:1 1 220px}.posting-tools textarea{display:block;width:100%;box-sizing:border-box;min-height:180px;font:16px/1.6 Montserrat,sans-serif}`}</style>
     {crowded.length>0&&<div role="status" style={{padding:'6px 12px',background:'#fff3d6',fontSize:12}}>Check slides {crowded.join(', ')}: some text is very small or extends outside the page. Resize it or use Fit text.</div>}
     {project.aiError&&<p role="alert" style={{margin:0,padding:'8px 12px',background:'#fff3d6',fontSize:13}}>{project.aiError}</p>}
+    {step==='design'&&slideActions}
     {step==='design'?<div className="simple-design">{isMobile?<MobileEditor progressNav={nav}/>:<EditorScreen progressNav={nav}/>}</div>:<>{nav}<main className="simple-content"><div className="final-review">
       <h2 style={{margin:0}}>Preview your carousel</h2><p className="simple-muted" style={{margin:0}}>{canvas.w} × {canvas.h} · saved automatically in this browser</p>
       <div className="preview-image" onTouchStart={e=>{touch.current=e.touches[0].clientX;}} onTouchEnd={e=>{if(touch.current==null)return;const dx=e.changedTouches[0].clientX-touch.current;if(Math.abs(dx)>40)go(index+(dx<0?1:-1));touch.current=null;}}><MiniPreview canvas={canvas} maxW={Math.min(440,window.innerWidth-48)} maxH={Math.min(540,window.innerHeight*.56)}/></div>
@@ -37,6 +39,9 @@ function FinalProjectWorkspace({isMobile}){
       <button className="simple-action simple-secondary" onClick={()=>setStep('design')}>Edit this slide</button>
       <section className="posting-tools" aria-label="Download and copy for posting">
         <button className="simple-action" disabled={busy} onClick={download}>{busy?'Preparing images…':'Download carousel PNGs'}</button>
+        <label>Caption &amp; hashtags<textarea aria-label="Caption and hashtags for manual copying" readOnly value={postCaption||''} placeholder="This design has no saved caption." onFocus={e=>e.target.select()}/></label>
+        <button className="sc-link" onClick={()=>{const field=document.querySelector('[aria-label="Caption and hashtags for manual copying"]');field?.focus();field?.select();}}>Select caption text</button>
+        <details><summary>View all slide text</summary><textarea aria-label="All slide text for manual copying" readOnly value={canvasSlideText(project.canvases)} onFocus={e=>e.target.select()}/></details>
         <div className="posting-copy-buttons"><button className="simple-action simple-secondary" disabled={!postCaption?.trim()} onClick={()=>copyForPosting('caption')}>Copy caption & hashtags</button><button className="simple-action simple-secondary" onClick={()=>copyForPosting('slides')}>Copy all slide text</button></div>
         {!postCaption?.trim()&&<p className="simple-muted">This design has no saved caption. You can copy its slide text instead.</p>}
         {copyNotice&&<p role="status" aria-live="polite" style={{margin:0}}>{copyNotice}</p>}

@@ -297,7 +297,7 @@ function TopBar() {
       </div>
 
       {/* Design name (editable) */}
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12 }}>
+      <div style={{ flex: 1, minWidth:0, overflow:'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12 }}>
         {renaming ? (
           <input autoFocus className="text-input"
             style={{ maxWidth: 320, textAlign: 'center', fontSize: 14 }}
@@ -308,9 +308,9 @@ function TopBar() {
           />
         ) : (
           <button onClick={() => setRenaming(true)} className="btn-ghost"
-            style={{ padding: '6px 12px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--ink)' }}>{proj.name}</span>
-            <span style={{ fontSize: 11, color: 'var(--ink-3)', fontVariantNumeric: 'tabular-nums' }}>· {canvas.w}×{canvas.h}</span>
+            style={{ padding: '6px 12px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8, minWidth:0, maxWidth:'100%', overflow:'hidden' }}>
+            <span title={proj.name} style={{ fontSize: 14, fontWeight: 500, color: 'var(--ink)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',minWidth:0 }}>{proj.name}</span>
+            <span style={{ fontSize: 11, color: 'var(--ink-3)', fontVariantNumeric: 'tabular-nums',whiteSpace:'nowrap',flexShrink:0 }}>· {canvas.w}×{canvas.h}</span>
           </button>
         )}
         <SaveIndicator />

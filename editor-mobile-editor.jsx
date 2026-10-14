@@ -114,7 +114,7 @@ function MobileEditor({ progressNav }) {
       </BottomSheet>
 
       {/* Properties sheet */}
-      <BottomSheet open={['words','font','styles','size','colour','align','add'].includes(openSheet)} onClose={closeSheet}
+      <BottomSheet open={['words','font','styles','size','colour','align','emphasis','add'].includes(openSheet)} onClose={closeSheet}
         title={openSheet==='add'?'Add to slide':openSheet} height="45vh">
         {openSheet==='add'?<div style={{display:'grid',gap:10}}>{[['text','Text'],['images','Image'],['shapes','Shape'],['bg','Background']].map(([id,label])=><button className="btn btn-tonal" key={id} onClick={()=>openTool(id)}>{label}</button>)}</div>:primaryEl&&<MobileQuickProperties el={primaryEl} tool={openSheet}/>}
       </BottomSheet>
@@ -800,9 +800,9 @@ function MobileSelectionBar({ el, onOpenProperties, onDuplicate, onMore, onDesel
         <Action icon="bg" label="Colour" onClick={()=>onTool('colour')}/>
         <Action icon="align_l" label="Align" onClick={()=>onTool('align')}/>
       </>:<Action icon="templates" label={el.role==='logo'||el.brandSlot==='logo'?'Edit logo':'Edit'} onClick={onOpenProperties} primary/>}
-      <Action icon="more" label="More ☰" onClick={onOpenProperties}/>
-      <Action icon="duplicate" label="Duplicate" onClick={onDuplicate} />
-      <Action icon="more" label="Actions" onClick={onMore} />
+      {el.type==='text'&&<Action icon="text" label="Bold / italic" onClick={()=>onTool('emphasis')}/>}
+      <Action icon="more" label="Advanced" onClick={onOpenProperties}/>
+      <Action icon="duplicate" label="Duplicate element" onClick={onDuplicate} />
       <Action icon="x" label="Deselect" onClick={onDeselect} />
     </div>
   );
@@ -810,6 +810,7 @@ function MobileSelectionBar({ el, onOpenProperties, onDuplicate, onMore, onDesel
 
 function MobileQuickProperties({el,tool}){
   const {state,dispatch}=useStore();const update=patch=>dispatch({type:'update-element',id:el.id,patch});
+  if(tool==='emphasis')return <div style={{display:'flex',gap:12}}><button className="btn btn-tonal" aria-pressed={Number(el.fontWeight)>=600} onClick={()=>update({fontWeight:Number(el.fontWeight)>=600?400:700})}>Bold</button><button className="btn btn-tonal" aria-pressed={!!el.italic} onClick={()=>update({italic:!el.italic})}>Italic</button></div>;
   if(tool==='styles')return <SlideTextStyleControls el={el} update={update}/>;
   if(tool==='words')return <textarea aria-label="Edit selected words" value={el.text||''} onChange={e=>update({text:e.target.value})} style={{width:'100%',minHeight:140,fontSize:16,padding:12,boxSizing:'border-box'}}/>;
   if(tool==='font')return <><select aria-label="Font" value={el.fontFamily} onChange={async e=>{const family=e.target.value;await document.fonts.load(`24px "${family}"`);update({fontFamily:family});}} style={{width:'100%',padding:14,fontSize:16}}>{ALL_FONT_OPTIONS.filter(f=>['Cormorant Garamond','Montserrat','Kalam'].includes(f.family)||f.family===el.fontFamily).map(f=><option key={f.family} value={f.family}>{f.label}</option>)}</select><p>The complete font library is kept in More ☰.</p></>;

@@ -35,10 +35,17 @@ function SimpleStudioHome() {
   const projects=[...state.projects].sort((a,b)=>b.updatedAt-a.updatedAt);
   const makePost=()=>setSection('post');
   React.useEffect(()=>sessionStorage.setItem('wpr-simple-section',section),[section]);
-  const projectCard=p=><button className="simple-card" key={p.id} onClick={()=>open(p.id)}>
-    {p.thumbnail?<img src={p.thumbnail} alt=""/>:<MiniPreview canvas={p.canvases[0]} maxW={210} maxH={135}/>}
-    <h3>{p.name}</h3><p>{p.canvases.length===1?'Single post':`${p.canvases.length} slides`} · {timeAgo(p.updatedAt)}</p><span>Continue editing →</span>
-  </button>;
+  const projectCard=p=><article className="simple-card" key={p.id}>
+    <button onClick={()=>open(p.id)} style={{width:'100%',textAlign:'left',background:'transparent',border:0,color:'inherit'}}>
+      {p.thumbnail?<img src={p.thumbnail} alt=""/>:<MiniPreview canvas={p.canvases[0]} maxW={210} maxH={135}/>}
+      <h3>{p.name}</h3><p>{p.canvases.length===1?'Single post':`${p.canvases.length} slides`} · {timeAgo(p.updatedAt)}</p><span>Open design →</span>
+    </button>
+    <div style={{display:'flex',flexWrap:'wrap',gap:8,marginTop:12}}>
+      <button onClick={()=>{const name=prompt('Rename design',p.name);if(name?.trim())dispatch({type:'rename-project',id:p.id,name:name.trim()});}}>Rename</button>
+      <button onClick={()=>dispatch({type:'duplicate-project',id:p.id})}>Duplicate design</button>
+      <button onClick={()=>{if(confirm(`Delete design “${p.name}”? This removes its saved slides from this browser. Download an editable backup first if needed.`))dispatch({type:'delete-project',id:p.id});}}>Delete design</button>
+    </div>
+  </article>;
   const applyTemplate=t=>{
     const p=t.canvases?{id:uid(),name:t.name,createdAt:now(),updatedAt:now(),canvases:JSON.parse(JSON.stringify(t.canvases)).map(c=>({...c,id:uid(),elements:c.elements.map(e=>({...e,id:uid()}))}))}:newProject(t.name,t.preset,t.els.map(e=>({type:e.type,patch:e.patch})));
     if(!t.canvases){

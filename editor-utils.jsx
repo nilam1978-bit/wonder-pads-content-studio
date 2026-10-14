@@ -121,7 +121,17 @@ function reflowBrandBackground(canvas, W, H, brand) {
       if(old&&next){const patch={};for(const key of ['x','y','w','h'])patch[key]=next[key]+(el[key]-old[key])*scale;if(el.type==='text')patch.fontSize=el.fontSize*scale;return {...el,...patch};}
     }
     const map = maps.get(el.brandLayout);
-    if (!map) return el;
+    if (!map) {
+      // Contain the existing composition in the new ratio, never crop its text.
+      const basis=el._ratioBasis||{w:canvas.w,h:canvas.h};
+      const before=Math.min(canvas.w/basis.w,canvas.h/basis.h),fit=Math.min(W/basis.w,H/basis.h),factor=fit/before;
+      const oldX=(canvas.w-basis.w*before)/2,oldY=(canvas.h-basis.h*before)/2;
+      const dx=(W-basis.w*fit)/2,dy=(H-basis.h*fit)/2;
+      const next={...el,_ratioBasis:basis,x:dx+(el.x-oldX)*factor,y:dy+(el.y-oldY)*factor,w:el.w*factor,h:el.h*factor};
+      if(el.type==='text'){next.fontSize=el.fontSize*factor;if(el.letterSpacing!=null)next.letterSpacing=el.letterSpacing*factor;}
+      if(el.radius!=null)next.radius=el.radius*factor;
+      return next;
+    }
     const old = map.old.find(e => e.brandSlot === el.brandSlot);
     const next = map.next.find(e => e.brandSlot === el.brandSlot);
     if (!old || !next) return el;
