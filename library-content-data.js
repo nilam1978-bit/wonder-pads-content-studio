@@ -400,7 +400,7 @@
       slides:[],
       previousCopy:{stylePair:'clear'},
       caption:"Pop-up this [day]: [event name]\n\n[Date and time]\n[Venue and address]\n\n[One sentence on what you will have with you.]\n\nSee you there! Questions? Message @ecoclothpad.",
-      notes:'A single bold deep teal announcement. Keep it short.'}),
+      notes:'A single bold deep sage green announcement. Keep it short.'}),
     tpl({id:'wp-tpl-event-reminder',ideaId:3005,librarySection:'events',priority:13,format:'Static post',stylePair:'popup',
       title:'Tomorrow: [event name]',
       slides:[],

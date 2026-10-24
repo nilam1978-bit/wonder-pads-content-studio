@@ -23,7 +23,7 @@ const CAROUSEL_STYLE_PAIRS = [
   // Occasion styles: colours plus ready-made cover and closing words. Your own words become the slides in between.
   {id:'order',name:'Custom order',description:'Cover and closing words are filled in for a custom order. Add the details in between.',bg:'#E8B8DC',ink:'#2A1F2A',size:104,kit:{label:'CUSTOM ORDER',cover:{title:"This week's custom order",body:'Made by hand for one special person.'},cta:'order'}},
   {id:'newhome',name:'Off to a new home',description:'Cover and closing words are filled in for a pad going to its new owner.',bg:'#D98BC6',ink:'#2A1F2A',size:108,kit:{label:'NEW HOME',cover:{title:'Off to its new home',body:'Another handmade set is on its way.'},cta:'thanks'}},
-  {id:'popup',name:'Pop-up & events',description:'A deep teal that stands out. Cover and closing words are filled in for an event.',bg:'#1F5C58',ink:'#FDFBFC',size:108,kit:{label:'POP-UP',cover:{title:'Come say hello',body:'Wonder Pads is popping up near you.'},cta:'visit'}},
+  {id:'popup',name:'Pop-up & events',description:'A deep sage green that stands out. Cover and closing words are filled in for an event.',bg:'#4F6B53',ink:'#FDFBFC',size:108,kit:{label:'POP-UP',cover:{title:'Come say hello',body:'Wonder Pads is popping up near you.'},cta:'visit'}},
 ];
 const CAROUSEL_CTA_CHOICES = {
   save:{title:'Save this for later',body:'Keep these tips handy for when you need them.',icon:'bookmark',label:'Save'},
