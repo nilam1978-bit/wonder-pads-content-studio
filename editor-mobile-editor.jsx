@@ -8,10 +8,19 @@ function MobileEditor({ progressNav }) {
   const proj = activeProject(state);
   const canvas = activeCanvas(state);
 
-  const [openSheet, setOpenSheet] = meS(null); // 'templates'|'brand'|'text'|'shapes'|'images'|'icons'|'frames'|'bg'|'more'|'pages'|'layers'|'properties'|'menu'|'download'|'rename'
+  const [openSheet, setOpenSheet] = meS(null); // 'templates'|'brand'|'text'|'shapes'|'images'|'icons'|'frames'|'bg'|'more'|'pages'|'layers'|'properties'|'menu'|'download'|'rename'|'add'
+  // The "tool tray" is the live-editing strip that sits under the slide (words, font, size, colour, format, move...).
+  // Unlike a pop-up sheet it never covers or blurs the slide, so you see every change as you make it.
+  const [tray, setTray] = meS(null);
   const [longPressMenu, setLongPressMenu] = meS(false);
 
-  // Start with the canvas unobstructed; tools open only on request.
+  const primaryEl = canvas ? canvas.elements.find(e => e.id === state.selection[0]) : null;
+
+  // Close the tray when nothing is selected, or when the chosen tool does not suit the newly selected item.
+  meE(() => {
+    if (!tray) return;
+    if (!primaryEl || !trayToolsFor(primaryEl).includes(tray)) setTray(null);
+  }, [primaryEl?.id, primaryEl?.type]);
 
   // Regenerate thumbnail
   const thumbSig = proj ? sigForThumb(proj.canvases[0]) : '';
@@ -34,14 +43,13 @@ function MobileEditor({ progressNav }) {
 
   if (!proj || !canvas) return null;
 
-  const primaryEl = canvas.elements.find(e => e.id === state.selection[0]);
-
   const openTool = (tool) => {
     dispatch({ type: 'set-tool', tool });
     setOpenSheet(tool);
   };
 
   const closeSheet = () => setOpenSheet(null);
+  const pickTool = (tool) => setTray(t => (t === tool ? null : tool));
 
   return (
     <div style={{
@@ -64,20 +72,26 @@ function MobileEditor({ progressNav }) {
 
       {/* Canvas area */}
       <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-        <MobileCanvasArea onLongPress={() => setLongPressMenu(true)} />
+        <MobileCanvasArea onLongPress={() => setLongPressMenu(true)}
+          onEditWords={() => setTray('words')} />
       </div>
 
-      {/* Slide thumbnails belong beneath the canvas in the simple workflow. */}
-      <MobilePagesStrip proj={proj} onOpen={() => setOpenSheet('pages')} />
+      {/* Slide thumbnails belong beneath the canvas in the simple workflow.
+          They step aside while a tool tray is open so the slide stays big. */}
+      {!tray && <MobilePagesStrip proj={proj} onOpen={() => setOpenSheet('pages')} />}
 
-      {/* Selection properties bar */}
-      {primaryEl && !openSheet && (
-        <MobileSelectionBar el={primaryEl}
-          onOpenProperties={() => setOpenSheet('properties')}
-          onDuplicate={() => dispatch({ type: 'duplicate-elements', ids: [primaryEl.id] })}
+      {/* Live tool tray */}
+      {primaryEl && tray && (
+        <MobileToolTray el={primaryEl} tool={tray} setTool={setTray} onClose={() => setTray(null)} />
+      )}
+
+      {/* Selection toolbar */}
+      {primaryEl && !openSheet && !tray && (
+        <MobileSelectionBar el={primaryEl} activeTool={tray}
+          onAdd={() => setOpenSheet('add')}
+          onTool={pickTool}
+          onAdjust={() => setOpenSheet('properties')}
           onMore={() => setLongPressMenu(true)}
-          onTool={setOpenSheet}
-          onDeselect={() => dispatch({ type: 'set-selection', ids: [] })}
         />
       )}
 
@@ -113,11 +127,16 @@ function MobileEditor({ progressNav }) {
         <BackgroundPanel />
       </BottomSheet>
 
-      {/* Properties sheet */}
-      <BottomSheet open={['words','font','styles','size','colour','align','emphasis','add'].includes(openSheet)} onClose={closeSheet}
-        title={openSheet==='add'?'Add to slide':openSheet} height="45vh">
-        {openSheet==='add'?<div style={{display:'grid',gap:10}}>{[['text','Text'],['images','Image'],['shapes','Shape'],['bg','Background']].map(([id,label])=><button className="btn btn-tonal" key={id} onClick={()=>openTool(id)}>{label}</button>)}</div>:primaryEl&&<MobileQuickProperties el={primaryEl} tool={openSheet}/>}
+      {/* Add something new while an item is selected */}
+      <BottomSheet open={openSheet === 'add'} onClose={closeSheet} title="Add to slide" height="auto">
+        <div style={{ display: 'grid', gap: 10 }}>
+          {[['text', 'Text'], ['images', 'Image'], ['shapes', 'Shape'], ['bg', 'Background']].map(([id, label]) =>
+            <button className="btn btn-tonal" style={{ justifyContent: 'center', padding: 14 }} key={id}
+              onClick={() => { dispatch({ type: 'set-selection', ids: [] }); openTool(id); }}>{label}</button>)}
+        </div>
       </BottomSheet>
+
+      {/* All settings for the selected item (the full properties list) */}
       <BottomSheet open={openSheet === 'properties'} onClose={closeSheet}
         title={primaryEl ? typeLabel(primaryEl.type) : 'Properties'}>
         {primaryEl ? <ElementProperties el={primaryEl} /> : <CanvasProperties />}
@@ -195,13 +214,15 @@ function MobileEditor({ progressNav }) {
           onRename={n => { dispatch({ type: 'rename-project', id: proj.id, name: n }); closeSheet(); }} />
       )}
 
-      {/* Long-press context menu */}
+      {/* "More" for the selected item (also opens on long-press) */}
       {longPressMenu && primaryEl && (
         <BottomSheet open onClose={() => setLongPressMenu(false)}
           title={typeLabel(primaryEl.type)} height="auto">
           <div style={{ display: 'grid', gap: 4, paddingBottom: 8 }}>
             <SheetAction icon="duplicate" label="Duplicate"
               onClick={() => { dispatch({ type: 'duplicate-elements', ids: [primaryEl.id] }); setLongPressMenu(false); }} />
+            <SheetAction icon="grid" label="Move & align"
+              onClick={() => { setLongPressMenu(false); setTray('position'); }} />
             <SheetAction icon="arrow_up" label="Bring to front"
               onClick={() => { dispatch({ type: 'reorder-element', id: primaryEl.id,
                 to: canvas.elements.length - 1 }); setLongPressMenu(false); }} />
@@ -211,6 +232,10 @@ function MobileEditor({ progressNav }) {
               onClick={() => { dispatch({ type: 'update-element', id: primaryEl.id,
                 patch: { locked: !primaryEl.locked } }); setLongPressMenu(false); }} />
             <SheetAction icon="eye" label={primaryEl.hidden?'Show':'Hide'} onClick={()=>{dispatch({type:'update-element',id:primaryEl.id,patch:{hidden:!primaryEl.hidden}});dispatch({type:'set-selection',ids:[]});setLongPressMenu(false);}}/>
+            <SheetAction icon="more" label="All settings"
+              onClick={() => { setLongPressMenu(false); setOpenSheet('properties'); }} />
+            <SheetAction icon="x" label="Deselect"
+              onClick={() => { setLongPressMenu(false); dispatch({ type: 'set-selection', ids: [] }); }} />
             <div style={{ height: 1, background: 'var(--line)', margin: '4px 0' }} />
             <SheetAction icon="trash" label="Delete" danger
               onClick={() => { dispatch({ type: 'delete-elements', ids: [primaryEl.id] }); setLongPressMenu(false); }} />
@@ -320,7 +345,7 @@ function MobilePagesStrip({ proj, onOpen }) {
   );
 }
 
-function MobileCanvasArea({ onLongPress }) {
+function MobileCanvasArea({ onLongPress, onEditWords }) {
   const { state, dispatch } = useStore();
   const canvas = activeCanvas(state);
   const stageRef = meR(null);
@@ -351,9 +376,38 @@ function MobileCanvasArea({ onLongPress }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canvas?.id]);
 
+  // When the area under the slide changes size (tool tray opens/closes, keyboard appears),
+  // keep the slide centred, and re-fit it if it was already fitted to the screen.
+  const lastRect = meR(null);
+  const skipZoomPan = meR(false);
+  meE(() => {
+    const node = stageRef.current;
+    if (!node || !canvas || typeof ResizeObserver === 'undefined') return;
+    const fitFor = (r) => clamp(Math.min((r.width - 40) / canvas.w, (r.height - 40) / canvas.h), 0.05, 4);
+    const ro = new ResizeObserver(() => {
+      const r = node.getBoundingClientRect();
+      const prev = lastRect.current;
+      lastRect.current = { width: r.width, height: r.height };
+      if (!prev || (prev.width === r.width && prev.height === r.height)) return;
+      const wasFit = Math.abs(state.zoom - fitFor(prev)) < 0.012;
+      if (wasFit) {
+        const z = fitFor(r);
+        skipZoomPan.current = Math.abs(z - state.zoom) > 0.0005;
+        setPan({ x: (r.width - canvas.w * z) / 2, y: (r.height - canvas.h * z) / 2 });
+        dispatch({ type: 'set-zoom', zoom: z });
+      } else {
+        setPan(p => ({ x: p.x + (r.width - prev.width) / 2, y: p.y + (r.height - prev.height) / 2 }));
+      }
+    });
+    ro.observe(node);
+    return () => ro.disconnect();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canvas?.id, canvas?.w, canvas?.h, state.zoom]);
+
   const prevZoom = meR(state.zoom);
   meE(() => {
     if (!stageRef.current) return;
+    if (skipZoomPan.current) { skipZoomPan.current = false; prevZoom.current = state.zoom; return; }
     const rect = stageRef.current.getBoundingClientRect();
     const cx = rect.width / 2, cy = rect.height / 2;
     setPan(p => ({
@@ -370,8 +424,9 @@ function MobileCanvasArea({ onLongPress }) {
     const el = canvas.elements.find(x => x.id === elId);
     if (el?.locked) return;
 
+    const wasSelected = state.selection.includes(elId);
     // Set selection immediately
-    if (!state.selection.includes(elId)) {
+    if (!wasSelected) {
       dispatch({ type: 'set-selection', ids: [elId] });
     }
 
@@ -404,7 +459,8 @@ function MobileCanvasArea({ onLongPress }) {
       const cy = ev.touches ? ev.touches[0].clientY : ev.clientY;
       const dx = (cx - startDataRef.current.startX) / state.zoom;
       const dy = (cy - startDataRef.current.startY) / state.zoom;
-      if (Math.abs(dx) + Math.abs(dy) > 4) {
+      // A real drag needs ~8 screen pixels of finger travel, so a normal tap never nudges the item.
+      if (!startDataRef.current.moved && Math.hypot(cx - startDataRef.current.startX, cy - startDataRef.current.startY) > 8) {
         startDataRef.current.moved = true;
         clearTimeout(longPressRef.current);
       }
@@ -432,8 +488,12 @@ function MobileCanvasArea({ onLongPress }) {
     const up = () => {
       clearTimeout(longPressRef.current);
       setGuides([]);
-      if (startDataRef.current?.moved) {
-        dispatch({ type: 'commit-transient', snapshot: startDataRef.current.canvasSnapshot });
+      const sd = startDataRef.current;
+      if (sd?.moved) {
+        dispatch({ type: 'commit-transient', snapshot: sd.canvasSnapshot });
+      } else if (sd && wasSelected && el.type === 'text') {
+        // Tapping text that is already selected opens "Edit words".
+        onEditWords?.();
       }
       startDataRef.current = null;
       window.removeEventListener('touchmove', move);
@@ -540,7 +600,7 @@ function MobileCanvasArea({ onLongPress }) {
 
   // Stage-level touch (pinch zoom, pan, tap-empty to deselect)
   const onStageTouchStart = (e) => {
-    if (e.target.dataset.canvasBg && e.touches.length === 1) {
+    if ((e.target.dataset.canvasBg || e.target === e.currentTarget) && e.touches.length === 1) {
       dispatch({ type: 'set-selection', ids: [] });
     }
     if (e.touches.length === 2) {
@@ -626,6 +686,15 @@ function MobileCanvasArea({ onLongPress }) {
               <ElementView el={el} selected={state.selection.includes(el.id)}
                 dispatch={dispatch} scale={state.zoom}
                 editing={editingId === el.id} setEditing={setEditingId} />
+              {/* Invisible, finger-sized grab area around items that are tiny on a phone screen. */}
+              {!el.locked && !el.hidden && editingId !== el.id && (() => {
+                const z = Math.max(0.05, state.zoom);
+                const padX = Math.max(0, (48 / z - el.w) / 2), padY = Math.max(0, (48 / z - el.h) / 2);
+                if (!padX && !padY) return null;
+                return <div aria-hidden="true" style={{ position: 'absolute', left: el.x - padX, top: el.y - padY,
+                  width: el.w + 2 * padX, height: el.h + 2 * padY, transform: `rotate(${el.rot || 0}deg)`,
+                  background: 'transparent' }} />;
+              })()}
               {el.type==='image'&&(el.role==='logo'||el.brandSlot==='logo')&&!el.hidden&&<button
                 aria-label="Select brand logo" aria-pressed={state.selection.includes(el.id)}
                 title="Tap to edit logo" style={logoHitTarget(el,state.zoom)}
@@ -653,7 +722,8 @@ function MobileCanvasArea({ onLongPress }) {
         {primary && (
           <MobileSelectionOverlay el={primary} scale={state.zoom}
             onResize={(handle, e) => startResize(e, primary.id, handle)}
-            onRotate={(e) => startRotate(e, primary.id)} />
+            onRotate={(e) => startRotate(e, primary.id)}
+            onMove={(e) => startElementDrag(e, primary.id)} />
         )}
       </div>
 
@@ -671,32 +741,46 @@ function MobileCanvasArea({ onLongPress }) {
   );
 }
 
-function MobileSelectionOverlay({ el, scale, onResize, onRotate }) {
+function MobileSelectionOverlay({ el, scale, onResize, onRotate, onMove }) {
+  const bw = el.w * scale, bh = el.h * scale;
+  // "Small" = hard to hold on a phone. Then: the handles sit just OUTSIDE the box so they never
+  // cover it, and an extra finger-sized grab area makes the item easy to drag.
+  const small = bw < 120 || bh < 56;
   const style = {
     position: 'absolute',
     left: el.x * scale, top: el.y * scale,
-    width: el.w * scale, height: el.h * scale,
+    width: bw, height: bh,
     transform: `rotate(${el.rot}deg)`,
     transformOrigin: 'center center',
     pointerEvents: 'none',
   };
+  const out = small ? 16 : 0; // how far outside the box the handles sit
   const handles = [
-    { key: 'nw', x: 0, y: 0, cursor: 'nwse-resize' },
-    { key: 'ne', x: '100%', y: 0, cursor: 'nesw-resize' },
-    { key: 'se', x: '100%', y: '100%', cursor: 'nwse-resize' },
-    { key: 'sw', x: 0, y: '100%', cursor: 'nesw-resize' },
+    { key: 'nw', x: '0%', y: '0%', dx: -out, dy: -out, cursor: 'nwse-resize' },
+    { key: 'ne', x: '100%', y: '0%', dx: out, dy: -out, cursor: 'nesw-resize' },
+    { key: 'se', x: '100%', y: '100%', dx: out, dy: out, cursor: 'nwse-resize' },
+    { key: 'sw', x: '0%', y: '100%', dx: -out, dy: out, cursor: 'nesw-resize' },
     ...(el.type === 'text' ? [
-      { key: 'e', x: '100%', y: '50%', cursor: 'ew-resize', side: true },
-      { key: 'w', x: 0, y: '50%', cursor: 'ew-resize', side: true },
+      { key: 'e', x: '100%', y: '50%', dx: out, dy: 0, cursor: 'ew-resize', side: true },
+      { key: 'w', x: '0%', y: '50%', dx: -out, dy: 0, cursor: 'ew-resize', side: true },
     ] : []),
   ];
   return (
     <div style={style}>
       <div style={{ position: 'absolute', inset: 0, outline: '2px solid var(--pink-500)' }} />
+      {onMove && (bw < 56 || bh < 56) && (
+        <div aria-label="Drag to move" style={{
+          position: 'absolute', left: '50%', top: '50%',
+          width: Math.max(bw, 56), height: Math.max(bh, 56),
+          transform: 'translate(-50%,-50%)', pointerEvents: 'auto', touchAction: 'none',
+        }}
+          onTouchStart={(e) => { onMove(e); }}
+          onPointerDown={(e) => { if (e.pointerType !== 'touch') onMove(e); }} />
+      )}
       {handles.map(h => (
         <button key={h.key} type="button" aria-label={`Resize ${h.key}`}
           style={{
-            position: 'absolute', left: h.x, top: h.y,
+            position: 'absolute', left: `calc(${h.x} + ${h.dx}px)`, top: `calc(${h.y} + ${h.dy}px)`,
             width: h.side ? 34 : 38, height: h.side ? 48 : 38,
             transform: 'translate(-50%,-50%)', padding: 0,
             background: 'transparent', border: 0, boxShadow: 'none',
@@ -709,7 +793,7 @@ function MobileSelectionOverlay({ el, scale, onResize, onRotate }) {
         >
           <span aria-hidden="true" style={{
             position: 'absolute', left: '50%', top: '50%',
-            width: h.side ? 10 : 18, height: h.side ? 28 : 18,
+            width: h.side ? 8 : 14, height: h.side ? 22 : 14,
             transform: 'translate(-50%,-50%)',
             background: 'white', border: '2px solid var(--pink-500)',
             borderRadius: h.side ? 999 : 4, boxSizing: 'border-box',
@@ -718,7 +802,7 @@ function MobileSelectionOverlay({ el, scale, onResize, onRotate }) {
         </button>
       ))}
       {onRotate && <div className="rotate-handle"
-        style={{ left: '50%', top: -44, marginLeft: -14, width: 28, height: 28, pointerEvents: 'auto', touchAction: 'none' }}
+        style={{ left: '50%', top: small ? -56 : -44, marginLeft: -14, width: 28, height: 28, pointerEvents: 'auto', touchAction: 'none' }}
         onTouchStart={(e) => { e.stopPropagation(); onRotate(e); }}
         onPointerDown={(e) => { if (e.pointerType !== 'touch') { e.stopPropagation(); onRotate(e); } }} />}
     </div>
@@ -764,59 +848,283 @@ function MobileEditorBottomBar({ activeTool, onOpen, onMore }) {
   );
 }
 
-function MobileSelectionBar({ el, onOpenProperties, onDuplicate, onMore, onDeselect, onTool }) {
-  const Action = ({ icon, label, onClick, primary }) => (
-    <button onClick={onClick} style={{
-      minWidth: primary ? 74 : 52, padding: '7px 6px', borderRadius: 10,
-      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-      background: primary ? 'var(--pink-100)' : 'transparent',
-      color: primary ? 'var(--pink-600)' : 'var(--ink-2)',
-    }}>
-      <Icon name={icon} size={17} />
-      <span style={{ fontSize: 9, fontWeight: 600, whiteSpace: 'nowrap' }}>{label}</span>
+// ======================================================================
+// SELECTION TOOLBAR + LIVE TOOL TRAY (phone)
+// The toolbar is always one tidy row (no sideways scrolling). Every button shows its
+// current value (font name, size, colour) so you can read the state at a glance.
+// ======================================================================
+const SHAPE_TYPES = ['rect', 'circle', 'triangle', 'star', 'heart', 'diamond', 'polygon'];
+
+// Which tray tools make sense for each kind of item.
+function trayToolsFor(el) {
+  if (el.type === 'text') return ['words', 'font', 'size', 'colour', 'format', 'position'];
+  if (SHAPE_TYPES.includes(el.type) || ['line', 'arrow', 'icon'].includes(el.type)) return ['colour', 'size', 'opacity', 'position'];
+  return ['size', 'opacity', 'position']; // image, frame
+}
+const TRAY_LABELS = { words: 'Edit', font: 'Font', size: 'Size', colour: 'Colour', format: 'Format', opacity: 'Fade', position: 'Move' };
+// The property that holds this item's main colour.
+function colourKey(el) {
+  if (el.type === 'text' || el.type === 'icon') return 'color';
+  if (SHAPE_TYPES.includes(el.type)) return 'fill';
+  return 'stroke';
+}
+
+function ToolBtn({ label, onClick, active, children }) {
+  return (
+    <button onClick={onClick} aria-label={label} aria-pressed={!!active}
+      style={{
+        flex: '1 1 0', minWidth: 0, minHeight: 54, padding: '7px 2px', borderRadius: 12,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+        background: active ? 'var(--pink-100)' : 'transparent',
+        color: active ? 'var(--pink-600)' : 'var(--ink-2)',
+      }}>
+      <span style={{ height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', maxWidth: '100%' }}>{children}</span>
+      <span style={{ fontSize: 10, fontWeight: 600, whiteSpace: 'nowrap', letterSpacing: '.01em' }}>{label}</span>
     </button>
+  );
+}
+
+function MobileSelectionBar({ el, activeTool, onAdd, onTool, onAdjust, onMore }) {
+  const isText = el.type === 'text';
+  const tools = trayToolsFor(el);
+  const swatch = (c) => (
+    <span style={{ width: 22, height: 22, borderRadius: '50%', background: c === 'transparent' ? '#fff' : c,
+      border: '2px solid var(--line-2)', boxSizing: 'border-box', display: 'block' }} />
   );
   return (
     <div className="safe-bottom" style={{
-      display: 'flex', gap: 4, padding: '8px 12px calc(8px + env(safe-area-inset-bottom, 0px))',
-      background: 'white', borderTop: '1px solid var(--line)',
-      flexShrink: 0, alignItems: 'center', zIndex: 15, overflowX:'auto',
+      display: 'flex', gap: 2, padding: '6px 6px calc(6px + env(safe-area-inset-bottom, 0px))',
+      background: 'white', borderTop: '1px solid var(--line)', flexShrink: 0, zIndex: 15,
     }}>
-      <div style={{ display:'none' }}>
-        <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink)',
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {typeLabel(el.type)}
-        </div>
-        <div style={{ fontSize: 10, color: 'var(--ink-3)' }}>
-          {Math.round(el.w)}×{Math.round(el.h)}
-        </div>
-      </div>
-      <Action icon="plus" label="Add" onClick={()=>onTool('add')}/>
-      {el.type==='text'?<>
-        <Action icon="text" label="Edit words" onClick={()=>onTool('words')} primary/>
-        <Action icon="text" label="Font" onClick={()=>onTool('font')}/>
-        <Action icon="text" label="Styles" onClick={()=>onTool('styles')}/>
-        <Action icon="text" label="Size" onClick={()=>onTool('size')}/>
-        <Action icon="bg" label="Colour" onClick={()=>onTool('colour')}/>
-        <Action icon="align_l" label="Align" onClick={()=>onTool('align')}/>
-      </>:<Action icon="templates" label={el.role==='logo'||el.brandSlot==='logo'?'Edit logo':'Edit'} onClick={onOpenProperties} primary/>}
-      {el.type==='text'&&<Action icon="text" label="Bold / italic" onClick={()=>onTool('emphasis')}/>}
-      <Action icon="more" label="Advanced" onClick={onOpenProperties}/>
-      <Action icon="duplicate" label="Duplicate element" onClick={onDuplicate} />
-      <Action icon="x" label="Deselect" onClick={onDeselect} />
+      <ToolBtn label="Add" onClick={onAdd}><Icon name="plus" size={20} /></ToolBtn>
+      {isText ? <>
+        <ToolBtn label="Edit" onClick={() => onTool('words')} active={activeTool === 'words'}><Icon name="edit" size={19} /></ToolBtn>
+        <ToolBtn label="Font" onClick={() => onTool('font')} active={activeTool === 'font'}>
+          <span style={{ fontFamily: `"${el.fontFamily}", sans-serif`, fontSize: 21, lineHeight: '22px' }}>Aa</span>
+        </ToolBtn>
+        <ToolBtn label="Size" onClick={() => onTool('size')} active={activeTool === 'size'}>
+          <span style={{ fontSize: 13, fontWeight: 700, border: '1.5px solid currentColor', borderRadius: 7, padding: '1px 6px', fontVariantNumeric: 'tabular-nums' }}>{Math.round(el.fontSize)}</span>
+        </ToolBtn>
+        <ToolBtn label="Colour" onClick={() => onTool('colour')} active={activeTool === 'colour'}>{swatch(el.color)}</ToolBtn>
+        <ToolBtn label="Format" onClick={() => onTool('format')} active={activeTool === 'format'}><Icon name="bold" size={20} /></ToolBtn>
+      </> : <>
+        {tools.includes('colour')
+          ? <ToolBtn label="Colour" onClick={() => onTool('colour')} active={activeTool === 'colour'}>{swatch(el[colourKey(el)])}</ToolBtn>
+          : <ToolBtn label="Adjust" onClick={onAdjust}><Icon name="images" size={20} /></ToolBtn>}
+        <ToolBtn label="Size" onClick={() => onTool('size')} active={activeTool === 'size'}><Icon name="fit" size={20} /></ToolBtn>
+        <ToolBtn label="Fade" onClick={() => onTool('opacity')} active={activeTool === 'opacity'}><Icon name="eye" size={20} /></ToolBtn>
+        <ToolBtn label="Move" onClick={() => onTool('position')} active={activeTool === 'position'}><Icon name="grid" size={20} /></ToolBtn>
+      </>}
+      <ToolBtn label="More" onClick={onMore}><Icon name="more" size={20} /></ToolBtn>
     </div>
   );
 }
 
-function MobileQuickProperties({el,tool}){
-  const {state,dispatch}=useStore();const update=patch=>dispatch({type:'update-element',id:el.id,patch});
-  if(tool==='emphasis')return <div style={{display:'flex',gap:12}}><button className="btn btn-tonal" aria-pressed={Number(el.fontWeight)>=600} onClick={()=>update({fontWeight:Number(el.fontWeight)>=600?400:700})}>Bold</button><button className="btn btn-tonal" aria-pressed={!!el.italic} onClick={()=>update({italic:!el.italic})}>Italic</button></div>;
-  if(tool==='styles')return <SlideTextStyleControls el={el} update={update}/>;
-  if(tool==='words')return <textarea aria-label="Edit selected words" value={el.text||''} onChange={e=>update({text:e.target.value})} style={{width:'100%',minHeight:140,fontSize:16,padding:12,boxSizing:'border-box'}}/>;
-  if(tool==='font')return <><select aria-label="Font" value={el.fontFamily} onChange={async e=>{const family=e.target.value;await document.fonts.load(`24px "${family}"`);update({fontFamily:family});}} style={{width:'100%',padding:14,fontSize:16}}>{ALL_FONT_OPTIONS.filter(f=>['Cormorant Garamond','Montserrat','Kalam'].includes(f.family)||f.family===el.fontFamily).map(f=><option key={f.family} value={f.family}>{f.label}</option>)}</select><p>The complete font library is kept in More ☰.</p></>;
-  if(tool==='size')return <><label>Font size<input type="number" min="6" aria-label="Font size" value={Math.round(el.fontSize)} onChange={e=>update({fontSize:Math.max(6,+e.target.value)})} style={{fontSize:18,padding:12,margin:12,width:100}}/></label><button className="btn btn-tonal" onClick={()=>update({fontSize:fitTextSize(el,Math.max(40,activeCanvas(state).h-el.y-150),el.fontSize)})}>Fit text inside slide</button></>;
-  if(tool==='colour')return <ColorPicker value={el.color} onChange={color=>update({color})}/>;
-  return <div style={{display:'flex',gap:12}}>{['left','center','right'].map(align=><button className="btn btn-tonal" key={align} onClick={()=>update({align})}>{align}</button>)}</div>;
+// The strip that opens under the slide. Tabs along the top switch tools without closing it.
+function MobileToolTray({ el, tool, setTool, onClose }) {
+  const tabs = trayToolsFor(el);
+  const tall = false;
+  return (
+    <div className="safe-bottom" style={{
+      background: 'white', borderTop: '1px solid var(--line)', flexShrink: 0, zIndex: 15,
+      display: 'flex', flexDirection: 'column',
+      maxHeight: `calc(var(--studio-viewport-height, 100dvh) * ${tall ? 0.5 : 0.42})`,
+      boxShadow: '0 -8px 24px rgba(150,60,120,.10)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 8px', borderBottom: '1px solid var(--line)', flexShrink: 0 }}>
+        <div className="scroll" role="tablist" style={{ display: 'flex', gap: 2, flex: 1, overflowX: 'auto', minWidth: 0 }}>
+          {tabs.map(t => (
+            <button key={t} role="tab" aria-selected={tool === t} onClick={() => setTool(t)}
+              style={{ padding: '10px 8px', minWidth: 46, borderRadius: 10, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0,
+                background: tool === t ? 'var(--pink-200)' : 'transparent', color: tool === t ? 'var(--pink-600)' : 'var(--ink-2)' }}>
+              {TRAY_LABELS[t]}
+            </button>
+          ))}
+        </div>
+        <button aria-label="Done" onClick={onClose}
+          style={{ width: 44, height: 40, borderRadius: 10, background: 'var(--ink)', color: 'var(--cream)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Icon name="check" size={18} />
+        </button>
+      </div>
+      <div className="scroll" style={{ overflowY: 'auto', padding: '12px 16px 14px', minHeight: 0 }}>
+        {tool === 'words' && <WordsTool el={el} />}
+        {tool === 'font' && <FontPicker el={el} maxHeight={Math.round((window.visualViewport?.height || window.innerHeight) * 0.27)} />}
+        {tool === 'size' && <SizeTool el={el} />}
+        {tool === 'colour' && <ColourTool el={el} />}
+        {tool === 'format' && <FormatTool el={el} />}
+        {tool === 'opacity' && <OpacityTool el={el} />}
+        {tool === 'position' && <PositionTool el={el} />}
+      </div>
+    </div>
+  );
+}
+
+// ---- Edit words: type straight into the box; Undo goes back to before you started typing ----
+function WordsTool({ el }) {
+  const { state } = useStore();
+  const { live, done } = useLiveElementEdit(el.id);
+  const { dispatch } = useStore();
+  const [busy, setBusy] = meS(false), [err, setErr] = meS('');
+  const improve = async () => {
+    if (!confirm('Rewrite this text with AI? Other items and slides stay unchanged. You can Undo.')) return;
+    setBusy(true); setErr('');
+    try {
+      const text = await aiGenerate({ brand: state.brand, vocab: state.vocab, provider: 'gemini',
+        task: 'Improve this one carousel text element. Keep the meaning. Return only the revised words, without labels or commentary.',
+        input: el.text, platform: 'Instagram carousel' });
+      if (!text?.trim()) throw new Error('No revised text returned.');
+      dispatch({ type: 'update-element', id: el.id, patch: { text: text.trim() } });
+    } catch (e) { setErr(e.message || 'AI could not rewrite this just now.'); } finally { setBusy(false); }
+  };
+  return (
+    <div>
+      <textarea aria-label="Edit selected words" autoFocus value={el.text || ''}
+        onChange={e => live({ text: e.target.value })} onBlur={done}
+        style={{ width: '100%', minHeight: 96, fontSize: 16, lineHeight: 1.45, padding: 12, boxSizing: 'border-box',
+          border: '1px solid var(--line-2)', borderRadius: 12, fontFamily: 'inherit', resize: 'vertical' }} />
+      <button className="btn btn-tonal" disabled={busy} onClick={improve} style={{ marginTop: 10 }}>{busy ? 'Improving…' : '✦ Improve with AI'}</button>
+      {err && <p role="alert" style={{ fontSize: 12, color: 'var(--pink-600)' }}>{err}</p>}
+    </div>
+  );
+}
+
+// ---- Colour ----
+function ColourTool({ el }) {
+  const { dispatch } = useStore();
+  const key = colourKey(el);
+  return <ColorPicker value={el[key]} onChange={v => dispatch({ type: 'update-element', id: el.id, patch: { [key]: v } })} />;
+}
+
+// ---- Size: text gets a size slider + box width; everything else scales as a whole ----
+function SizeTool({ el }) {
+  const { state, dispatch } = useStore();
+  const canvas = activeCanvas(state);
+  const { live, done } = useLiveElementEdit(el.id);
+  if (el.type === 'text') {
+    const maxW = Math.max(Math.round(el.w), Math.round(canvas.w - el.x));
+    return (
+      <div>
+        <FontSizeControl el={el} />
+        <div style={{ height: 14 }} />
+        <SliderRow label="Box width (wraps the words)" value={Math.round(el.w)} min={80} max={maxW} step={4} unit=" px"
+          onLive={v => live({ w: v })} onDone={done}
+          onStep={d => dispatch({ type: 'update-element', id: el.id, patch: { w: clamp(el.w + d, 80, maxW) } })} />
+      </div>
+    );
+  }
+  // Scale about the centre, keeping the shape's proportions.
+  const ratio = el.h / Math.max(1, el.w);
+  const cx = el.x + el.w / 2, cy = el.y + el.h / 2;
+  const maxW = Math.round(Math.max(canvas.w * 1.2, el.w));
+  const apply = (nw) => ({ x: cx - nw / 2, y: cy - (nw * ratio) / 2, w: nw, h: nw * ratio });
+  const isLine = el.type === 'line' || el.type === 'arrow';
+  return (
+    <div>
+      <SliderRow label="Size" value={Math.round(el.w)} min={24} max={maxW} step={2} unit=" px"
+        onLive={v => live(apply(v))} onDone={done}
+        onStep={d => dispatch({ type: 'update-element', id: el.id, patch: apply(clamp(el.w + d, 24, maxW)) })} />
+      {isLine && <>
+        <div style={{ height: 10 }} />
+        <SliderRow label="Thickness" value={Math.round(el.strokeWidth || 4)} min={1} max={40} unit=" px"
+          onLive={v => live({ strokeWidth: v })} onDone={done}
+          onStep={d => dispatch({ type: 'update-element', id: el.id, patch: { strokeWidth: clamp((el.strokeWidth || 4) + d, 1, 40) } })} />
+      </>}
+    </div>
+  );
+}
+
+// ---- See-through ----
+function OpacityTool({ el }) {
+  const { dispatch } = useStore();
+  const { live, done } = useLiveElementEdit(el.id);
+  const pct = Math.round((el.opacity ?? 1) * 100);
+  return <SliderRow label="Visibility" value={pct} min={5} max={100} unit="%" onLive={v => live({ opacity: v / 100 })} onDone={done}
+    onStep={d => dispatch({ type: 'update-element', id: el.id, patch: { opacity: clamp(pct + d, 5, 100) / 100 } })} />;
+}
+
+// ---- Format: bold / italic / underline, alignment, weight, spacing ----
+function FormatTool({ el }) {
+  const { dispatch } = useStore();
+  const { live, done } = useLiveElementEdit(el.id);
+  const update = (patch) => dispatch({ type: 'update-element', id: el.id, patch });
+  const bold = boldWeightFor(el.fontFamily);
+  const toggle = (on, extra = {}) => ({
+    flex: 1, justifyContent: 'center', minHeight: 46, fontSize: 17,
+    background: on ? 'var(--pink-200)' : 'var(--pink-50)', color: on ? 'var(--pink-600)' : 'var(--ink)', ...extra,
+  });
+  const ls = Number(el.letterSpacing || 0), lh = Number(el.lineHeight || 1.2);
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button className="btn" disabled={!bold} aria-pressed={isBoldText(el)} aria-label="Bold"
+          onClick={() => { const p = toggleBoldPatch(el); if (p) update(p); }}
+          style={toggle(isBoldText(el), { fontWeight: 800, opacity: bold ? 1 : 0.35 })}>B</button>
+        <button className="btn" aria-pressed={!!el.italic} aria-label="Italic" onClick={() => update({ italic: !el.italic })}
+          style={toggle(!!el.italic, { fontStyle: 'italic', fontFamily: 'serif' })}>I</button>
+        <button className="btn" aria-pressed={!!el.underline} aria-label="Underline" onClick={() => update({ underline: !el.underline })}
+          style={toggle(!!el.underline, { textDecoration: 'underline' })}>U</button>
+        {[['left', 'align_l'], ['center', 'align_c'], ['right', 'align_r']].map(([a, icon]) => (
+          <button key={a} className="btn" aria-label={`Align ${a}`} aria-pressed={el.align === a} onClick={() => update({ align: a })}
+            style={toggle(el.align === a)}><Icon name={icon} size={18} /></button>
+        ))}
+      </div>
+      {!bold && <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--ink-3)' }}>This font only comes in one weight, so Bold is off. Pick another font for bold.</p>}
+      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', margin: '14px 0 6px' }}>Weight</div>
+      <WeightChips el={el} update={update} />
+      <div style={{ height: 12 }} />
+      <SliderRow label="Letter spacing" value={ls} min={-2} max={30} step={0.5} onLive={v => live({ letterSpacing: v })} onDone={done}
+        onStep={d => update({ letterSpacing: clamp(ls + d, -2, 30) })} />
+      <SliderRow label="Line spacing" value={Math.round(lh * 100) / 100} min={0.8} max={2.4} step={0.05} onLive={v => live({ lineHeight: v })} onDone={done}
+        onStep={d => update({ lineHeight: Math.round(clamp(lh + d, 0.8, 2.4) * 100) / 100 })} />
+      <SliderRow label="Visibility" value={Math.round((el.opacity ?? 1) * 100)} min={5} max={100} unit="%" onLive={v => live({ opacity: v / 100 })} onDone={done}
+        onStep={d => update({ opacity: clamp(Math.round((el.opacity ?? 1) * 100) + d, 5, 100) / 100 })} />
+      <details style={{ marginTop: 10 }}>
+        <summary style={{ padding: '10px 0', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}>Slide text styles (Heading, Body…)</summary>
+        <SlideTextStyleControls el={el} update={update} />
+      </details>
+    </div>
+  );
+}
+
+// ---- Move: nudge with arrows, or snap to the page ----
+function PositionTool({ el }) {
+  const { state, dispatch } = useStore();
+  const [step, setStep] = meS(10);
+  const nudge = (dx, dy) => dispatch({ type: 'update-element', id: el.id, patch: { x: el.x + dx, y: el.y + dy } });
+  const arrow = { width: 52, height: 48, borderRadius: 12, background: 'var(--pink-100)', color: 'var(--ink)', fontSize: 20, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' };
+  const aligns = [['left', 'Left'], ['hcenter', 'Centre'], ['right', 'Right'], ['top', 'Top'], ['vmiddle', 'Middle'], ['bottom', 'Bottom']];
+  return (
+    <div style={{ display: 'flex', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+      <div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 52px)', gap: 6 }}>
+          <span />
+          <button style={arrow} aria-label="Nudge up" onClick={() => nudge(0, -step)}>↑</button>
+          <span />
+          <button style={arrow} aria-label="Nudge left" onClick={() => nudge(-step, 0)}>←</button>
+          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--ink-3)' }}>{step}px</span>
+          <button style={arrow} aria-label="Nudge right" onClick={() => nudge(step, 0)}>→</button>
+          <span />
+          <button style={arrow} aria-label="Nudge down" onClick={() => nudge(0, step)}>↓</button>
+          <span />
+        </div>
+        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+          {[[2, 'Fine'], [10, 'Normal'], [40, 'Big']].map(([v, l]) => (
+            <button key={v} onClick={() => setStep(v)} style={{ flex: 1, padding: '8px 4px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+              background: step === v ? 'var(--pink-200)' : 'var(--pink-50)', color: step === v ? 'var(--pink-600)' : 'var(--ink-2)' }}>{l}</button>
+          ))}
+        </div>
+      </div>
+      <div style={{ flex: 1, minWidth: 150 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 6 }}>Snap to the slide</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+          {aligns.map(([pos, label]) => (
+            <button key={pos} onClick={() => alignElementsToPage(state, dispatch, pos)}
+              style={{ padding: '12px 4px', borderRadius: 10, background: 'var(--pink-50)', fontSize: 12, fontWeight: 600, color: 'var(--ink)' }}>{label}</button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function MobilePagesList({ onSwitch }) {
@@ -933,6 +1241,7 @@ function MobileRenameSheet({ proj, onClose, onRename }) {
 }
 
 Object.assign(window, {
+  trayToolsFor, MobileToolTray, ToolBtn,
   MobileEditor, MobileEditorTopBar, MobilePagesStrip,
   MobileCanvasArea, MobileSelectionOverlay, MobileEditorBottomBar,
   MobileSelectionBar, MobilePagesList, MobileDownloadOptions, MobileRenameSheet,

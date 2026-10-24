@@ -29,10 +29,51 @@ const MORE_FONT_OPTIONS = [
   { family: 'Shantell Sans', label: 'Shantell Sans', kind: 'script' },
   { family: 'Pacifico',      label: 'Pacifico',      kind: 'script' },
   { family: 'Chewy',         label: 'Chewy',         kind: 'display' },
+  { family: 'Dancing Script',    label: 'Dancing Script',    kind: 'script' },
+  { family: 'Fredoka',           label: 'Fredoka',           kind: 'display' },
+  { family: 'Plus Jakarta Sans', label: 'Plus Jakarta Sans', kind: 'sans' },
 ];
 
 // Shared by every selected-text editor, including generated slides and mobile.
 const ALL_FONT_OPTIONS = [...FONT_OPTIONS, ...MORE_FONT_OPTIONS];
+
+// Which weights each font really has (matches the Google Fonts link in index.html).
+// Used so Bold / weight choices never fake-bold a font that has only one weight.
+const FONT_WEIGHTS = {
+  'Bebas Neue': [400], 'Chewy': [400], 'Pacifico': [400], 'DM Serif Display': [400], 'Instrument Serif': [400],
+  'Caveat': [400, 500, 600, 700], 'Dancing Script': [400, 500, 600, 700],
+  'Cormorant Garamond': [400, 600], 'Libre Baskerville': [400, 700], 'Kalam': [300, 400, 700],
+  'Lora': [400, 500, 600, 700], 'Instrument Sans': [400, 500, 600, 700],
+  'Josefin Sans': [300, 400, 500, 600, 700], 'Space Grotesk': [300, 400, 500, 600, 700], 'Fredoka': [300, 400, 500, 600, 700],
+  'Montserrat': [300, 400, 500, 600, 700, 800], 'Nunito': [300, 400, 500, 600, 700, 800], 'Poppins': [300, 400, 500, 600, 700, 800],
+  'Raleway': [300, 400, 500, 600, 700, 800], 'Shantell Sans': [300, 400, 500, 600, 700, 800], 'Plus Jakarta Sans': [300, 400, 500, 600, 700, 800],
+  'Fraunces': [100, 200, 300, 400, 500, 600, 700, 800, 900], 'Playfair Display': [400, 500, 600, 700, 800, 900],
+};
+const WEIGHT_NAMES = { 100: 'Thin', 200: 'Extra light', 300: 'Light', 400: 'Regular', 500: 'Medium', 600: 'Semibold', 700: 'Bold', 800: 'Extra bold', 900: 'Black' };
+const FONT_GROUPS = [
+  { kind: 'serif', label: 'Serif' }, { kind: 'sans', label: 'Sans-serif' },
+  { kind: 'script', label: 'Handwritten & script' }, { kind: 'display', label: 'Display & fun' },
+];
+const weightsFor = (family) => FONT_WEIGHTS[family] || [400, 700];
+const nearestWeight = (family, w) => {
+  const list = weightsFor(family); const n = Number(w) || 400;
+  return list.reduce((best, x) => Math.abs(x - n) < Math.abs(best - n) ? x : best, list[0]);
+};
+const regularWeightFor = (family) => weightsFor(family).includes(400) ? 400 : weightsFor(family)[0];
+const boldWeightFor = (family) => [700, 600].find(w => weightsFor(family).includes(w)) || null;
+const isBoldText = (el) => Number(el.fontWeight) >= 600;
+// Returns the patch for the Bold button, or null if this font has no bold.
+const toggleBoldPatch = (el) => {
+  if (isBoldText(el)) return { fontWeight: regularWeightFor(el.fontFamily) };
+  const b = boldWeightFor(el.fontFamily);
+  return b ? { fontWeight: b } : null;
+};
+// Waits for the font to be ready (so wrapping is measured correctly), then returns the patch.
+async function fontChangePatch(el, family) {
+  const weight = nearestWeight(family, el.fontWeight);
+  try { await document.fonts.load(`${el.italic ? 'italic ' : ''}${weight} 32px "${family}"`); } catch (e) {}
+  return { fontFamily: family, fontWeight: weight };
+}
 
 // ------- Palette swatches -------
 const BRAND_PALETTE = ['#F1CFEA', '#E8B8DC', '#D98BC6', '#C260A8', '#A0447F', '#2A1F2A', '#FDFBFC', '#F7E1F0'];
@@ -1301,6 +1342,13 @@ function LabeledInput({ label, value, onChange, suffix }) {
 }
 
 function ColorPicker({ label, value, onChange }) {
+  const { state } = useStore();
+  const brand = (state.brand?.colors || []).filter(Boolean);
+  const rows = [
+    ['Brand', brand.length ? brand : BRAND_PALETTE],
+    ['Neutral', NEUTRAL_PALETTE],
+    ['Soft accents', COMPLEMENT_PALETTE],
+  ];
   return (
     <div>
       {label && <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.08em' }}>{label}</div>}
@@ -1309,15 +1357,153 @@ function ColorPicker({ label, value, onChange }) {
           onChange={e => onChange(e.target.value)} />
         <input type="text" className="text-input" value={value} onChange={e => onChange(e.target.value)} />
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 4, marginTop: 8 }}>
-        {[...BRAND_PALETTE].map(c => (
-          <button key={c} onClick={() => onChange(c)}
-            style={{
-              aspectRatio: '1', background: c, borderRadius: 6,
-              border: value === c ? '2px solid var(--pink-500)' : '1px solid var(--line)',
-            }} />
-        ))}
+      {rows.map(([name, colors]) => (
+        <div key={name} style={{ marginTop: 10 }}>
+          <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 5 }}>{name}</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+            {colors.map(c => (
+              <button key={name + c} aria-label={`Colour ${c}`} onClick={() => onChange(c)}
+                style={{
+                  width: 30, height: 30, background: c, borderRadius: 8, flexShrink: 0,
+                  border: String(value).toLowerCase() === c.toLowerCase() ? '2.5px solid var(--pink-500)' : '1px solid var(--line-2)',
+                  boxSizing: 'border-box',
+                }} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ---------- Live (drag) editing helpers ----------
+// While a slider is dragged the element updates instantly but history is only
+// written once, when the finger lifts - so Undo goes back to "before the drag".
+function useLiveElementEdit(elId) {
+  const { state, dispatch } = useStore();
+  const snap = pR(null);
+  const stateRef = pR(state); stateRef.current = state;
+  const live = (patch) => {
+    if (!snap.current) snap.current = JSON.parse(JSON.stringify(activeProject(stateRef.current)));
+    dispatch({ type: 'update-element', id: elId, transient: true, patch });
+  };
+  const done = () => {
+    if (snap.current) { dispatch({ type: 'commit-transient', snapshot: snap.current }); snap.current = null; }
+  };
+  pE(() => () => { if (snap.current) { dispatch({ type: 'commit-transient', snapshot: snap.current }); snap.current = null; } }, []);
+  return { live, done };
+}
+
+function LiveSlider({ value, min, max, step = 1, onLive, onDone, label }) {
+  const ref = pR(null);
+  const doneRef = pR(onDone); doneRef.current = onDone;
+  pE(() => {
+    const node = ref.current; if (!node) return;
+    const fire = () => doneRef.current && doneRef.current();
+    node.addEventListener('change', fire);
+    return () => node.removeEventListener('change', fire);
+  }, []);
+  return <input ref={ref} className="big-range" type="range" aria-label={label}
+    min={min} max={max} step={step} value={value}
+    onChange={e => onLive(+e.target.value)} />;
+}
+
+const stepperStyle = {
+  width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'var(--pink-100)',
+  color: 'var(--ink)', fontSize: 15, fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+};
+
+// One slider row: [ - ] ====o==== [ + ]  with the value shown (and typeable) above.
+function SliderRow({ label, value, min, max, step = 1, unit = '', onLive, onDone, onStep, display }) {
+  return (
+    <div style={{ marginBottom: 6 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
+        <span style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 600 }}>{label}</span>
+        <span style={{ fontSize: 13, color: 'var(--pink-600)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{display ?? value}{unit}</span>
       </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <button style={stepperStyle} aria-label={`Decrease ${label}`} onClick={() => onStep(-step)}>−</button>
+        <LiveSlider value={value} min={min} max={max} step={step} onLive={onLive} onDone={onDone} label={label} />
+        <button style={stepperStyle} aria-label={`Increase ${label}`} onClick={() => onStep(step)}>+</button>
+      </div>
+    </div>
+  );
+}
+
+// Font size as a slider (plus small - / + steps) instead of typing a number.
+function FontSizeControl({ el }) {
+  const { state, dispatch } = useStore();
+  const { live, done } = useLiveElementEdit(el.id);
+  const canvas = activeCanvas(state);
+  const size = Math.round(el.fontSize || 24);
+  const max = Math.max(240, size);
+  const setSize = (v) => dispatch({ type: 'update-element', id: el.id, patch: { fontSize: clamp(v, 6, 600) } });
+  return (
+    <div>
+      <SliderRow label="Text size" value={size} min={10} max={max} unit=" px"
+        onLive={v => live({ fontSize: v })} onDone={done} onStep={d => setSize(size + d)} />
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+        {[['Small', 32], ['Body', 44], ['Heading', 76], ['Big', 112]].map(([name, v]) => (
+          <button key={name} className="btn btn-tonal" style={{ padding: '8px 12px', fontSize: 12 }}
+            onClick={() => setSize(Math.round(v * Math.min(canvas.w, canvas.h) / 1080))}>{name}</button>
+        ))}
+        <button className="btn btn-tonal" style={{ padding: '8px 12px', fontSize: 12 }}
+          onClick={() => setSize(fitTextSize(el, Math.max(40, canvas.h - el.y - 150), el.fontSize || 48))}>Fit to slide</button>
+      </div>
+    </div>
+  );
+}
+
+// Every font, shown in its own typeface, grouped. Tap one to apply.
+function FontPicker({ el, maxHeight = 260 }) {
+  const { dispatch } = useStore();
+  const pick = async (family) => {
+    const patch = await fontChangePatch(el, family);
+    dispatch({ type: 'update-element', id: el.id, patch });
+  };
+  return (
+    <div className="scroll" style={{ maxHeight, overflowY: 'auto', border: '1px solid var(--line)', borderRadius: 12, background: 'white' }}>
+      {FONT_GROUPS.map(g => {
+        const fonts = ALL_FONT_OPTIONS.filter(f => f.kind === g.kind);
+        if (!fonts.length) return null;
+        return (
+          <div key={g.kind}>
+            <div style={{ position: 'sticky', top: 0, background: 'var(--pink-50)', padding: '6px 12px', fontSize: 10, fontWeight: 700,
+              letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--ink-3)', zIndex: 1 }}>{g.label}</div>
+            {fonts.map(f => {
+              const on = el.fontFamily === f.family;
+              return (
+                <button key={f.family} onClick={() => pick(f.family)} aria-pressed={on}
+                  style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                    padding: '11px 14px', minHeight: 46, textAlign: 'left', borderBottom: '1px solid var(--line)',
+                    background: on ? 'var(--pink-100)' : 'white', color: on ? 'var(--pink-600)' : 'var(--ink)' }}>
+                  <span style={{ fontFamily: `"${f.family}", sans-serif`, fontSize: 21, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.label}</span>
+                  {on && <Icon name="check" size={16} />}
+                </button>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Weight choices limited to the weights this font really has.
+function WeightChips({ el, update }) {
+  const list = weightsFor(el.fontFamily);
+  if (list.length < 2) return <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>This font has one weight (Regular).</div>;
+  return (
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      {list.map(w => (
+        <button key={w} onClick={() => update({ fontWeight: w })}
+          style={{ padding: '9px 12px', minHeight: 40, borderRadius: 10, fontSize: 13, fontWeight: w,
+            fontFamily: `"${el.fontFamily}", sans-serif`,
+            background: Number(el.fontWeight) === w ? 'var(--pink-200)' : 'var(--pink-50)',
+            color: Number(el.fontWeight) === w ? 'var(--pink-600)' : 'var(--ink)' }}>
+          {WEIGHT_NAMES[w] || w}
+        </button>
+      ))}
     </div>
   );
 }
@@ -1350,52 +1536,33 @@ function TextProps({ el, update, mode='basic' }) {
         onChange={e => update({ text: e.target.value })}
         style={{ width: '100%', minHeight: 96, resize: 'vertical', lineHeight: 1.45,
           padding: '10px 12px', boxSizing: 'border-box', marginBottom: 10 }} />
-      <select aria-label="Basic font" className="pk-select" value={el.fontFamily} onChange={async e=>{const family=e.target.value;await document.fonts.load(`24px "${family}"`);update({fontFamily:family});}} style={{width:'100%',padding:12,marginBottom:10}}>
-        {ALL_FONT_OPTIONS.filter(f=>['Cormorant Garamond','Montserrat','Kalam'].includes(f.family)||f.family===el.fontFamily).map(f=><option key={f.family} value={f.family}>{f.label}</option>)}
-      </select>
-      <LabeledInput label="Font size" value={Math.round(el.fontSize)} onChange={v=>update({fontSize:Math.max(6,+v)})}/>
-      <div style={{display:'flex',gap:8,margin:'12px 0'}}>{['left','center','right'].map(align=><button className="btn btn-tonal" key={align} onClick={()=>update({align})}>{align}</button>)}</div>
+      <SectionLabel>Font</SectionLabel>
+      <FontPicker el={el} maxHeight={220}/>
+      <SectionLabel>Size</SectionLabel>
+      <FontSizeControl el={el}/>
+      <div style={{display:'flex',gap:8,margin:'14px 0 12px'}}>{[['left','align_l'],['center','align_c'],['right','align_r']].map(([align,icon])=><button className={'btn btn-tonal'} aria-label={'Align '+align} aria-pressed={el.align===align} key={align} onClick={()=>update({align})} style={{flex:1,justifyContent:'center',background:el.align===align?'var(--pink-200)':undefined}}><Icon name={icon} size={16}/></button>)}</div>
       <ColorPicker value={el.color} onChange={color=>update({color})}/>
-      <div style={{display:'flex',gap:8,margin:'12px 0'}}><button className="btn btn-tonal" aria-pressed={Number(el.fontWeight)>=600} onClick={()=>update({fontWeight:Number(el.fontWeight)>=600?400:700})}>Bold</button><button className="btn btn-tonal" aria-pressed={!!el.italic} onClick={()=>update({italic:!el.italic})}>Italic</button></div>
+      <div style={{display:'flex',gap:8,margin:'12px 0'}}><button className="btn btn-tonal" disabled={!boldWeightFor(el.fontFamily)} title={boldWeightFor(el.fontFamily)?'':'This font has no bold'} aria-pressed={isBoldText(el)} onClick={()=>{const p=toggleBoldPatch(el);if(p)update(p);}} style={{flex:1,justifyContent:'center',fontWeight:700,background:isBoldText(el)?'var(--pink-200)':undefined}}>Bold</button><button className="btn btn-tonal" aria-pressed={!!el.italic} onClick={()=>update({italic:!el.italic})} style={{flex:1,justifyContent:'center',fontStyle:'italic',background:el.italic?'var(--pink-200)':undefined}}>Italic</button></div>
       </>}
       {mode==='advanced'&&<>
       <button className="btn btn-tonal" disabled={aiBusy} onClick={improve}>{aiBusy?'Improving…':'Improve selected text with AI'}</button>
       {aiError&&<p role="alert">{aiError}</p>}
       <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 5 }}>Font library · {ALL_FONT_OPTIONS.length} fonts</div>
       <select className="pk-select" style={{ width: '100%', padding: '10px 24px 10px 12px', fontSize: 13, fontFamily: el.fontFamily }}
-        value={el.fontFamily} onChange={e => update({ fontFamily: e.target.value })}>
-        <optgroup label="Core fonts">
-          {FONT_OPTIONS.map(f => <option key={f.family} value={f.family} style={{ fontFamily: f.family }}>{f.label}</option>)}
-        </optgroup>
-        <optgroup label="Handmade & extra fonts">
-          {MORE_FONT_OPTIONS.map(f => <option key={f.family} value={f.family} style={{ fontFamily: f.family }}>{f.label}</option>)}
-        </optgroup>
-      </select>
-      <div style={{ display: 'flex', gap: 5, marginTop: 6, flexWrap: 'wrap' }}>
-        {['Chewy', 'Kalam', 'Shantell Sans'].map(family => (
-          <button key={family} onClick={() => update({ fontFamily: family })}
-            style={{
-              padding: '6px 9px', borderRadius: 7, border: '1px solid var(--line)',
-              background: el.fontFamily === family ? 'var(--pink-100)' : 'white',
-              color: el.fontFamily === family ? 'var(--pink-600)' : 'var(--ink-2)',
-              fontFamily: family, fontSize: 12,
-            }}>
-            {family}
-          </button>
+        value={el.fontFamily} onChange={async e => update(await fontChangePatch(el, e.target.value))}>
+        {FONT_GROUPS.map(g => (
+          <optgroup key={g.kind} label={g.label}>
+            {ALL_FONT_OPTIONS.filter(f => f.kind === g.kind).map(f => <option key={f.family} value={f.family} style={{ fontFamily: f.family }}>{f.label}</option>)}
+          </optgroup>
         ))}
-      </div>
-
+      </select>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
         <LabeledInput label="Size" value={el.fontSize} onChange={v => update({ fontSize: Math.max(6, +v) })} />
         <div>
           <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 4 }}>Weight</div>
           <select className="pk-select" style={{ width: '100%' }}
             value={el.fontWeight} onChange={e => update({ fontWeight: +e.target.value })}>
-            <option value={300}>Light</option>
-            <option value={400}>Regular</option>
-            <option value={500}>Medium</option>
-            <option value={600}>Semibold</option>
-            <option value={700}>Bold</option>
+            {weightsFor(el.fontFamily).map(w => <option key={w} value={w}>{WEIGHT_NAMES[w] || w}</option>)}
           </select>
         </div>
       </div>
@@ -1815,4 +1982,6 @@ function PagesList() {
   );
 }
 
-Object.assign(window, { LeftRail, LeftPanel, RightPanel, PagesList, LayerArrangeControls, FONT_OPTIONS, PanelHeader, SectionLabel });
+Object.assign(window, { LeftRail, LeftPanel, RightPanel, PagesList, LayerArrangeControls, FONT_OPTIONS, PanelHeader, SectionLabel,
+  FONT_WEIGHTS, WEIGHT_NAMES, FONT_GROUPS, weightsFor, nearestWeight, regularWeightFor, boldWeightFor, isBoldText, toggleBoldPatch, fontChangePatch,
+  useLiveElementEdit, LiveSlider, SliderRow, FontSizeControl, FontPicker, WeightChips, ColorPicker });
