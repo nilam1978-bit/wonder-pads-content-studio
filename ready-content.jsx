@@ -1,10 +1,18 @@
+// Occasion templates (custom order, new home, pop-up) keep only the detail slides.
+// Their cover and closing slides come from the matching style (kitId).
+function readyPostSlides(post){
+  const kit=post.kitId&&CAROUSEL_STYLE_PAIRS.find(p=>p.id===post.kitId)?.kit;
+  if(!kit||!post.slides?.length)return post.slides||[];
+  const cta=CAROUSEL_CTA_CHOICES[kit.cta]||CAROUSEL_CTA_CHOICES.save;
+  return [{title:kit.cover.title,body:kit.cover.body},...post.slides,{title:cta.title,body:cta.body}];
+}
 // Exact scripted pages: never redistribute text or append an automatic outro.
 function fullSinglePostCanvas(post,size,pairId,brand){
   const W=1080,H=size==='portrait'?1350:1080,pair=CAROUSEL_STYLE_PAIRS.find(p=>p.id===pairId)||CAROUSEL_STYLE_PAIRS[0];
   const paragraphs=(post.caption||'').trim().split(/\n\s*\n/);
   const titleText=paragraphs.shift()||post.imageText||post.title||'',bodyText=paragraphs.join('\n\n');
   const c={id:uid(),name:'Post',slideKind:'content',w:W,h:H,bg:{type:'color',value:pair.bg},elements:[]};
-  const title=newElement('text',{...SLIDE_TEXT_STYLES.h1,textStyle:'h1',__role:'heading',text:titleText,x:86,y:86,w:908,fontSize:84,color:pair.ink,italic:!!pair.italic});
+  const title=newElement('text',{...SLIDE_TEXT_STYLES.h1,textStyle:'h1',__role:'heading',text:titleText,x:86,y:86,w:908,fontSize:pair.kit?104:84,color:pair.ink,italic:!!pair.italic});
   const body=newElement('text',{...SLIDE_TEXT_STYLES.body,textStyle:'body',__role:'body',text:bodyText,x:86,y:0,w:908,fontSize:42,lineHeight:1.4,color:pair.split?'#2A1F2A':pair.ink});
   const measure=()=>{title.h=textLayout(title).height;body.y=title.y+title.h+60;body.h=bodyText?textLayout(body).height:0;};
   measure();
@@ -24,7 +32,8 @@ function readyPostCanvases(post, size, pair, brand) {
   if(!post.slides?.length&&post.includeFullText!==false)return [fullSinglePostCanvas(post,size,pair,brand)];
   const W=1080,H=size==='portrait'?1350:1080;
   const settings={size,pair,cta:post.cta||'message',logo:true,handles:true,swipe:true};
-  const slides=post.slides?.length?post.slides:[{title:(post.imageText||'').replace(/ \/ /g,'\n'),body:''}];
+  const kitDef=post.kitId&&CAROUSEL_STYLE_PAIRS.find(p=>p.id===post.kitId)?.kit;
+  const slides=post.slides?.length?readyPostSlides(post):[{title:(post.imageText||'').replace(/ \/ /g,'\n'),body:''}];
   return slides.map((slide,i)=>{
     if(slides.length===1&&!post.imageText)return {id:uid(),name:'Photo post',slideKind:'content',w:W,h:H,bg:{type:'color',value:'#FDFBFC'},elements:[]};
     let c;
@@ -33,7 +42,7 @@ function readyPostCanvases(post, size, pair, brand) {
       // Fit the heading AND supporting copy together, preserving a separate
       // area for Swipe or Save/Share/Follow and the footer.
       for(let n=0;n<=12;n++){
-        c=endpointSlide(kind,slide.title,slide.body,'',{...settings,swipe:slides.length>1,textScale:1-n*.02},brand,W,H);
+        c=endpointSlide(kind,slide.title,slide.body,i===0&&slides.length>1?(post.hookLabel||kitDef?.label||''):'',{...settings,swipe:slides.length>1,textScale:1-n*.02},brand,W,H);
         const text=c.elements.filter(e=>e.__role==='heading'||e.__role==='body');
         if(text.every(e=>e.y+textLayout(e).height<=limit))break;
         if(n===12)throw new Error('The opening or closing text is too long to fit legibly. Shorten it in Edit words; no words have been removed.');
@@ -72,7 +81,7 @@ function readyPostHasPlaceholders(post){
     .some(text=>/\[[^\]]+\]/.test(text||''));
 }
 function readySlideText(post){
-  return post.slides?.length?post.slides.map((s,i)=>'Slide '+(i+1)+'\n'+[s.title,s.body].filter(Boolean).join('\n\n')).join('\n\n---\n\n'):
+  return post.slides?.length?readyPostSlides(post).map((s,i)=>'Slide '+(i+1)+'\n'+[s.title,s.body].filter(Boolean).join('\n\n')).join('\n\n---\n\n'):
     (post.includeFullText!==false?post.caption:post.imageText)||'';
 }
 function canvasSlideText(canvases){
@@ -122,7 +131,7 @@ function ReadyContentPlan(){
       if(project&&!rebuild){dispatch({type:'open-project',id:project.id});return;}
       if(unresolved)throw new Error('Replace the bracketed prices and quantities in Edit words first.');
       if(post.confirmation&&!post.confirmed)throw new Error('Confirm the product details below before creating your design.');
-      if(post.slides?.length&&(!post.slides[0].title.trim()||!post.slides[post.slides.length-1].title.trim()))throw new Error('Add a title to the opening and closing slides in Edit words.');
+      const allSlides=readyPostSlides(post);if(allSlides.length&&(!allSlides[0].title.trim()||!allSlides[allSlides.length-1].title.trim()))throw new Error('Add a title to the opening and closing slides in Edit words.');
       await Promise.all([document.fonts.load('600 112px "Cormorant Garamond"'),document.fonts.load('400 50px "Montserrat"')]);
       const canvases=readyPostCanvases(post,size,pair,state.brand),id=uid();
       dispatch({type:'create-project',project:{id,name:post.title.slice(0,70),createdAt:now(),updatedAt:now(),canvases,activeCanvasId:canvases[0].id,projectType:post.format==='Carousel'?'carousel':'post',contentEntryId:post.id,caption,contentDate:post.date}});
@@ -145,14 +154,14 @@ function ReadyContentPlan(){
       <div className="ready-list">{visible.map(p=><button className="simple-card" key={p.id} onClick={()=>openEntry(p)}>
         <span>{p.priority!=null&&<span className="ready-badge">New</span>}{readySectionName(p)} · {p.format==='Static post'?'Single post':p.format}</span>
         <h3>{p.title}</h3>
-        <p>{readyContentStatus(p)==='posted'?'Posted':readyContentStatus(p)==='check'?'Needs your confirmation':p.designCreated?'Design saved':p.format==='Carousel'?`Text ready · ${p.slides?.length||0} slides`:p.format==='Reel'?'Script ready · filming needed':'Text ready · one page'}</p>
+        <p>{readyContentStatus(p)==='posted'?'Posted':readyContentStatus(p)==='check'?'Needs your confirmation':p.designCreated?'Design saved':p.format==='Carousel'?`Text ready · ${readyPostSlides(p).length} slides`:p.format==='Reel'?'Script ready · filming needed':'Text ready · one page'}</p>
         {p.stylePair&&<small>Suggested style: {CAROUSEL_STYLE_PAIRS.find(s=>s.id===p.stylePair)?.name}</small>}
       </button>)}</div>
     </>:<div className="simple-card ready-fields">
       <p className="simple-muted">{readySectionName(post)} · {post.format==='Static post'?'Single post':post.format}{post.archived?' · Archived':''}</p><h1 className="simple-title">{post.title}</h1>
       {post.week&&<p className="simple-muted">Original plan: week {post.week} · {post.date}. Use it whenever you like.</p>}
       {post.stylePair&&<p className="simple-muted">Suggested style: {CAROUSEL_STYLE_PAIRS.find(s=>s.id===post.stylePair)?.name}. You can choose another below.</p>}
-      {post.format!=='Reel'&&<div className="ready-actions"><select aria-label="Post aspect ratio" value={size} onChange={e=>setSize(e.target.value)}><option value="portrait">Portrait · 1080 × 1350</option><option value="post">Square · 1080 × 1080</option></select><select aria-label="Opening and closing style" value={pair} onChange={e=>setPair(e.target.value)}>{CAROUSEL_STYLE_PAIRS.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select><button className="simple-action" disabled={busy} onClick={()=>create()}>{busy?'Creating…':project?'Open saved design':post.format==='Carousel'?`Create my ${post.slides?.length||0} slides`:'Create single post'}</button>{project&&<button className="simple-action simple-secondary" disabled={busy} onClick={()=>create(true)}>Create updated copy</button>}</div>}
+      {post.format!=='Reel'&&<div className="ready-actions"><select aria-label="Post aspect ratio" value={size} onChange={e=>setSize(e.target.value)}><option value="portrait">Portrait · 1080 × 1350</option><option value="post">Square · 1080 × 1080</option></select><select aria-label="Opening and closing style" value={pair} onChange={e=>setPair(e.target.value)}>{CAROUSEL_STYLE_PAIRS.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select><button className="simple-action" disabled={busy} onClick={()=>create()}>{busy?'Creating…':project?'Open saved design':post.format==='Carousel'?`Create my ${readyPostSlides(post).length} slides`:'Create single post'}</button>{project&&<button className="simple-action simple-secondary" disabled={busy} onClick={()=>create(true)}>Create updated copy</button>}</div>}
       {notice&&<p role="status">{notice}</p>}
       {post.format!=='Reel'&&<div className="ready-actions"><button className="simple-action simple-secondary" onClick={copyWords}>Copy all slide text</button></div>}
       {copyFallback&&<textarea aria-label="Slide text to copy" readOnly value={copyFallback} onFocus={e=>e.target.select()}/>}
@@ -162,7 +171,19 @@ function ReadyContentPlan(){
       <h2>Caption & hashtags</h2><textarea aria-label="Post caption" value={post.caption} onChange={e=>patch({caption:e.target.value})}/><label>Hashtags <input aria-label="Post hashtags" value={post.hashtags} onChange={e=>patch({hashtags:e.target.value})}/></label>
       <div className="ready-actions"><button className="simple-action simple-secondary" onClick={async()=>{try{await navigator.clipboard.writeText(caption);setNotice('Caption and hashtags copied.');}catch{setNotice('Copy is unavailable here. Select the caption and hashtags manually.');}}}>Copy caption & hashtags</button><button className="simple-action simple-secondary" onClick={()=>patch({status:post.status==='posted'?'queued':'posted'})}>{post.status==='posted'?'Mark not posted':'Mark posted'}</button><button className="simple-action simple-secondary" onClick={()=>{patch({archived:!post.archived});setNotice(post.archived?'Returned to the library.':'Moved to Archive. Your words and design are kept.');}}>{post.archived?'Return to library':'Move to Archive'}</button></div>
       <details><summary>Preparation notes</summary><p className="ready-notes simple-muted">{post.notes||'No additional preparation notes.'}</p><p className="simple-muted">Contacts: @ecoclothpad · wonder-pads.com. No WhatsApp number has been invented.</p></details>
-      {post.format!=='Reel'&&<details><summary>Edit words before creating slides</summary>{project&&<p>These edits change the saved script. Your existing design is kept. Use Create updated copy to transfer the current text and settings without overwriting it.</p>}{post.slides?.length?post.slides.map((s,i)=><div key={i}><label>Slide {i+1} title <input value={s.title} onChange={e=>patch({slides:post.slides.map((x,j)=>j===i?{...x,title:e.target.value}:x),confirmed:false})}/></label><textarea aria-label={`Slide ${i+1} text`} value={s.body} onChange={e=>patch({slides:post.slides.map((x,j)=>j===i?{...x,body:e.target.value}:x),confirmed:false})}/></div>):<textarea aria-label="Image text" value={post.imageText||''} onChange={e=>patch({imageText:e.target.value})}/>}</details>}
+      {post.format!=='Reel'&&<details><summary>Edit words before creating slides</summary>{post.kitId&&CAROUSEL_STYLE_PAIRS.some(p=>p.id===post.kitId&&p.kit)&&<p className="simple-muted">The cover and closing slides come from the “{CAROUSEL_STYLE_PAIRS.find(p=>p.id===post.kitId).name}” style above, so only the detail slides are listed here. You can still edit the cover and closing words on the canvas.</p>}{project&&<p>These edits change the saved script. Your existing design is kept. Use Create updated copy to transfer the current text and settings without overwriting it.</p>}{post.slides?.length?post.slides.map((s,i)=>{
+        const n=post.slides.length,wrapped=!!(post.kitId&&CAROUSEL_STYLE_PAIRS.some(p=>p.id===post.kitId&&p.kit)),off=wrapped?1:0,first=!wrapped&&i===0&&n>1,last=!wrapped&&i===n-1&&n>1;
+        const setSlide=change=>patch({slides:post.slides.map((x,j)=>j===i?{...x,...change}:x),confirmed:false});
+        return <div key={i} style={{marginTop:18,paddingTop:12,borderTop:'1px solid #ead5e5'}}>
+          <h3 style={{margin:'0 0 4px'}}>{first?'Cover slide':last?'Closing slide':`Slide ${i+1+off}`}</h3>
+          {first&&<label>Small label above the headline (optional)<input maxLength={32} aria-label="Cover label" value={post.hookLabel||''} onChange={e=>patch({hookLabel:e.target.value})} placeholder="e.g. CUSTOM ORDER"/></label>}
+          {last&&<label>What should readers do next?<select aria-label="Closing slide action" value={post.cta||'message'} onChange={e=>{const c=CAROUSEL_CTA_CHOICES[e.target.value];patch({cta:e.target.value,slides:post.slides.map((x,j)=>j===i?{...x,title:c.title,body:c.body}:x),confirmed:false});}}>{Object.entries(CAROUSEL_CTA_CHOICES).map(([id,c])=><option key={id} value={id}>{c.label}</option>)}</select></label>}
+          {last&&<p className="simple-muted">Picking an action fills in the closing words below. You can still edit them afterwards.</p>}
+          {s.photo&&<p className="simple-muted">Photo slide: the pink area is where your picture goes.</p>}
+          <label>{first?'Cover headline':last?'Closing headline':`Slide ${i+1+off} title`} <input value={s.title} onChange={e=>setSlide({title:e.target.value})}/></label>
+          <textarea aria-label={`Slide ${i+1} text`} value={s.body} onChange={e=>setSlide({body:e.target.value})}/>
+        </div>;
+      }):<textarea aria-label="Image text" value={post.imageText||''} onChange={e=>patch({imageText:e.target.value})}/>}</details>}
 
     </div>}
     </div></main>

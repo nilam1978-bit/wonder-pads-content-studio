@@ -255,10 +255,12 @@ function reducer(state, action) {
         if(entry.packId!=='wp-weeks-1-8')return entry;
         const source=action.posts.find(p=>p.id===entry.id),patch={};
         if(!source)return entry;
-        for(const key of ['librarySection','priority','stylePair','middleStyle','defaultSize','archived'])
+        for(const key of ['librarySection','priority','stylePair','middleStyle','defaultSize','archived','hookLabel'])
           if(entry[key]===undefined&&source[key]!==undefined)patch[key]=source[key];
         for(const [key,old] of Object.entries(entry.status==='posted'?{}:source.previousCopy||{}))
           if(JSON.stringify(entry[key])===JSON.stringify(old))patch[key]=source[key];
+        // Unedited saved copies of the occasion templates move to the new cover/closing structure together.
+        if(patch.slides!==undefined&&source.kitId){patch.kitId=source.kitId;patch.stylePair=source.stylePair;}
         if(!Object.keys(patch).length)return entry;
         updated=true;
         const next={...entry,...patch};
