@@ -14,7 +14,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Caveat:wght@400..700&family=Chewy&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Serif+Display:ital@0;1&family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Instrument+Serif:ital@0;1&family=Josefin+Sans:wght@300..700&family=Kalam:wght@300;400;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400..700;1,400..700&family=Montserrat:wght@300..800&family=Nunito:wght@300..800&family=Pacifico&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:wght@300..800&family=Raleway:wght@300..800&family=Shantell+Sans:ital,wght@0,300..800;1,300..800&family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Caveat:wght@400..700&family=Chewy&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Dancing+Script:wght@400..700&family=DM+Serif+Display:ital@0;1&family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Fredoka:wght@300..700&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Instrument+Serif:ital@0;1&family=Josefin+Sans:wght@300..700&family=Kalam:wght@300;400;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400..700;1,400..700&family=Montserrat:wght@300..800&family=Nunito:wght@300..800&family=Pacifico&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:wght@300..800&family=Poppins:wght@300..800&family=Raleway:wght@300..800&family=Shantell+Sans:ital,wght@0,300..800;1,300..800&family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
 
 <style>
   :root{
@@ -85,6 +85,14 @@
     box-shadow: 0 2px 6px rgba(150, 60, 120, .3);
     cursor: pointer;
   }
+
+
+  /* Big, finger-friendly slider (font size, spacing, opacity...) */
+  input[type=range].big-range{ height: 44px; flex: 1; min-width: 0; margin: 0; touch-action: pan-y; }
+  input[type=range].big-range::-webkit-slider-runnable-track{ height: 8px; border-radius: 8px; background: var(--pink-200); }
+  input[type=range].big-range::-webkit-slider-thumb{ height: 30px; width: 30px; margin-top: -11px; background: var(--pink-500); border: 3px solid white; box-shadow: 0 2px 8px rgba(150,60,120,.4); }
+  input[type=range].big-range::-moz-range-track{ height: 8px; border-radius: 8px; background: var(--pink-200); }
+  input[type=range].big-range::-moz-range-thumb{ height: 24px; width: 24px; background: var(--pink-500); border: 3px solid white; box-shadow: 0 2px 8px rgba(150,60,120,.4); }
 
   /* color input reset */
   input[type=color]{
@@ -295,7 +303,7 @@
   <script type="text/babel" src="editor-ai.jsx?v=social-create-1"></script>
   <script type="text/babel" src="editor-export.jsx?v=logo-final-1"></script>
   <script type="text/babel" src="editor-canvas.jsx?v=logo-final-1"></script>
-  <script type="text/babel" src="editor-panels.jsx?v=clear-actions-1"></script>
+  <script type="text/babel" src="editor-panels.jsx?v=phone-tools-1"></script>
   <script type="text/babel" src="editor-brand.jsx?v=hook-cta-1"></script>
   <script type="text/babel" src="editor-carousel.jsx?v=brand-final-1"></script>
   <script type="text/babel" src="editor-repurpose.jsx?v=6"></script>
@@ -304,7 +312,7 @@
   <script type="text/babel" src="editor-calendar.jsx?v=workspace-nav-4"></script>
   <script type="text/babel" src="editor-home.jsx?v=hook-cta-1"></script>
   <script type="text/babel" src="editor-mobile.jsx?v=14"></script>
-  <script type="text/babel" src="editor-mobile-editor.jsx?v=clear-actions-1"></script>
+  <script type="text/babel" src="editor-mobile-editor.jsx?v=phone-tools-1"></script>
   <script type="text/babel" src="editor-mobile-carousel.jsx?v=preview-return-1"></script>
   <script type="text/babel" src="simple-carousel.jsx?v=simple-carousel-3"></script>
   <script type="text/babel" src="final-carousel.jsx?v=text-social-align-1"></script>
@@ -312,7 +320,7 @@
   <script src="library-content-data.js?v=library-1"></script>
   <script type="text/babel" src="ready-content.jsx?v=library-1"></script>
   <script type="text/babel" src="simple-studio.jsx?v=clear-actions-1"></script>
-  <script type="text/babel" src="final-workspace.jsx?v=clear-actions-1"></script>
+  <script type="text/babel" src="final-workspace.jsx?v=phone-tools-1"></script>
   <script type="text/babel" src="editor.jsx?v=text-social-align-1"></script>
   <script>
     // Safari's visible area changes as its address bar and keyboard open.
