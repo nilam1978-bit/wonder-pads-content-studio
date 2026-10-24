@@ -349,5 +349,60 @@
     "script": "Image text: Every topper gets a water-only wash before sewing."
   }
 ];
+  // ---- Fill-in templates: change the [bracketed] words, add your own photos. ----
+  // Slides marked photo:true get an empty photo area. Anything in [square brackets]
+  // must be replaced in "Edit words" before slides can be created.
+  const TAGS='#WonderPadsSG #ClothPadsSingapore #HandmadeSG #ReusablePads';
+  const tpl=(o)=>({date:null,week:null,effort:'Quick',confirmation:'',cta:'message',defaultSize:'portrait',stylePair:'gentle',middleStyle:'editorial',hashtags:TAGS,...o,hook:o.title,script:(o.slides||[]).map((x,i)=>'Slide '+(i+1)+': '+[x.title,x.body].filter(Boolean).join(' — ')).join('\n')||o.caption});
+  additions.push(
+    tpl({id:'wp-tpl-custom-order',ideaId:3001,librarySection:'orders',priority:9,format:'Carousel',
+      title:"This week's custom order: [theme or colours]",
+      slides:[
+        {title:"This week's custom order",body:'Made by hand for [first name or "a lovely customer"].'},
+        {title:'What was asked for',body:'[Size, flow, fabric or colours they wanted]',photo:true},
+        {title:'How it came together',body:'[One or two sentences: fabric choice, a small detail, anything special]'},
+        {title:'The finished set',body:'[One line about the finished pads]',photo:true},
+        {title:'Want something made just for you?',body:'Message @ecoclothpad to talk about a custom order.'}],
+      caption:"This week's custom order: [theme or colours]\n\n[Two or three sentences about who it is for, what they asked for and what you enjoyed making.]\n\nWant something made just for you? Message @ecoclothpad and we will work out the size, fabric and colours together.",
+      notes:'Add your own photos of the fabric and the finished set. Ask your customer before naming them or showing anything that identifies them.'}),
+    tpl({id:'wp-tpl-new-owner',ideaId:3002,librarySection:'orders',priority:10,format:'Carousel',
+      title:'Off to its new home: [name of set or pad]',
+      slides:[
+        {title:'Off to its new home',body:'[Name of set or pad] is on its way to [first name or "a new owner"].'},
+        {title:'Packed with care',body:'[One line about how it was wrapped or packed]',photo:true},
+        {title:'A little story',body:'[Short story: who it is for, why it was chosen, what makes it special]'},
+        {title:'Ready to be loved',body:'[One line about the pad, fabric or print]',photo:true},
+        {title:'Thank you, [first name]',body:'Every pad is made by hand. Thank you for choosing Wonder Pads.'}],
+      caption:"Off to its new home: [name of set or pad]\n\n[Two or three sentences about the pad and the person it is going to.]\n\nThank you, [first name], for choosing handmade. Message @ecoclothpad if you would like something made for you.",
+      notes:'Swap in your own photos. Ask permission before naming a customer or showing their message.'}),
+    tpl({id:'wp-tpl-popup-announce',ideaId:3003,librarySection:'events',priority:11,format:'Carousel',stylePair:'colourful',
+      title:'Come say hello: [event name]',
+      slides:[
+        {title:'Come say hello',body:'[Event name]. Wonder Pads will be there.'},
+        {title:'When and where',body:'When: [date and time]\nWhere: [venue and address]'},
+        {title:'What to expect',body:'[Two or three things: pads to see and touch, fabrics, a chat, a discount]'},
+        {title:'See you there',body:'Questions before then? Message @ecoclothpad.'}],
+      caption:"Come say hello: [event name]\n\nWhen: [date and time]\nWhere: [venue and address]\n\n[One or two sentences on what people can expect.]\n\nQuestions before then? Message @ecoclothpad.",
+      notes:'Check the date, time and address twice before posting.'}),
+    tpl({id:'wp-tpl-popup-single',ideaId:3004,librarySection:'events',priority:12,format:'Static post',stylePair:'clear',
+      title:'Pop-up this [day]: [event name]',
+      slides:[],
+      caption:"Pop-up this [day]: [event name]\n\n[Date and time]\n[Venue and address]\n\n[One sentence on what you will have with you.]\n\nSee you there! Questions? Message @ecoclothpad.",
+      notes:'A single image that says everything. Keep it short.'}),
+    tpl({id:'wp-tpl-event-reminder',ideaId:3005,librarySection:'events',priority:13,format:'Static post',stylePair:'informative',
+      title:'Tomorrow: [event name]',
+      slides:[],
+      caption:"Tomorrow: [event name]\n\n[Time] at [venue].\n\nCome and see the pads in person. Message @ecoclothpad with any questions.",
+      notes:'Post the day before, or on the morning of the event.'}),
+    tpl({id:'wp-tpl-event-thanks',ideaId:3006,librarySection:'events',priority:14,format:'Carousel',stylePair:'gentle',
+      title:'Thank you for stopping by: [event name]',
+      slides:[
+        {title:'Thank you for stopping by',body:'[Event name] was a joy.'},
+        {title:'Our table',body:'[One line about the day]',photo:true},
+        {title:'What we loved',body:'[A conversation, a favourite pad, a moment that made you smile]'},
+        {title:'Until next time',body:'Find us at [next event or date], or message @ecoclothpad.'}],
+      caption:"Thank you for stopping by: [event name]\n\n[Two or three sentences about the day and the people you met.]\n\nFind us next at [next event or date], or message @ecoclothpad any time.",
+      notes:'Add one or two of your own photos from the day.'})
+  );
   window.WONDER_READY_POSTS=[...originals,...additions];
 })();

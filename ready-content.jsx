@@ -41,6 +41,17 @@ function readyPostCanvases(post, size, pair, brand) {
       c.name=slides.length===1?'Post':i===0?'Cover':'Closing slide';
     }else{
       c={id:uid(),name:`Slide ${i+1}`,slideKind:'content',w:W,h:H,bg:{type:'color',value:i%2?'#FDFBFC':'#FBF0F7'},elements:[]};
+      if(slide.photo){
+        // Photo slide: heading, an empty photo area (no instruction text on the canvas), one short line below.
+        const head=newElement('text',{...SLIDE_TEXT_STYLES.h2,text:slide.title,x:86,y:86,w:908,fontSize:64,textStyle:'h2',__role:'heading',color:'#2A1F2A'});head.h=textLayout(head).height;
+        const frameY=head.y+head.h+30,frameH=Math.round(H*(H>1100?.44:.36));
+        const note=newElement('text',{...SLIDE_TEXT_STYLES.body,text:slide.body,x:86,y:frameY+frameH+30,w:908,fontSize:42,lineHeight:1.4,textStyle:'body',__role:'body',color:'#2A1F2A'});
+        while(note.fontSize>32&&note.y+textLayout(note).height>H-200)note.fontSize-=2;
+        if(note.y+textLayout(note).height>H-200)throw new Error('Slide '+(i+1)+' has too much text next to the photo. Shorten the line in Edit words; no words have been removed.');
+        note.h=textLayout(note).height;
+        c.elements.push(head,newElement('rect',{x:86,y:frameY,w:908,h:frameH,fill:'#F4E3EF',radius:28}),note,...brandBackgroundElements('signature',c,brand));
+        return c;
+      }
       const numbered=/^\d+$/.test(slide.title);
       const label=newElement('text',{...SLIDE_TEXT_STYLES[numbered?'label':'h2'],text:slide.title,x:86,y:86,w:908,fontSize:numbered?32:76,textStyle:numbered?'label':'h2',__role:numbered?'number':'heading',color:numbered?'#963d80':'#2A1F2A'});label.h=textLayout(label).height;c.elements.push(label);
       if(post.middleStyle==='steps')c.elements.push(newElement('rect',{x:86,y:label.y+label.h+24,w:100,h:3,fill:'#963d80',radius:0}));
@@ -71,6 +82,7 @@ function canvasSlideText(canvases){
 }
 const READY_CONTENT_SECTIONS=[
   {id:'priority',name:'New & priority'},{id:'all',name:'All content'},
+  {id:'orders',name:'Custom orders & new homes'},{id:'events',name:'Events & pop-ups'},
   {id:'start',name:'Start here'},{id:'fit',name:'Find your fit'},
   {id:'care',name:'Care & troubleshooting'},{id:'brand',name:'About Wonder Pads'},
   {id:'small',name:'Small switches & savings'},{id:'archive',name:'Archive'}

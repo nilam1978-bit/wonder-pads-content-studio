@@ -283,12 +283,17 @@ function reducer(state, action) {
         past: [], future: [], selection: [],
       };
     }
-    case 'delete-project':
+    case 'delete-project': {
+      // If this design was the saved copy of the carousel draft, drop the draft too,
+      // otherwise the deleted design comes back as an "Unfinished draft".
+      const wasDraft = state.carousel && state.carousel.simpleProjectId === action.id;
       return {
         ...state,
         projects: state.projects.filter(p => p.id !== action.id),
         activeProjectId: state.activeProjectId === action.id ? null : state.activeProjectId,
+        carousel: wasDraft ? { ...state.carousel, slides: [], simpleProjectId: null } : state.carousel,
       };
+    }
     case 'rename-project': {
       const projects = state.projects.map(p => p.id === action.id ? { ...p, name: action.name, updatedAt: now() } : p);
       return { ...state, projects };
@@ -299,6 +304,7 @@ function reducer(state, action) {
       const dup = JSON.parse(JSON.stringify(src));
       dup.id = uid();
       dup.name = src.name + ' (copy)';
+      dup.finished = false; dup.finishedAt = null;
       dup.createdAt = now();
       dup.updatedAt = now();
       dup.canvases = dup.canvases.map(c => ({ ...c, id: uid(), elements: c.elements.map(el => ({ ...el, id: uid() })) }));

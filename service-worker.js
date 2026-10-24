@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wonder-pads-content-studio-v36-clear-actions';
+const CACHE_NAME = 'wonder-pads-content-studio-v39-restructure';
 
 const APP_FILES = [
   './final-carousel.jsx',
@@ -6,6 +6,7 @@ const APP_FILES = [
   './library-content-data.js',
   './ready-content.jsx',
   './final-workspace.jsx',
+  './simple-studio.jsx',
   './',
   './index.html',
   './manifest.webmanifest',

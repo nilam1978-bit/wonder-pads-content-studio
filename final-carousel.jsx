@@ -114,6 +114,25 @@ function CarouselPairPicker({settings,onChange,brand}){
   })}</div><label className="final-count">What should readers do next?<select aria-label="What should readers do next?" value={settings.cta||'save'} onChange={e=>onChange('cta',e.target.value)}>{Object.entries(CAROUSEL_CTA_CHOICES).map(([id,c])=><option key={id} value={id}>{c.label}</option>)}</select></label><label className="final-count">Small hook label (optional)<input aria-label="Small hook label" type="text" maxLength="32" value={settings.hookLabel||''} onChange={e=>onChange('hookLabel',e.target.value)} placeholder="e.g. CLOTH PAD TIPS"/></label>{(!settings.cover||!settings.outro)&&<p className="simple-muted">The pair applies to the opening and closing slides you enable above.</p>}</section>;
 }
 
+// Turns the carousel draft (state.carousel.slides) into a saved project and opens it.
+// If the draft already has a saved project, opens that instead. Falls back to the Create form only if there is nothing to build.
+function makeCarouselProject(carousel,brand){
+  const canvases=buildCarouselCanvases(carousel,brand);
+  if(!canvases.length)return null;
+  const slides=carousel.slides||[];
+  return {id:uid(),name:(slides.find(s=>s.kind!=='outro')?.heading||'My carousel').slice(0,50),createdAt:now(),updatedAt:now(),thumbnail:null,projectType:'carousel',canvases,activeCanvasId:canvases[0].id};
+}
+function openCarouselDraft(state,dispatch,carouselOverride){
+  const c=carouselOverride||state.carousel;
+  const existing=state.projects.find(p=>p.id===c.simpleProjectId);
+  if(existing){dispatch({type:'open-project',id:existing.id});return true;}
+  const project=makeCarouselProject(c,state.brand);
+  if(!project){dispatch({type:'set-view',view:'carousel'});return false;}
+  dispatch({type:'create-project',project});
+  dispatch({type:'update-carousel',patch:{simpleProjectId:project.id}});
+  return true;
+}
+
 function FinalCarouselFlow(){
   const {state,dispatch}=useStore();
   const [draft]=React.useState(()=>{try{return JSON.parse(sessionStorage.getItem('wpr-social-create-draft')||'{}');}catch{return {};}});
@@ -150,6 +169,7 @@ function FinalCarouselFlow(){
       if(!text.trim())throw new Error('No text was returned. Try without AI.');
       const canvases=createSimpleCanvases(text,s,state.brand);
       dispatch({type:'create-project',project:{id:uid(),name:text.trim().split('\n')[0].slice(0,50),createdAt:now(),updatedAt:now(),thumbnail:null,projectType:'carousel',canvases,activeCanvasId:canvases[0].id,carouselSettings:s,sourceText:input,socialCopies,aiError}});
+      try{sessionStorage.removeItem('wpr-social-create-draft');}catch{}
     }catch(e){setError(e.message||'Could not create slides.');}finally{setBusy(false);}
   };
   const socialTools=<div style={{marginTop:20,borderTop:'1px solid #ead5e5',paddingTop:16}}><h3>Turn these words into social posts</h3><p className="simple-muted">Choose text versions—not canvas sizes. Generate them here without creating any slides.</p><div className="final-options">{[['facebook-post','Facebook post text'],['tiktok-hook','TikTok hook & script']].map(([key,label])=><label key={key}><input type="checkbox" checked={socials.includes(key)} disabled={busy||socialBusy} onChange={e=>setSocials(prev=>e.target.checked?[...prev,key]:prev.filter(p=>p!==key))}/>{label}</label>)}</div><div className="sc-row" style={{marginTop:16,flexWrap:'wrap'}}><button className="simple-action simple-secondary" disabled={busy||socialBusy} onClick={generateSocialText}>{socialBusy?'Writing text…':'Generate selected text versions'}</button><button className="sc-link" disabled={checking} onClick={checkConnection}>{checking?'Checking…':'Check Gemini connection'}</button></div>{connection&&<p role="status">{connection}</p>}{socialNotice&&<p role="status" aria-live="polite">{socialNotice}</p>}{Object.entries(socialText).map(([key,words])=><div key={key} style={{marginTop:18}}><h3>{key==='facebook-post'?'Facebook post':'TikTok hook & script'}</h3>{socialSource!==input&&<p className="simple-muted">Your source words have changed. Generate again to update this version.</p>}<textarea className="sc-source" aria-label={key==='facebook-post'?'Generated Facebook post':'Generated TikTok script'} value={words} onChange={e=>setSocialText(prev=>({...prev,[key]:e.target.value}))}/><button className="sc-link" onClick={()=>copySocial(key)}>Copy {key==='facebook-post'?'Facebook text':'TikTok script'}</button></div>)}</div>;
@@ -161,4 +181,4 @@ function FinalCarouselFlow(){
     <footer className="sc-footer"><span>Text versions stay above. Create slides only when you’re ready.</span><button className="simple-action" disabled={busy||socialBusy} onClick={create}>{busy?'Creating…':'Create carousel →'}</button></footer>
   </div>;
 }
-Object.assign(window,{FinalCarouselFlow,createSimpleCanvases,distributeCarouselText});
+Object.assign(window,{FinalCarouselFlow,createSimpleCanvases,distributeCarouselText,makeCarouselProject,openCarouselDraft});

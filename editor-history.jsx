@@ -210,8 +210,9 @@ function HistoryScreen() {
     const parsed = parseCarouselText(text);
     const nextCarousel = { ...state.carousel, applyBrand: true };
     const decorated = decorateSlides(parsed.map(p => ({ ...p, kind: 'content' })), nextCarousel);
-    dispatch({ type: 'update-carousel', patch: { applyBrand: true, slides: decorated, activeSlideIdx: 0 } });
-    dispatch({ type: 'set-view', view: 'carousel' });
+    const patch = { applyBrand: true, slides: decorated, activeSlideIdx: 0, simpleProjectId: null };
+    dispatch({ type: 'update-carousel', patch });
+    openCarouselDraft(state, dispatch, { ...state.carousel, ...patch });
   };
 
   const items = tab === 'repurpose' ? state.savedRepurpose : state.savedLaunches;
