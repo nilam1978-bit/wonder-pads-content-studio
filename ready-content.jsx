@@ -28,7 +28,32 @@ function fullSinglePostCanvas(post,size,pairId,brand){
   c.elements.push(...branding);
   return c;
 }
+// Big text lead post, modelled on the Quote starter: large quotation mark, big italic lead line,
+// optional smaller supporting lines. Lines come from the image text (split on ' / ') or the caption's first paragraph.
+function bigTextCanvas(post,size,pairId,brand){
+  const W=1080,H=size==='portrait'?1350:1080,pair=CAROUSEL_STYLE_PAIRS.find(p=>p.id===pairId)||CAROUSEL_STYLE_PAIRS[0];
+  const raw=post.imageText||(post.caption||'').trim().split(/\n\s*\n/)[0]||post.title||'';
+  const lines=raw.split(/ \/ |\n/).map(x=>x.trim()).filter(Boolean);
+  const dark=pair.ink==='#FDFBFC',ink=pair.split?'#2A1F2A':pair.ink;
+  const c={id:uid(),name:'Post',slideKind:'content',w:W,h:H,bg:{type:'color',value:pair.bg},elements:[]};
+  const mark=newElement('text',{...SLIDE_TEXT_STYLES.h1,textStyle:'h1',__role:'heading',text:'\u201C',x:70,y:40,w:320,fontSize:340,lineHeight:.8,color:dark?'#E8B8DC':'#D98BC6'});
+  mark.h=textLayout(mark).height;
+  const support=lines.length>2;
+  const lead=newElement('text',{...SLIDE_TEXT_STYLES.h1,textStyle:'h1',__role:'heading',text:support?lines[0]:lines.join('\n'),x:86,y:Math.round(H*.26),w:908,fontSize:support?88:100,lineHeight:1.2,italic:true,color:ink});
+  const rest=support?newElement('text',{...SLIDE_TEXT_STYLES.body,textStyle:'body',__role:'body',text:lines.slice(1).join('\n'),x:86,y:0,w:908,fontSize:48,lineHeight:1.45,color:ink}):null;
+  const measure=()=>{lead.h=textLayout(lead).height;if(rest){rest.y=lead.y+lead.h+44;rest.h=textLayout(rest).height;}};
+  const bottom=()=>rest?rest.y+rest.h:lead.y+lead.h;
+  measure();
+  while(bottom()>H-240&&(lead.fontSize>52||(rest&&rest.fontSize>34))){lead.fontSize=Math.max(52,lead.fontSize-2);if(rest)rest.fontSize=Math.max(34,rest.fontSize-1);measure();}
+  if(bottom()>H-240)throw new Error('This text is too long for the big text layout. Shorten the image text; no words have been removed.');
+  c.elements.push(mark,lead);if(rest)c.elements.push(rest);
+  const branding=brandBackgroundElements('signature',c,brand);
+  for(const el of branding)if(el.type==='text')el.color=ink;
+  c.elements.push(...branding);
+  return c;
+}
 function readyPostCanvases(post, size, pair, brand) {
+  if(!post.slides?.length&&post.layout==='bigtext')return [bigTextCanvas(post,size,pair,brand)];
   if(!post.slides?.length&&post.includeFullText!==false)return [fullSinglePostCanvas(post,size,pair,brand)];
   const W=1080,H=size==='portrait'?1350:1080;
   const settings={size,pair,cta:post.cta||'message',logo:true,handles:true,swipe:true};
@@ -168,6 +193,7 @@ function ReadyContentPlan(){
       {post.format==='Reel'?<><h2>Filming script</h2><pre style={{whiteSpace:'pre-wrap',font:'inherit',lineHeight:1.7}}>{post.script}</pre><p className="simple-muted">This app does not produce video. Film these scenes separately.</p></>:<p className="simple-muted">{post.format==='Carousel'?'Exact slide order, with no extra CTA page. Fonts, text and elements remain editable on the canvas.':'Full written content wraps onto one page by default. Hashtags stay in the caption, not on the slide.'}</p>}
       {post.confirmation&&<div role="status"><p>{post.confirmation}</p>{unresolved?<p>Unfilled prices/quantities remain. Replace them in Edit words below.</p>:<label><input type="checkbox" checked={!!post.confirmed} onChange={e=>patch({confirmed:e.target.checked})}/> I checked this against my actual products and care instructions</label>}</div>}
       {post.format==='Static post'&&<label><input type="checkbox" checked={post.includeFullText!==false} onChange={e=>patch({includeFullText:e.target.checked})}/> Put the full written content on this one-page slide (uncheck for headline/photo only)</label>}
+      {post.format==='Static post'&&!post.slides?.length&&<label><input type="checkbox" checked={post.layout==='bigtext'} onChange={e=>patch({layout:e.target.checked?'bigtext':''})}/> Big text layout (large quotation mark and a big lead line, like the Quote template)</label>}
       <h2>Caption & hashtags</h2><textarea aria-label="Post caption" value={post.caption} onChange={e=>patch({caption:e.target.value})}/><label>Hashtags <input aria-label="Post hashtags" value={post.hashtags} onChange={e=>patch({hashtags:e.target.value})}/></label>
       <div className="ready-actions"><button className="simple-action simple-secondary" onClick={async()=>{try{await navigator.clipboard.writeText(caption);setNotice('Caption and hashtags copied.');}catch{setNotice('Copy is unavailable here. Select the caption and hashtags manually.');}}}>Copy caption & hashtags</button><button className="simple-action simple-secondary" onClick={()=>patch({status:post.status==='posted'?'queued':'posted'})}>{post.status==='posted'?'Mark not posted':'Mark posted'}</button><button className="simple-action simple-secondary" onClick={()=>{patch({archived:!post.archived});setNotice(post.archived?'Returned to the library.':'Moved to Archive. Your words and design are kept.');}}>{post.archived?'Return to library':'Move to Archive'}</button></div>
       <details><summary>Preparation notes</summary><p className="ready-notes simple-muted">{post.notes||'No additional preparation notes.'}</p><p className="simple-muted">Contacts: @ecoclothpad · wonder-pads.com. No WhatsApp number has been invented.</p></details>

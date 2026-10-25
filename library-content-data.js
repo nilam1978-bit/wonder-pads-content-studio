@@ -417,6 +417,74 @@
       caption:"Thank you for stopping by: [event name]\n\n[Two or three sentences about the day and the people you met.]\n\nFind us next at [next event or date], or message @ecoclothpad any time.",
       notes:'Add one or two of your own photos from the day.'})
   );
+  // ---- From the Absorbency vs Length kit: pieces the library did not have yet ----
+  additions.push(...[
+ {
+  "week": null,
+  "date": null,
+  "effort": "Medium",
+  "confirmation": "Choose two pads that really are long with lighter absorbency and shorter with heavier absorbency, so the Reel is true to what you make.",
+  "slides": [],
+  "librarySection": "fit",
+  "defaultSize": "portrait",
+  "cta": "save",
+  "id": "wp-kit-which-holds-more",
+  "ideaId": 4001,
+  "format": "Reel",
+  "title": "Which holds more, the long pad or the short one?",
+  "hook": "Which holds more, the long pad or the short one?",
+  "caption": "Which holds more, the long pad or the short one?\n\nIt's a trick question, because you can't tell from the length. Length is how far a pad reaches, and absorbency is how much it can hold. A long pad with light absorbency can still soak through, while a shorter pad with the right absorbency can be exactly enough.\n\nDrop 'front', 'back' or 'middle' below to tell me where your pad usually leaks, and I'll help you work out what to try.",
+  "hashtags": "#WonderPadsSG #ClothPadsSingapore #LengthVsAbsorbency #ReusablePads #PeriodTalk",
+  "script": "Length: 15 to 20 seconds\nScene 1\nShot: Two pads on the pink background: one long with light absorbency, one shorter with heavy absorbency.\nOn screen: Which one holds more?\nVoiceover: Which one holds more?\nScene 2\nShot: Hand taps the long pad.\nOn screen: The long one?\nVoiceover: The long one? It reaches further, but that's coverage.\nScene 3\nShot: Hand taps the shorter pad.\nOn screen: Or the short one?\nVoiceover: Or the short one? You can't tell from the length alone.\nScene 4\nShot: Both pads side by side, text appears in handwriting.\nOn screen: Length = coverage. Absorbency = holding power.\nVoiceover: Length is how far a pad reaches. Absorbency is how much it can hold.\nScene 5\nShot: You, or your handle on screen.\nOn screen: Where does yours leak?\nVoiceover: So where does yours usually leak? Tell me below and I'll help you work out what to try.",
+  "notes": "Suggested for a free day in Week 4, for example Tue 3 Nov. Hold up a long, light pad and a shorter, heavy pad side by side. No liquids on camera. Call to action: tell me where your pad leaks (front, back or middle). Story prompt: share the Reel to your Story with a poll sticker, 'Which holds more? Long pad / Short pad'."
+ },
+ {
+  "week": null,
+  "date": null,
+  "effort": "Quick",
+  "confirmation": "",
+  "slides": [],
+  "librarySection": "fit",
+  "defaultSize": "portrait",
+  "cta": "save",
+  "id": "wp-kit-length-absorbency-line",
+  "ideaId": 4002,
+  "format": "Static post",
+  "stylePair": "gentle",
+  "layout": "bigtext",
+  "includeFullText": false,
+  "title": "Length is how far a pad reaches. Absorbency is how much it can hold.",
+  "hook": "Length is how far a pad reaches. Absorbency is how much it can hold.",
+  "imageText": "Length is how far a pad reaches. / Absorbency is how much it can hold.",
+  "caption": "Length is how far a pad reaches. Absorbency is how much it can hold.\n\nIt sounds simple, but it's the mix-up behind so many leaks. A long pad with light absorbency can still soak through, and a shorter pad with the right absorbency can be exactly enough.\n\nWhen you choose, ask two things: how much coverage do I need, and how much does it have to hold? Save this for your next order, and message me if you'd like help choosing.",
+  "hashtags": "#WonderPadsSG #ClothPadsSingapore #LengthVsAbsorbency #ReusablePads #PeriodTips",
+  "script": "Image text: Length is how far a pad reaches. Absorbency is how much it can hold.",
+  "notes": "Suggested for Thu 29 Oct. Brand pink background with the two lines in Kalam handwriting, and one small pad photo in a corner. Call to action: save this for your next order. Story prompt: add the image to your Story with a quiz sticker, 'Does a longer pad always hold more? Yes / No'. No video version: a single image works best on Instagram and Facebook."
+ },
+ {
+  "week": null,
+  "date": null,
+  "effort": "Quick",
+  "confirmation": "The caption promises to help people who comment. Only post it if you can reply, or soften it to 'tell me below'.",
+  "slides": [],
+  "librarySection": "fit",
+  "defaultSize": "portrait",
+  "cta": "message",
+  "id": "wp-kit-where-does-it-leak",
+  "ideaId": 4003,
+  "format": "Static post",
+  "stylePair": "clear",
+  "layout": "bigtext",
+  "includeFullText": false,
+  "title": "Where does your pad usually leak? The answer tells you what to change.",
+  "hook": "Where does your pad usually leak? The answer tells you what to change.",
+  "imageText": "Where does your pad leak? / Front or back: think length. / Through the middle: think absorbency. / Sides: think shape and fit.",
+  "caption": "Where does your pad usually leak? The answer tells you what to change.\n\nOut the front or back usually points to length, because the pad isn't reaching far enough. Soaking through the middle usually points to absorbency, because the pad is full. Out the sides usually points to shape or fit, because the pad is shifting.\n\nIt's a rule of thumb, not a diagnosis, but it's a good place to start. If your bleeding has suddenly become much heavier than usual, it's worth checking in with a doctor as well.\n\nDrop 'front', 'back' or 'middle' below and I'll help you work out what to try.",
+  "hashtags": "#WonderPadsSG #ClothPadsSingapore #PadLeaks #ReusablePads #PeriodTips",
+  "script": "Image text: Where does your pad leak? Front or back: think length. Through the middle: think absorbency. Sides: think shape and fit.",
+  "notes": "Suggested for Sat 7 Nov, two days before the leaks carousel. A simple pad outline on the pink background with three labels: front or back, middle, sides. Call to action: drop 'front', 'back' or 'middle' in the comments. Story prompt: add the image to your Story with a question sticker, 'Where does your pad usually leak?'. Keep the doctor note in the caption."
+ }
+]);
   const coverLabels={'wp-tpl-event-thanks':'THANK YOU'};
   additions.forEach(a=>{if(coverLabels[a.id])a.hookLabel=coverLabels[a.id];});
   window.WONDER_READY_POSTS=[...originals,...additions];
