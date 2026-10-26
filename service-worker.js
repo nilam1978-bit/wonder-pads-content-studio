@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wonder-pads-content-studio-v44-bigtext';
+const CACHE_NAME = 'wonder-pads-content-studio-v46-library-pack';
 
 const APP_FILES = [
   './final-carousel.jsx',

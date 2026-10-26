@@ -52,7 +52,35 @@ function bigTextCanvas(post,size,pairId,brand){
   c.elements.push(...branding);
   return c;
 }
+// Question poster: big Kalam question, one supporting line, small logo + WhatsApp number at the bottom.
+// posterBg 'pink' = #F1CFEA; 'photo' = the same pink with a soft cream panel behind the words, ready for a fabric photo behind it.
+function posterCanvas(post,size,brand){
+  const W=1080,H=size==='portrait'?1350:1080,ink='#2A1F2A';
+  const parts=(post.imageText||post.title||'').split(/ \/ |\n/).map(x=>x.trim()).filter(Boolean);
+  const question=parts[0]||'',line=parts.slice(1).join(' ');
+  const c={id:uid(),name:'Poster',slideKind:'content',w:W,h:H,bg:{type:'color',value:'#F1CFEA'},elements:[]};
+  const q=newElement('text',{...SLIDE_TEXT_STYLES.h1,textStyle:'h1',__role:'heading',text:question,fontFamily:'Kalam',fontWeight:700,fontSize:98,lineHeight:1.18,align:'center',x:110,y:0,w:860,color:ink});
+  const s=newElement('text',{...SLIDE_TEXT_STYLES.body,textStyle:'body',__role:'body',text:line,fontSize:46,lineHeight:1.4,align:'center',x:130,y:0,w:820,color:'#56454F'});
+  const top=Math.round(H*.16),bottom=H-250,gap=48;
+  const measure=()=>{q.h=textLayout(q).height;s.h=line?textLayout(s).height:0;};
+  measure();
+  while(q.h+(line?gap+s.h:0)>bottom-top&&(q.fontSize>56||s.fontSize>32)){q.fontSize=Math.max(56,q.fontSize-2);s.fontSize=Math.max(32,s.fontSize-1);measure();}
+  if(q.h+(line?gap+s.h:0)>bottom-top)throw new Error('This question is too long for the poster layout. Shorten it; no words have been removed.');
+  const blockH=q.h+(line?gap+s.h:0);
+  q.y=Math.round(top+(bottom-top-blockH)/2);s.y=q.y+q.h+gap;
+  if(post.posterBg==='photo')c.elements.push(newElement('rect',{x:60,y:q.y-64,w:W-120,h:blockH+128,fill:'#FDFBFC',opacity:.9,radius:36}));
+  c.elements.push(q);if(line)c.elements.push(s);
+  const social=brand.handles?.find(h=>h.platform==='instagram')?.value||'@ecoclothpad';
+  const phone=brand.handles?.find(h=>h.platform==='phone')?.value;
+  const label=phone?'WhatsApp '+phone:social;
+  const logoSize=84,labelW=560,groupW=logoSize+24+labelW,gx=Math.round((W-groupW)/2),gy=H-170;
+  const fromBrand=(slot,type,patch)=>newElement(type,{...patch,fromBrand:true,role:slot,brandLayout:'signature',brandSlot:slot});
+  if(brand.logo)c.elements.push(fromBrand('logo','image',{src:brand.logo,x:gx,y:gy,w:logoSize,h:logoSize,radius:9999}));
+  c.elements.push(fromBrand(phone?'phone':'instagram','text',{text:label,x:gx+logoSize+24,y:gy+20,w:labelW,h:44,fontSize:34,fontFamily:brand.fontBody||'Montserrat',fontWeight:500,lineHeight:1.3,align:'left',color:ink}));
+  return c;
+}
 function readyPostCanvases(post, size, pair, brand) {
+  if(!post.slides?.length&&post.layout==='poster')return [posterCanvas(post,size,brand)];
   if(!post.slides?.length&&post.layout==='bigtext')return [bigTextCanvas(post,size,pair,brand)];
   if(!post.slides?.length&&post.includeFullText!==false)return [fullSinglePostCanvas(post,size,pair,brand)];
   const W=1080,H=size==='portrait'?1350:1080;
@@ -116,7 +144,7 @@ function canvasSlideText(canvases){
 }
 const READY_CONTENT_SECTIONS=[
   {id:'priority',name:'New & priority'},{id:'all',name:'All content'},
-  {id:'orders',name:'Custom orders & new homes'},{id:'events',name:'Events & pop-ups'},
+  {id:'orders',name:'Custom orders & new homes'},{id:'posters',name:'Question posters'},{id:'events',name:'Events & pop-ups'},
   {id:'start',name:'Start here'},{id:'fit',name:'Find your fit'},
   {id:'care',name:'Care & troubleshooting'},{id:'brand',name:'About Wonder Pads'},
   {id:'small',name:'Small switches & savings'},{id:'archive',name:'Archive'}
@@ -193,7 +221,8 @@ function ReadyContentPlan(){
       {post.format==='Reel'?<><h2>Filming script</h2><pre style={{whiteSpace:'pre-wrap',font:'inherit',lineHeight:1.7}}>{post.script}</pre><p className="simple-muted">This app does not produce video. Film these scenes separately.</p></>:<p className="simple-muted">{post.format==='Carousel'?'Exact slide order, with no extra CTA page. Fonts, text and elements remain editable on the canvas.':'Full written content wraps onto one page by default. Hashtags stay in the caption, not on the slide.'}</p>}
       {post.confirmation&&<div role="status"><p>{post.confirmation}</p>{unresolved?<p>Unfilled prices/quantities remain. Replace them in Edit words below.</p>:<label><input type="checkbox" checked={!!post.confirmed} onChange={e=>patch({confirmed:e.target.checked})}/> I checked this against my actual products and care instructions</label>}</div>}
       {post.format==='Static post'&&<label><input type="checkbox" checked={post.includeFullText!==false} onChange={e=>patch({includeFullText:e.target.checked})}/> Put the full written content on this one-page slide (uncheck for headline/photo only)</label>}
-      {post.format==='Static post'&&!post.slides?.length&&<label><input type="checkbox" checked={post.layout==='bigtext'} onChange={e=>patch({layout:e.target.checked?'bigtext':''})}/> Big text layout (large quotation mark and a big lead line, like the Quote template)</label>}
+      {post.format==='Static post'&&!post.slides?.length&&<label>One-page layout <select aria-label="One-page layout" value={post.layout||''} onChange={e=>patch({layout:e.target.value})}><option value="">Standard (headline and writing)</option><option value="bigtext">Big text (quotation mark and big lead line)</option><option value="poster">Question poster (big Kalam question, logo and WhatsApp)</option></select></label>}
+      {post.format==='Static post'&&post.layout==='poster'&&<label>Poster background <select aria-label="Poster background" value={post.posterBg||'pink'} onChange={e=>patch({posterBg:e.target.value})}><option value="pink">Soft pink</option><option value="photo">Soft panel, for a fabric photo behind</option></select></label>}
       <h2>Caption & hashtags</h2><textarea aria-label="Post caption" value={post.caption} onChange={e=>patch({caption:e.target.value})}/><label>Hashtags <input aria-label="Post hashtags" value={post.hashtags} onChange={e=>patch({hashtags:e.target.value})}/></label>
       <div className="ready-actions"><button className="simple-action simple-secondary" onClick={async()=>{try{await navigator.clipboard.writeText(caption);setNotice('Caption and hashtags copied.');}catch{setNotice('Copy is unavailable here. Select the caption and hashtags manually.');}}}>Copy caption & hashtags</button><button className="simple-action simple-secondary" onClick={()=>patch({status:post.status==='posted'?'queued':'posted'})}>{post.status==='posted'?'Mark not posted':'Mark posted'}</button><button className="simple-action simple-secondary" onClick={()=>{patch({archived:!post.archived});setNotice(post.archived?'Returned to the library.':'Moved to Archive. Your words and design are kept.');}}>{post.archived?'Return to library':'Move to Archive'}</button></div>
       <details><summary>Preparation notes</summary><p className="ready-notes simple-muted">{post.notes||'No additional preparation notes.'}</p><p className="simple-muted">Contacts: @ecoclothpad · wonder-pads.com. No WhatsApp number has been invented.</p></details>
