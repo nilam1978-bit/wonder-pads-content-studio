@@ -1,6 +1,45 @@
 // Home dashboard — Recent designs, New from preset, My templates, Starter templates
 const { useState: hS, useRef: hR, useEffect: hE, useMemo: hM } = React;
 
+// Big-text covers (restored from the first version of the app). These carry their own words and layout.
+// Wording is a placeholder only: no prices, dates or customer quotes. Replace every line with your own.
+const BIG_TEXT_STARTERS = [
+  // Dark plum story announcement (portrait 1080x1350)
+  {name:'Big text · Plum announcement',preset:SIZE_PRESETS[1],bg:'#7d2960',accent:'#FDFBFC',
+    els:[
+      {type:'text',patch:{text:'WONDER PADS  ·  NEWS',fontFamily:'Instrument Sans',fontSize:26,color:'#F1CFEA',x:80,y:100,w:920,h:40,align:'left',letterSpacing:6,fontWeight:600}},
+      {type:'text',patch:{text:'big news\nhere.',fontFamily:'DM Serif Display',fontSize:230,color:'#FDFBFC',x:80,y:380,w:920,h:560,align:'left',italic:true,lineHeight:1}},
+      {type:'rect',patch:{fill:'#D98BC6',x:80,y:1050,w:100,h:6,radius:4}},
+      {type:'text',patch:{text:'Add one or two short lines\nof detail here.',fontFamily:'Instrument Sans',fontSize:36,color:'#F1CFEA',x:80,y:1090,w:920,h:140,align:'left',lineHeight:1.45}},
+    ]},
+  // Orchid product spotlight
+  {name:'Big text · Orchid spotlight',preset:SIZE_PRESETS[0],bg:'#D98BC6',accent:'#FDFBFC',
+    els:[
+      {type:'text',patch:{text:'FEATURED',fontFamily:'Instrument Sans',fontSize:24,color:'#FDFBFC',x:100,y:130,w:880,h:40,align:'left',letterSpacing:8,fontWeight:700}},
+      {type:'text',patch:{text:'your pad\nname.',fontFamily:'DM Serif Display',fontSize:190,color:'#FDFBFC',x:100,y:200,w:880,h:460,align:'left',italic:true,lineHeight:1.05}},
+      {type:'rect',patch:{fill:'#FDFBFC',x:100,y:720,w:880,h:1,radius:0}},
+      {type:'text',patch:{text:'length  ·  top fabric  ·  absorbency',fontFamily:'Instrument Sans',fontSize:28,color:'#FDFBFC',x:100,y:760,w:880,h:40,align:'left',letterSpacing:1}},
+      {type:'text',patch:{text:'wonder-pads.com',fontFamily:'Instrument Sans',fontSize:26,color:'#FDFBFC',x:480,y:900,w:500,h:40,align:'right',letterSpacing:2}},
+    ]},
+  // Blush "drop" announcement
+  {name:'Big text · Blush announcement',preset:SIZE_PRESETS[0],bg:'#F7E1F0',accent:'#C260A8',
+    els:[
+      {type:'text',patch:{text:'DAY  ·  TIME',fontFamily:'Instrument Sans',fontSize:28,color:'#C260A8',x:100,y:130,w:880,h:40,align:'left',letterSpacing:8,fontWeight:700}},
+      {type:'text',patch:{text:'new drop\nis coming.',fontFamily:'DM Serif Display',fontSize:180,color:'#2A1F2A',x:100,y:220,w:880,h:460,align:'left',lineHeight:1.05}},
+      {type:'rect',patch:{fill:'#D98BC6',x:100,y:720,w:80,h:5,radius:4}},
+      {type:'text',patch:{text:'Add what is new and\nwhen it is available.',fontFamily:'Instrument Sans',fontSize:34,color:'#56454F',x:100,y:760,w:880,h:160,align:'left',lineHeight:1.45}},
+    ]},
+  // Pink quote card
+  {name:'Big text · Pink quote',preset:SIZE_PRESETS[0],bg:'#F1CFEA',accent:'#7d2960',
+    els:[
+      {type:'text',patch:{text:'“',fontFamily:'DM Serif Display',fontSize:400,color:'#D98BC6',x:80,y:60,w:300,h:400,align:'left'}},
+      {type:'text',patch:{text:'your words or\na kind message\ngo here.',fontFamily:'DM Serif Display',fontSize:84,color:'#2A1F2A',x:100,y:340,w:880,h:460,italic:true,align:'left',lineHeight:1.2}},
+      {type:'rect',patch:{fill:'#7d2960',x:100,y:840,w:60,h:3,radius:2}},
+      {type:'text',patch:{text:'— name, or a Wonder Pads customer',fontFamily:'Instrument Sans',fontSize:24,color:'#56454F',x:100,y:870,w:600,h:40,align:'left',letterSpacing:3}},
+      {type:'text',patch:{text:'thank you.',fontFamily:'Caveat',fontSize:64,color:'#C260A8',x:700,y:850,w:280,h:80,align:'right',italic:true}},
+    ]},
+];
+
 // Blank brand backgrounds: keep the familiar Wonder Pads palette, not sample claims.
 const STARTER_TEMPLATES = [
   {name:'Hook · Blush',preset:SIZE_PRESETS[0],bg:'#F1CFEA',accent:'#C260A8',brandLayout:'hook',slideKind:'hook'},
@@ -14,6 +53,8 @@ const STARTER_TEMPLATES = [
   {name:'Pink · Signature',preset:SIZE_PRESETS[0],bg:'#F1CFEA',accent:'#7d2960',brandLayout:'signature'},
   {name:'Plum · Writing frame',preset:SIZE_PRESETS[1],bg:'#7d2960',accent:'#FDFBFC',brandLayout:'frame'},
 ].map(t => ({...t,els:starterBackgroundElements(t,t.preset).map(el=>({type:el.type,patch:el}))}));
+// Big-text covers first (they are the eye-catching ones), then the blank branded backgrounds.
+STARTER_TEMPLATES.unshift(...BIG_TEXT_STARTERS);
 
 function timeAgo(ts) {
   if (!ts) return '';
