@@ -3,6 +3,111 @@
 
 const { useState: meS, useEffect: meE, useRef: meR, useMemo: meM } = React;
 
+const { useState: mbS, useEffect: mbE, useRef: mbR, useMemo: mbM, useCallback: mbCB } = React;
+
+// ==================== BOTTOM SHEET PRIMITIVE ====================
+function BottomSheet({ open, onClose, title, height = '70vh', children, actionRight }) {
+  const sheetRef = mbR(null);
+  const [dragY, setDragY] = mbS(0);
+  const [dragging, setDragging] = mbS(false);
+
+  mbE(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [open, onClose]);
+
+  const onHandleDown = (e) => {
+    const startY = e.touches ? e.touches[0].clientY : e.clientY;
+    setDragging(true);
+    const move = (ev) => {
+      const y = ev.touches ? ev.touches[0].clientY : ev.clientY;
+      setDragY(Math.max(0, y - startY));
+    };
+    const up = () => {
+      setDragging(false);
+      if (sheetRef.current) {
+        const h = sheetRef.current.getBoundingClientRect().height;
+        if (dragY > h * 0.28) onClose();
+      }
+      setDragY(0);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('touchmove', move);
+      window.removeEventListener('touchend', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('touchmove', move);
+    window.addEventListener('touchend', up);
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="sheet-back" onClick={onClose}>
+      <div className="sheet safe-bottom" ref={sheetRef}
+        onClick={e => e.stopPropagation()}
+        style={{
+          height,
+          transform: dragY ? `translateY(${dragY}px)` : undefined,
+          transition: dragging ? 'none' : undefined,
+        }}>
+        <div className="sheet-handle"
+          onPointerDown={onHandleDown}
+          onTouchStart={onHandleDown}
+          style={{ cursor: 'grab' }} />
+        {(title || actionRight) && (
+          <div style={{
+            padding: '4px 20px 12px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            borderBottom: '1px solid var(--line)',
+            flexShrink: 0,
+          }}>
+            <div style={{ fontFamily: 'DM Serif Display', fontSize: 20, fontWeight: 400 }}>
+              {title}
+            </div>
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              {actionRight}
+              <button className="icon-btn" onClick={onClose}>
+                <Icon name="x" size={18} />
+              </button>
+            </div>
+          </div>
+        )}
+        <div className="scroll" style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SheetAction({ icon, label, onClick, danger }) {
+  return (
+    <button onClick={onClick} style={{
+      display: 'flex', alignItems: 'center', gap: 14, padding: 14,
+      borderRadius: 12, textAlign: 'left',
+      color: danger ? 'var(--pink-600)' : 'var(--ink)',
+      background: 'transparent',
+      transition: 'background .12s',
+    }}
+    onTouchStart={e => e.currentTarget.style.background = 'var(--pink-50)'}
+    onTouchEnd={e => e.currentTarget.style.background = 'transparent'}
+    onMouseEnter={e => e.currentTarget.style.background = 'var(--pink-50)'}
+    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+    >
+      <Icon name={icon} size={18} style={{ color: danger ? 'var(--pink-500)' : 'var(--ink-2)' }} />
+      <span style={{ fontSize: 14, fontWeight: 500 }}>{label}</span>
+    </button>
+  );
+}
+
 function MobileEditor({ progressNav }) {
   const { state, dispatch } = useStore();
   const proj = activeProject(state);

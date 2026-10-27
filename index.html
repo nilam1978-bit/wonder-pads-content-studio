@@ -253,6 +253,9 @@
   /* Mobile utilities (< 640px) */
   @media (max-width: 639px) {
     body { overscroll-behavior: none; }
+    /* Pin the app to the visible area so the keyboard never leaves a blank gap. */
+    #root { position: fixed; left: 0; right: 0; top: var(--studio-viewport-top, 0px);
+      height: var(--studio-viewport-height, 100%); width: auto; }
     .tt::after { display: none !important; }
     .icon-btn { width: 40px !important; height: 40px !important; }
     .icon-btn.compact { width: 32px !important; height: 32px !important; }
@@ -298,46 +301,67 @@
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
-  <script type="text/babel" src="editor-icons.jsx?v=pair-selector-1"></script>
-  <script type="text/babel" src="editor-utils.jsx?v=occasion-1"></script>
-  <script type="text/babel" src="editor-ai.jsx?v=social-create-1"></script>
-  <script type="text/babel" src="editor-export.jsx?v=logo-final-1"></script>
-  <script type="text/babel" src="editor-canvas.jsx?v=logo-final-1"></script>
-  <script type="text/babel" src="editor-panels.jsx?v=phone-tools-1"></script>
-  <script type="text/babel" src="editor-brand.jsx?v=hook-cta-1"></script>
-  <script type="text/babel" src="editor-carousel.jsx?v=brand-final-1"></script>
-  <script type="text/babel" src="editor-repurpose.jsx?v=draft-fix-1"></script>
-  <script type="text/babel" src="editor-launch.jsx?v=draft-fix-1"></script>
-  <script type="text/babel" src="editor-history.jsx?v=draft-fix-1"></script>
-  <script type="text/babel" src="editor-calendar.jsx?v=workspace-nav-4"></script>
-  <script type="text/babel" src="editor-home.jsx?v=big-text-1"></script>
-  <script type="text/babel" src="editor-mobile.jsx?v=14"></script>
-  <script type="text/babel" src="editor-mobile-editor.jsx?v=phone-tools-1"></script>
-  <script type="text/babel" src="editor-mobile-carousel.jsx?v=preview-return-1"></script>
-  <script type="text/babel" src="simple-carousel.jsx?v=simple-carousel-3"></script>
-  <script type="text/babel" src="final-carousel.jsx?v=occasion-2"></script>
-  <script src="ready-content-data.js?v=library-1"></script>
-  <script src="library-content-data.js?v=pack-1"></script>
-  <script type="text/babel" src="ready-content.jsx?v=poster-1"></script>
-  <script type="text/babel" src="simple-studio.jsx?v=restructure-1"></script>
-  <script type="text/babel" src="final-workspace.jsx?v=restructure-1"></script>
-  <script type="text/babel" src="editor.jsx?v=text-social-align-1"></script>
+  <script>
+    // ONE version number for every app file. Change it each time you upload new files,
+    // so phones and browsers fetch the fresh copies instead of reusing old ones.
+    const APP_VERSION = '2026-10-27-1';
+    // Files load in this order. The data file is plain JavaScript; the rest are React (.jsx).
+    const APP_FILES = [
+      'editor-icons.jsx',
+      'editor-utils.jsx',
+      'editor-ai.jsx',
+      'editor-export.jsx',
+      'editor-canvas.jsx',
+      'editor-panels.jsx',
+      'editor-brand.jsx',
+      'editor-carousel.jsx',
+      'editor-repurpose.jsx',
+      'editor-launch.jsx',
+      'editor-history.jsx',
+      'editor-calendar.jsx',
+      'editor-home.jsx',
+      'editor-mobile-editor.jsx',
+      'final-carousel.jsx',
+      'ready-content-data.js',
+      'ready-content.jsx',
+      'simple-studio.jsx',
+      'final-workspace.jsx',
+      'editor.jsx',
+    ];
+    for (const file of APP_FILES) {
+      const type = file.endsWith('.jsx') ? ' type="text/babel"' : '';
+      document.write('<script' + type + ' src="' + file + '?v=' + APP_VERSION + '"><\/script>');
+    }
+  </script>
+
   <script>
     // Safari's visible area changes as its address bar and keyboard open.
     // Size the mobile flex layout to that area so its footer stays reachable.
+    // When the keyboard opens, iPhones slide the visible area up the page. We follow it
+    // (height AND top offset) so the app always fills exactly what you can see.
     const updateStudioViewport = () => {
-      document.documentElement.style.setProperty('--studio-viewport-height',
-        `${window.visualViewport?.height || window.innerHeight}px`);
+      const vv = window.visualViewport;
+      const root = document.documentElement.style;
+      root.setProperty('--studio-viewport-height', `${vv?.height || window.innerHeight}px`);
+      root.setProperty('--studio-viewport-top', `${vv?.offsetTop || 0}px`);
     };
     updateStudioViewport();
     window.addEventListener('resize', updateStudioViewport);
     window.visualViewport?.addEventListener('resize', updateStudioViewport);
-    if (false && 'serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js').catch((error) => {
-          console.warn('Wonder Pads Content Studio offline support could not start:', error);
-        });
-      });
+    window.visualViewport?.addEventListener('scroll', updateStudioViewport);
+    // After the keyboard closes, put the page back where it belongs.
+    document.addEventListener('focusout', () => {
+      setTimeout(() => { window.scrollTo(0, 0); updateStudioViewport(); }, 120);
+    });
+    // Offline mode is switched off. This clears out any old offline copy left on a device,
+    // so nobody is stuck on an out-of-date version.
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations()
+        .then(list => list.forEach(r => r.unregister()))
+        .catch(() => {});
+    }
+    if (window.caches) {
+      caches.keys().then(keys => keys.forEach(k => caches.delete(k))).catch(() => {});
     }
   </script>
 </body>

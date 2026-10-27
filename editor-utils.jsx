@@ -688,11 +688,6 @@ function computeSnapGuides(dragBox, otherBoxes, canvasBox, threshold = 6) {
   return { dx, dy, guides };
 }
 
-function rotatePoint(px, py, cx, cy, deg) {
-  const rad = (deg * Math.PI) / 180;
-  const cos = Math.cos(rad), sin = Math.sin(rad);
-  return [(px - cx) * cos - (py - cy) * sin + cx, (px - cx) * sin + (py - cy) * cos + cy];
-}
 
 // -------------- Store --------------
 const StoreCtx = createContext(null);
@@ -986,11 +981,4 @@ function parseEditableProjectFile(text) {
   return state;
 }
 
-Object.assign(window, {
-  uid, clamp, now, SIZE_PRESETS, defaultCanvas, newElement, newProject, defaultBrand, defaultCarousel,
-  reducer, initialState, computeSnapGuides, rotatePoint, brandBackgroundElements, reflowBrandBackground,
-  SLIDE_TEXT_STYLES, slideTextRole, styleSlideText, cleanSlideSwipe, starterBackgroundElements,
-  StoreCtx, useStore, StoreProvider, activeProject, activeCanvas,
-  useMediaQuery, useIsMobile, alignElementsToPage,
-  exportEditableProjectFile, parseEditableProjectFile, STORAGE_KEY,
-});
+Object.assign(window, { uid, clamp, now, SIZE_PRESETS, defaultCanvas, newElement, newProject, defaultBrand, defaultCarousel, reducer, initialState, computeSnapGuides, brandBackgroundElements, reflowBrandBackground, SLIDE_TEXT_STYLES, slideTextRole, styleSlideText, cleanSlideSwipe, starterBackgroundElements, StoreCtx, useStore, StoreProvider, activeProject, activeCanvas, useMediaQuery, useIsMobile, alignElementsToPage, exportEditableProjectFile, parseEditableProjectFile, STORAGE_KEY });

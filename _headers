@@ -2,6 +2,21 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
 
+/
+  Cache-Control: no-cache
+
+/index.html
+  Cache-Control: no-cache
+
+/*.jsx
+  Cache-Control: no-cache
+
+/*.js
+  Cache-Control: no-cache
+
+/content-pack.json
+  Cache-Control: no-cache
+
 /service-worker.js
   Cache-Control: no-cache
 

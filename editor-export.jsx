@@ -256,13 +256,6 @@ function downloadBlob(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function downloadDataURL(dataUrl, filename) {
-  const a = document.createElement('a');
-  a.href = dataUrl; a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
 
 // ---------- SVG → PNG/JPEG raster via <canvas> ----------
 async function rasterizeSVG(svgString, w, h, mime = 'image/png', quality = 0.92, scale = 2) {
@@ -419,17 +412,6 @@ ${pages}
 }
 
 // ---------- Reorder actions (dispatch helpers) ----------
-function moveLayer(state, dispatch, id, direction) {
-  const canvas = activeCanvas(state);
-  const idx = canvas.elements.findIndex(e => e.id === id);
-  if (idx < 0) return;
-  let to = idx + direction;
-  to = Math.max(0, Math.min(canvas.elements.length - 1, to));
-  if (to === idx) return;
-  dispatch({ type: 'reorder-element', id, to });
-}
 
-Object.assign(window, {
-  canvasToSVG, elementToSVG, rasterizeSVG, exportCanvases,
-  downloadBlob, downloadDataURL, moveLayer,
-});
+
+Object.assign(window, { canvasToSVG, elementToSVG, rasterizeSVG, exportCanvases, downloadBlob });

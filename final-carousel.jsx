@@ -146,48 +146,68 @@ function FinalCarouselFlow(){
   const {state,dispatch}=useStore();
   const [draft]=React.useState(()=>{try{return JSON.parse(sessionStorage.getItem('wpr-social-create-draft')||'{}');}catch{return {};}});
   const [input,setInput]=React.useState(draft.input||''),[reuse,setReuse]=React.useState(false),[busy,setBusy]=React.useState(false),[error,setError]=React.useState('');
-  const [socialText,setSocialText]=React.useState(draft.socialText||{}),[socialSource,setSocialSource]=React.useState(draft.socialSource||''),[socialBusy,setSocialBusy]=React.useState(false),[socialNotice,setSocialNotice]=React.useState('');
-  React.useEffect(()=>{try{sessionStorage.setItem('wpr-social-create-draft',JSON.stringify({input,socialText,socialSource}));}catch{}},[input,socialText,socialSource]);
-  const [socials,setSocials]=React.useState([]),[connection,setConnection]=React.useState(''),[checking,setChecking]=React.useState(false);
+  React.useEffect(()=>{try{sessionStorage.setItem('wpr-social-create-draft',JSON.stringify({input}));}catch{}},[input]);
+  const [connection,setConnection]=React.useState(''),[checking,setChecking]=React.useState(false);
   const checkConnection=async()=>{setChecking(true);setConnection('');try{const r=await fetch('/api/gemini');const p=await r.json();setConnection(p.configured?'Gemini server is configured. Generation will check provider access.':p.error||'Gemini is not connected.');}catch{setConnection('The AI server is unavailable here. Use the deployed app, or run the local Gemini server with its API key.');}finally{setChecking(false);}};
   const [s,setSettings]=React.useState({size:'portrait',count:'',cover:true,outro:true,numbers:false,logo:true,handles:true,swipe:true,cta:'save',pair:'clear'});
   const set=(key,value)=>setSettings(prev=>({...prev,[key]:value}));
-  const generateSocialText=async()=>{
-    if(!input.trim()){setSocialNotice('Add your words first.');return;}
-    if(!socials.length){setSocialNotice('Choose Facebook or TikTok first.');return;}
-    setSocialBusy(true);setSocialNotice('');
-    try{const result=await aiRepurposeAll({brand:state.brand,vocab:state.vocab,input,platforms:socials,provider:'gemini'});const next={};for(const key of socials){if(typeof result[key]!=='string'||!result[key].trim())throw new Error('One selected version was missing. Please try again.');next[key]=result[key];}setSocialText(next);setSocialSource(input);setSocialNotice('Your text versions are ready below. No slides were created.');}
-    catch(e){setSocialNotice(e.message||'Could not generate text. Your words and previous results are kept.');}finally{setSocialBusy(false);}
-  };
-  const copySocial=async(key)=>{try{await navigator.clipboard.writeText(socialText[key]);setSocialNotice('Text copied.');}catch{setSocialNotice('Copy was blocked. Select the text in its box and copy it manually.');}};
   const create=async()=>{
     if(!input.trim()){setError('Add your words first.');return;}
     setBusy(true);setError('');
     try{
       await Promise.all([document.fonts.load('600 112px "Cormorant Garamond"'),document.fonts.load('italic 400 108px "Cormorant Garamond"'),document.fonts.load('400 46px "Montserrat"'),document.fonts.load('500 30px "Montserrat"')]);let text=input;
-      let socialCopies=socialSource===input?{...socialText}:{},aiError='';
-      const pendingSocials=socials.filter(key=>!socialCopies[key]);
-      if(reuse||pendingSocials.length){
+      let aiError='';
+      if(reuse){
         try{
-          const platforms=[...(reuse?['instagram-carousel']:[]),...pendingSocials];
-          const r=await aiRepurposeAll({brand:state.brand,vocab:state.vocab,input,platforms,counts:{'instagram-carousel':s.count?+s.count-(s.outro?1:0):7},provider:'gemini'});
-          if(reuse){if(!r['instagram-carousel']?.trim())throw new Error('Gemini returned no carousel text.');text=r['instagram-carousel'];}
-          for(const key of pendingSocials){if(!r[key]?.trim())throw new Error('Gemini did not return every selected social version.');socialCopies[key]=r[key];}
-        }catch(e){socialCopies={};text=input;aiError=`AI could not finish: ${e.message}. Your carousel was created from your original words instead. Return to Create to retry the other versions.`;}
+          const r=await aiRepurposeAll({brand:state.brand,vocab:state.vocab,input,platforms:['instagram-carousel'],counts:{'instagram-carousel':s.count?+s.count-(s.outro?1:0):7},provider:'gemini'});
+          if(!r['instagram-carousel']?.trim())throw new Error('Gemini returned no carousel text.');
+          text=r['instagram-carousel'];
+        }catch(e){text=input;aiError=`AI could not finish: ${e.message}. Your carousel was created from your original words instead.`;}
       }
       if(!text.trim())throw new Error('No text was returned. Try without AI.');
       const canvases=createSimpleCanvases(text,s,state.brand);
-      dispatch({type:'create-project',project:{id:uid(),name:text.trim().split('\n')[0].slice(0,50),createdAt:now(),updatedAt:now(),thumbnail:null,projectType:'carousel',canvases,activeCanvasId:canvases[0].id,carouselSettings:s,sourceText:input,socialCopies,aiError}});
+      dispatch({type:'create-project',project:{id:uid(),name:text.trim().split('\n')[0].slice(0,50),createdAt:now(),updatedAt:now(),thumbnail:null,projectType:'carousel',canvases,activeCanvasId:canvases[0].id,carouselSettings:s,sourceText:input,aiError}});
       try{sessionStorage.removeItem('wpr-social-create-draft');}catch{}
     }catch(e){setError(e.message||'Could not create slides.');}finally{setBusy(false);}
   };
-  const socialTools=<div style={{marginTop:20,borderTop:'1px solid #ead5e5',paddingTop:16}}><h3>Turn these words into social posts</h3><p className="simple-muted">Choose text versions—not canvas sizes. Generate them here without creating any slides.</p><div className="final-options">{[['facebook-post','Facebook post text'],['tiktok-hook','TikTok hook & script']].map(([key,label])=><label key={key}><input type="checkbox" checked={socials.includes(key)} disabled={busy||socialBusy} onChange={e=>setSocials(prev=>e.target.checked?[...prev,key]:prev.filter(p=>p!==key))}/>{label}</label>)}</div><div className="sc-row" style={{marginTop:16,flexWrap:'wrap'}}><button className="simple-action simple-secondary" disabled={busy||socialBusy} onClick={generateSocialText}>{socialBusy?'Writing text…':'Generate selected text versions'}</button><button className="sc-link" disabled={checking} onClick={checkConnection}>{checking?'Checking…':'Check Gemini connection'}</button></div>{connection&&<p role="status">{connection}</p>}{socialNotice&&<p role="status" aria-live="polite">{socialNotice}</p>}{Object.entries(socialText).map(([key,words])=><div key={key} style={{marginTop:18}}><h3>{key==='facebook-post'?'Facebook post':'TikTok hook & script'}</h3>{socialSource!==input&&<p className="simple-muted">Your source words have changed. Generate again to update this version.</p>}<textarea className="sc-source" aria-label={key==='facebook-post'?'Generated Facebook post':'Generated TikTok script'} value={words} onChange={e=>setSocialText(prev=>({...prev,[key]:e.target.value}))}/><button className="sc-link" onClick={()=>copySocial(key)}>Copy {key==='facebook-post'?'Facebook text':'TikTok script'}</button></div>)}</div>;
+  const aiCheck=<div style={{marginTop:12}}><button className="sc-link" disabled={checking} onClick={checkConnection}>{checking?'Checking…':'Check Gemini connection'}</button>{connection&&<p role="status">{connection}</p>}</div>;
   return <div className="sc-shell"><SimpleStudioStyles/><SimpleCarouselStyles/><style>{`.final-options{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}.final-options label{display:flex;gap:8px;align-items:center}.final-options input{width:20px;height:20px}.final-count{display:flex;gap:12px;align-items:center;margin-top:18px}.final-count select{font-size:16px;padding:10px;max-width:70%} .pair-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.pair-option{border:1px solid #dfcbd9;border-radius:12px;background:#fff;padding:16px;text-align:left;color:#2A1F2A;min-width:0}.pair-option[aria-pressed=true]{border:2px solid #963d80;background:#fcf1f8}.pair-option strong{display:block;font-size:17px}.pair-option>span{display:block;font-size:13px;line-height:1.5;margin:8px 0}.pair-samples{display:flex;gap:12px;justify-content:center;align-items:flex-start}.pair-samples small{display:block;margin-top:6px;text-align:center}.final-count input{min-width:0;padding:10px;font-size:16px;max-width:60%}@media(max-width:500px){.pair-options{grid-template-columns:1fr}.final-count{flex-wrap:wrap}.final-count select,.final-count input{max-width:100%}}`}</style>
     <header className="sc-header"><button className="sc-back" onClick={()=>dispatch({type:'set-view',view:'home'})}>← Home</button><div><strong>Create a carousel</strong><small>Text → Canvas → Download</small></div></header>
-    <main className="sc-main"><div className="sc-inner"><section className="sc-panel"><h2>Your words</h2><textarea aria-label="Your carousel text" className="sc-source" value={input} onChange={e=>setInput(e.target.value)} placeholder="Paste your words. Blank lines separate slides when count is Auto."/><div className="sc-row"><button className="sc-link" onClick={()=>setInput(getExampleText())}>Try example</button><button className="sc-link" onClick={()=>setInput('')}>Clear</button></div><label><input type="checkbox" checked={reuse} onChange={e=>setReuse(e.target.checked)}/> Reuse / improve with AI (optional)</label>{socialTools}</section>
+    <main className="sc-main"><div className="sc-inner"><section className="sc-panel"><h2>Your words</h2><textarea aria-label="Your carousel text" className="sc-source" value={input} onChange={e=>setInput(e.target.value)} placeholder="Paste your words. Blank lines separate slides when count is Auto."/><div className="sc-row"><button className="sc-link" onClick={()=>setInput(getExampleText())}>Try example</button><button className="sc-link" onClick={()=>setInput('')}>Clear</button></div><label><input type="checkbox" checked={reuse} onChange={e=>setReuse(e.target.checked)}/> Reuse / improve with AI (optional)</label>{aiCheck}</section>
     <section className="sc-panel"><h2>Carousel settings</h2><div className="sc-aspects">{[['post','Square · 1:1','1080 × 1080'],['portrait','Portrait · 4:5','1080 × 1350']].map(([id,label,size])=><button key={id} aria-current={s.size===id} onClick={()=>set('size',id)}>{label}<small>{size}</small></button>)}</div><label className="final-count">Total slides<select aria-label="Total slides" value={s.count} onChange={e=>set('count',e.target.value)}><option value="">Auto — my text breaks</option>{Array.from({length:19},(_,i)=>i+2).map(n=><option key={n} value={n}>{n} slides</option>)}</select></label><p className="simple-muted">Includes cover and closing slides. A chosen count divides all your words without removing any.</p><div className="final-options">{[['cover','First slide / hook'],['outro','Closing slide'],['numbers','Slide numbers'],['logo','Brand logo'],['handles','Social / website'],['swipe','Swipe hint']].map(([key,label])=><label key={key}><input type="checkbox" checked={s[key]} onChange={e=>set(key,e.target.checked)}/>{label}</label>)}</div><p className="simple-muted">Hook and closing slides share one colour. Middle slides use white and soft pink. The closing slide always includes your contact details.</p></section><CarouselPairPicker settings={s} onChange={set} brand={state.brand}/>{error&&<p role="alert">{error}</p>}
     </div></main>
-    <footer className="sc-footer"><span>Text versions stay above. Create slides only when you’re ready.</span><button className="simple-action" disabled={busy||socialBusy} onClick={create}>{busy?'Creating…':'Create carousel →'}</button></footer>
+    <footer className="sc-footer"><span>Create slides only when you’re ready.</span><button className="simple-action" disabled={busy} onClick={create}>{busy?'Creating…':'Create carousel →'}</button></footer>
   </div>;
 }
-Object.assign(window,{FinalCarouselFlow,createSimpleCanvases,distributeCarouselText,makeCarouselProject,openCarouselDraft});
+// Sample text for the "Try example" button, and the shared styles for the carousel screen.
+function getExampleText() {
+  return (typeof EXAMPLE_TEXT !== 'undefined' && EXAMPLE_TEXT) ||
+    `THE GUIDE: Your first reusable pad, without the overwhelm
+
+Getting started with reusable pads
+
+Everything you need to know before your first cycle with reusables. Simple, gentle, effective.
+
+---
+
+TIP 01: Start with your usual flow
+
+Track a single cycle with the pads you already own.
+
+TIP 02: Build a rotation of three
+
+Two absorbencies, one liner. Wash, rotate, repeat.
+
+TIP 03: Rinse cold, then wash warm
+
+Cold water first to protect the fibers.
+
+TIP 04: Air-dry, always
+
+Skip the dryer to keep the wings crisp.`;
+}
+function SimpleCarouselStyles() { return <style>{`
+  .sc-shell{height:var(--studio-viewport-height,100dvh);display:flex;flex-direction:column;background:#fcf3fa;color:#2a1f2a;overflow:hidden}.sc-header{height:68px;padding:0 24px;background:#fff;border-bottom:1px solid #eadbe6;display:flex;align-items:center;gap:18px;flex-shrink:0}.sc-header>div{flex:1}.sc-header strong{display:block;font:22px 'DM Serif Display',serif}.sc-header small{color:#846f7f}.sc-back,.sc-link{border:0;background:transparent;color:#8f3d7b;padding:8px;font:inherit}.sc-main{flex:1;overflow:auto;padding:24px}.sc-inner{max-width:880px;margin:auto;display:grid;gap:16px}.sc-panel{background:#fff;border:1px solid #eadbe6;border-radius:18px;padding:22px}.sc-stage{display:flex;gap:12px;align-items:flex-start}.sc-stage>span{width:28px;height:28px;border-radius:50%;background:#f2d8ea;color:#913e7d;display:grid;place-items:center;font-weight:700;flex-shrink:0}.sc-stage h1,.sc-stage h2{font:24px 'DM Serif Display',serif;margin:0}.sc-stage p{margin:3px 0 14px;color:#7b6675;font-size:13px}.sc-source-tabs{display:flex;gap:6px;margin:4px 0 10px}.sc-source-tabs button{border:0;padding:10px 14px;border-radius:10px;background:#f8edf5;color:#6d5968}.sc-source-tabs button[aria-current=true]{background:#efd1e7;color:#883672}.sc-source{width:100%;min-height:140px;box-sizing:border-box;border:1px solid #decbd9;border-radius:12px;padding:14px;font:15px/1.55 inherit;resize:vertical}.sc-row{display:flex;align-items:center;gap:8px;margin-top:10px}.sc-wrap{flex-wrap:wrap}.sc-aspects{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.sc-aspects button{padding:14px;border-radius:12px;border:1px solid #eadbe6;background:#fdf8fb;color:#493a45;text-align:left}.sc-aspects button[aria-current=true]{border:2px solid #b54b98;background:#f4dced;color:#84336f}.sc-aspects small{display:block;margin-top:3px;color:#846f7f}.sc-section-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.sc-slides{display:grid;gap:14px;margin-top:8px}.sc-slide{position:relative;border:1px solid #e4d5df;border-radius:16px;padding:18px;background:#fff}.sc-slide-head{display:flex;align-items:center;gap:8px;margin-bottom:15px}.sc-grip{color:#cbb6c5;cursor:grab}.sc-kind{font-size:10px;font-weight:700;background:#4e7f53;color:#fff;border-radius:5px;padding:2px 7px}.sc-dots{margin-left:auto;border:0;background:transparent;font-size:24px;line-height:1;padding:3px 8px}.sc-menu{position:absolute;right:18px;top:48px;z-index:5;background:#fff;border:1px solid #decbd9;border-radius:12px;padding:6px;box-shadow:0 12px 28px rgba(50,25,44,.16);width:205px}.sc-menu button{display:block;width:100%;border:0;background:transparent;text-align:left;padding:10px;border-radius:8px;color:#493a45}.sc-menu button:hover{background:#faedf6}.sc-menu button:disabled{opacity:.35}.sc-menu .danger{color:#c52852;border-top:1px solid #eadbe6}.sc-slide label{display:block;text-transform:uppercase;letter-spacing:.06em;font-size:11px;color:#8b7685;margin:12px 0 5px}.sc-slide input,.sc-slide textarea{display:block;width:100%;box-sizing:border-box;border:1px solid #decbd9;border-radius:12px;padding:12px 14px;color:#2a1f2a;background:#fff;font:16px/1.45 inherit;text-transform:none;letter-spacing:normal}.sc-slide input{font-size:18px;font-weight:650}.sc-slide textarea{min-height:105px;resize:vertical}.sc-outro,.sc-empty{padding:18px;border-radius:12px;background:#fbf3f9;color:#806a79}.sc-message,.sc-busy{color:#8e3979;font-size:13px}.sc-footer{display:flex;align-items:center;justify-content:space-between;padding:10px 24px calc(10px + env(safe-area-inset-bottom,0px));background:#fff;border-top:1px solid #eadbe6;flex-shrink:0;color:#7b6675;font-size:13px}
+  @media(max-width:640px){.sc-header{height:auto;padding:10px 12px;gap:8px}.sc-header strong{font-size:17px}.sc-header small,.sc-header>.simple-action{display:none}.sc-back{font-size:12px;padding:5px}.sc-main{padding:12px}.sc-panel{padding:15px;border-radius:14px}.sc-stage h1,.sc-stage h2{font-size:20px}.sc-source-tabs{display:grid;grid-template-columns:1fr 1fr}.sc-source-tabs button{padding:9px 6px;font-size:12px}.sc-aspects{grid-template-columns:1fr 1fr}.sc-section-head{display:block}.sc-slide{padding:14px}.sc-slide input{font-size:16px}.sc-slide textarea{min-height:92px}.sc-footer{padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))}.sc-footer span{display:none}.sc-footer .simple-action{width:100%}}
+`}</style>; }
+Object.assign(window,{FinalCarouselFlow,createSimpleCanvases,distributeCarouselText,makeCarouselProject,openCarouselDraft,getExampleText,SimpleCarouselStyles});

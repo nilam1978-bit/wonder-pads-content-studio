@@ -35,6 +35,8 @@ function SimpleStudioHome() {
   const open=id=>dispatch({type:'open-project',id});
   const projects=[...state.projects].sort((a,b)=>b.updatedAt-a.updatedAt);
   const makePost=()=>setSection('post');
+  const isBigText=t=>t.name.startsWith('Big text');
+  const templateCard=t=><button className="simple-card" key={t.name} onClick={()=>applyTemplate(t)}><MiniPreview canvas={{...defaultCanvas(t.name,t.preset),bg:{type:'color',value:t.bg},elements:t.els.map(e=>newElement(e.type,e.patch))}} maxW={200} maxH={200}/><h3>{t.name.replace('Big text · ','')}</h3><p>Make it your own →</p></button>;
   const inProgress=projects.filter(p=>!p.finished),finishedList=projects.filter(p=>p.finished);
   const shownProjects=projects.filter(p=>(workFilter==='all'||(workFilter==='finished'?p.finished:!p.finished))&&p.name.toLowerCase().includes(query.toLowerCase()));
   // A draft is only "unfinished" while it has slides and has not yet been saved as a design.
@@ -63,18 +65,21 @@ function SimpleStudioHome() {
   return <div className="simple-shell"><SimpleStudioStyles/>
     <header className="simple-header"><div><strong>Wonder Pads Content Studio</strong><small>A little space for your handmade business</small></div></header>
     <nav className="simple-nav" aria-label="Main navigation">
-      {[['create','Create'],['work','My Work'],['brand','My Brand']].map(([id,label])=><button key={id} aria-current={section===id} onClick={()=>setSection(id)}>{label}</button>)}
+      {[['create','Create'],['work','My Work'],['brand','My Brand']].map(([id,label])=><button key={id} aria-current={section===id||(id==='create'&&section==='post')} onClick={()=>setSection(id)}>{label}</button>)}
     </nav>
     <main className="simple-content"><div className="simple-inner">
       {section==='create'&&<><h1 className="simple-title">Create</h1><p className="simple-muted">Start something new, or pick up where you left off.</p><div className="simple-grid">
         <button className="simple-card" onClick={()=>go('carousel')}><span>NEW</span><h3>Write a new carousel</h3><p>Paste your words, choose the size and slides, then edit on the canvas.</p><span>Add your words →</span></button>
+        <button className="simple-card" onClick={makePost}><span>SINGLE</span><h3>Make a single post</h3><p>One slide only. Start blank, or pick a big-text or branded layout, then add your words.</p><span>Pick a layout →</span></button>
         <button className="simple-card" onClick={()=>go('repurpose')}><span>REUSE</span><h3>Reuse my words</h3><p>Turn something you have already written into a carousel, a Facebook post or a TikTok script.</p><span>Paste and reuse →</span></button>
         <button className="simple-card" onClick={()=>go('ready-content')}><span>READY-MADE</span><h3>Posts &amp; templates</h3><p>Care tips, fabric stories, custom orders, new homes and pop-ups. Change the words and go.</p><span>Browse posts →</span></button>
       </div>{(hasUnsavedDraft||inProgress.length>0)&&<><h2 className="simple-title" style={{marginTop:28}}>Pick up where you left off</h2><div className="simple-grid">
         {hasUnsavedDraft&&<button className="simple-card" onClick={()=>openCarouselDraft(state,dispatch)}><span>UNFINISHED DRAFT</span><h3>Continue your carousel</h3><p>{state.carousel.slides.length} slides are waiting for you.</p><span>Continue editing →</span></button>}
         {inProgress.slice(0,3).map(projectCard)}
       </div>{inProgress.length>3&&<button className="simple-action simple-secondary" onClick={()=>{setWorkTab('designs');setWorkFilter('progress');setSection('work');}}>See all {inProgress.length} in My Work</button>}</>}</>}
-      {section==='post'&&<><h1 className="simple-title">Make a post</h1><p className="simple-muted">Choose a size to start blank, or pick a ready-made layout below.</p><div className="simple-grid">{SIZE_PRESETS.slice(0,3).map(p=><button className="simple-card" key={p.id} onClick={()=>dispatch({type:'create-project',name:'My new post',preset:p})}><h3>{p.name}</h3><p>{p.w} × {p.h}</p></button>)}</div><h2>Start with a template</h2><div className="simple-grid">{STARTER_TEMPLATES.map(t=><button className="simple-card" key={t.name} onClick={()=>applyTemplate(t)}><h3>{t.name}</h3><p>Make it your own →</p></button>)}</div></>}
+      {section==='post'&&<><button className="simple-action simple-secondary" onClick={()=>setSection('create')}>← Back to Create</button><h1 className="simple-title" style={{marginTop:16}}>Make a single post</h1><p className="simple-muted">One slide only. Choose a size to start blank, or pick a layout below and replace the words.</p><div className="simple-grid">{SIZE_PRESETS.slice(0,3).map(p=><button className="simple-card" key={p.id} onClick={()=>dispatch({type:'create-project',name:'My new post',preset:p})}><h3>{p.name}</h3><p>{p.w} × {p.h}</p></button>)}</div>
+        <h2>Big text layouts</h2><p className="simple-muted">A large headline, ready for your own words. The words shown are placeholders.</p><div className="simple-grid">{STARTER_TEMPLATES.filter(isBigText).map(templateCard)}</div>
+        <h2>Branded backgrounds</h2><p className="simple-muted">Blank Wonder Pads backgrounds with your logo and contact details in place.</p><div className="simple-grid">{STARTER_TEMPLATES.filter(t=>!isBigText(t)).map(templateCard)}</div></>}
       {section==='work'&&<><h1 className="simple-title">My Work</h1><nav className="simple-nav" aria-label="My Work sections" style={{padding:'0 0 12px'}}>{[['designs','Designs'],['writing','Saved writing']].map(([id,label])=><button key={id} aria-current={workTab===id} onClick={()=>setWorkTab(id)}>{label}</button>)}</nav>
         {workTab==='designs'&&<><p className="simple-muted">{finishedList.length} finished · {inProgress.length} in progress. A design counts as finished once you download it. You can change that on any card.</p><nav className="simple-nav" aria-label="Filter designs" style={{padding:'0 0 12px'}}>{[['all','All'],['progress','In progress'],['finished','Finished']].map(([id,label])=><button key={id} aria-current={workFilter===id} onClick={()=>setWorkFilter(id)}>{label}</button>)}</nav><label className="simple-muted">Find a design <input aria-label="Find a design" value={query} onChange={e=>setQuery(e.target.value)} style={{padding:12,margin:12,borderRadius:10,border:'1px solid #dfcbd9'}}/></label><div className="simple-grid">{shownProjects.map(projectCard)}</div>{!shownProjects.length&&<p>{projects.length?'Nothing matches here. Try another filter.':'No designs yet. Choose Create to start.'}</p>}<BackupRestoreCard/></>}
         {workTab==='writing'&&<><p className="simple-muted">Text you have reused or written for launches, saved so you can find it again and send it to a carousel.</p><div className="simple-grid"><button className="simple-card" onClick={()=>go('history')}><h3>Open saved writing</h3><p>Reused text, saved launches and your library.</p><span>Open →</span></button></div></>}</>}
@@ -113,34 +118,4 @@ function SimpleSlideStrip() {
   </nav>;
 }
 
-function SimpleProjectWorkspace({isMobile}) {
-  const {state,dispatch}=useStore();
-  React.useEffect(()=>{dispatch({type:'set-tool',tool:null});},[]);
-  const project=activeProject(state);
-  const isCarousel=project.projectType==='carousel'||state.carousel.simpleProjectId===project.id;
-  React.useEffect(()=>{
-    const canvases=project.canvases.map(c=>({...c,elements:c.elements.map(el=>{
-      const isBrandLogo=el.type==='image'&&(el.__role==='logo'||el.role==='logo'||(state.brand.logo&&el.src===state.brand.logo));
-      return isBrandLogo&&el.radius!==9999?{...el,radius:9999,fromBrand:true,role:'logo'}:el;
-    })}));
-    const changed=canvases.some((c,i)=>c.elements.some((el,j)=>el!==project.canvases[i].elements[j]));
-    if(changed) dispatch({type:'update-project',id:project.id,patch:{canvases}});
-  },[project.id]);
-  const [step,setStep]=React.useState('design');
-  const [busy,setBusy]=React.useState(false);
-  const [error,setError]=React.useState('');
-  const exit=()=>{dispatch({type:'close-project'});dispatch({type:'set-view',view:'home'});};
-  const changeWords=(canvasId,id,text)=>dispatch({type:'update-project',id:project.id,patch:{canvases:project.canvases.map(c=>c.id===canvasId?{...c,elements:c.elements.map(e=>e.id===id?{...e,text}:e)}:c)}});
-  const addText=canvasId=>dispatch({type:'update-project',id:project.id,patch:{canvases:project.canvases.map(c=>c.id===canvasId?{...c,elements:[...c.elements,newElement('text',{text:'Your words here',w:Math.round(c.w*.8),x:Math.round(c.w*.1),fontSize:48,align:'left'})]}:c)}});
-  const download=async format=>{setBusy(true);setError('');try{await exportCanvases(project.canvases,format,project.name.replace(/[^\w-]/g,'_'));}catch(e){setError(e.message);}finally{setBusy(false);}};
-  const selectStep=(id)=>{if(id==='words'&&isCarousel){dispatch({type:'close-project'});dispatch({type:'set-view',view:'carousel'});}else setStep(id);};
-  const progress=<nav className="simple-nav simple-progress" aria-label="Project steps"><span style={{padding:'12px 10px',fontSize:12,color:'#806b7a',whiteSpace:'nowrap'}}>Workspace · {isCarousel?'Carousel':'Design'}</span><button onClick={exit}>← Home</button>{[['words','1 · Words'],['design','2 · Design'],['download','3 · Preview & Download']].map(([id,label])=><button key={id} aria-current={step===id} onClick={()=>selectStep(id)}>{label}</button>)}</nav>;
-  return <div className="simple-workspace"><SimpleStudioStyles/>
-    {step==='design'?<div className="simple-design">{isMobile?<MobileEditor progressNav={progress}/>:<EditorScreen progressNav={progress}/>}</div>:<>{progress}<main className="simple-content"><div className="simple-inner">
-      <h1 className="simple-title">{step==='words'?'Your words':'Preview & download'}</h1>
-      <p className="simple-muted">{step==='words'?'These are the words in this design. Changes stay in the same project and keep your layouts.':'Download your finished design, then post it wherever you share with your customers.'}</p>
-      {step==='words'?<><div className="simple-card"><label>Project name</label><input value={project.name} onChange={e=>dispatch({type:'rename-project',id:project.id,name:e.target.value})}/></div>{project.canvases.map((c,i)=><section className="simple-card" key={c.id} style={{marginTop:16}}><h3>{project.canvases.length>1?`Slide ${i+1}`:'Your post'}</h3>{c.elements.filter(e=>e.type==='text').map((e,j)=><div key={e.id}><label htmlFor={'words-'+e.id}>Text {j+1}{e.locked?' (locked in design)':''}</label><textarea id={'words-'+e.id} disabled={e.locked} value={e.text||''} onChange={event=>changeWords(c.id,e.id,event.target.value)}/></div>)}<button className="simple-action simple-secondary" style={{marginTop:12}} onClick={()=>addText(c.id)}>Add text</button></section>)}</>:<><h2>Instagram preview</h2><div className="simple-grid">{project.canvases.map((c,i)=><div className="slide-preview" key={c.id} style={{background:"transparent",border:0,padding:0}}><MiniPreview canvas={c} maxW={220} maxH={260}/><p>Slide {i+1} of {project.canvases.length}</p></div>)}</div><div className="simple-grid">{[['png','Images for posting','Download your pages as PNG images.'],['pdf','PDF document','Keep or share all pages in one document.']].map(([format,title,desc])=><button disabled={busy} className="simple-card" key={format} onClick={()=>download(format)}><h3>{title}</h3><p>{desc}</p><span>{busy?'Preparing…':'Download →'}</span></button>)}<button className="simple-card" onClick={()=>exportProjectFile(project)}><h3>Editable backup</h3><p>Keep a copy you can import and edit later.</p></button></div>{error&&<p role="alert">{error}</p>}<p className="simple-muted">Saved in this browser. Downloads and backups let you take your work elsewhere.</p></>}
-    </div></main></>}
-    {step==='words'&&<div className="simple-step-end"><button className="simple-action" onClick={()=>setStep('design')}>Continue to design →</button></div>}
-  </div>;
-}
+

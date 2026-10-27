@@ -224,6 +224,22 @@ const TEMPLATES = [
   },
 ];
 
+// Templates are drawn for one page size (e.g. 1080 x 1350). When applied to a page of another
+// size, scale and centre them so nothing runs off the edge.
+function fitTemplateToCanvas(tpl, canvas) {
+  const from = tpl.preset || { w: 1080, h: 1080 };
+  const s = Math.min(canvas.w / from.w, canvas.h / from.h);
+  const dx = (canvas.w - from.w * s) / 2, dy = (canvas.h - from.h * s) / 2;
+  if (Math.abs(s - 1) < 0.001 && Math.abs(dx) < 1 && Math.abs(dy) < 1) return tpl.els.map(e => newElement(e.type, e.patch));
+  return tpl.els.map(e => {
+    const q = { ...e.patch };
+    for (const k of ['x', 'w']) if (typeof q[k] === 'number') q[k] = k === 'x' ? q[k] * s + dx : q[k] * s;
+    for (const k of ['y', 'h']) if (typeof q[k] === 'number') q[k] = k === 'y' ? q[k] * s + dy : q[k] * s;
+    for (const k of ['fontSize', 'letterSpacing', 'radius', 'strokeWidth']) if (typeof q[k] === 'number') q[k] = q[k] * s;
+    return newElement(e.type, q);
+  });
+}
+
 function TemplatesPanel() {
   const { state, dispatch } = useStore();
   // Use the Wonder Pads shop-specific starters from the home page (not the old generic 4).
@@ -241,7 +257,7 @@ function TemplatesPanel() {
       ...branding.filter(e=>e.type==='rect'),
       ...canvas.elements.filter(e=>!e.fromBrand),
       ...branding.filter(e=>e.type!=='rect'),
-    ] : tpl.els.map(e => newElement(e.type, e.patch));
+    ] : fitTemplateToCanvas(tpl, canvas);
     if(tpl.slideKind&&!elements.some(e=>e.type==='text'&&!e.fromBrand)) elements.push(...starterBackgroundElements(tpl,canvas,state.brand).filter(e=>!e.fromBrand));
     dispatch({ type: 'update-canvas', id: canvas.id, patch: { elements:cleanSlideSwipe(elements,canvas), ...(tpl.slideKind?{slideKind:tpl.slideKind}:{}), bg: { type: 'color', value: tpl.bg } } });
     if(tpl.brandLayout&&(isHook||isCta)&&proj){
@@ -1225,7 +1241,6 @@ function ElementProperties({ el }) {
       <PagePositionControls />
 
 
-
       {el.type==='text'&&<TextProps el={el} update={update} mode="advanced"/>}
       <SectionLabel>Opacity</SectionLabel>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1883,105 +1898,6 @@ function layerPreviewGlyph(el) {
 }
 
 // ---------- PAGES LIST (bottom-left) ----------
-function PagesList() {
-  const { state, dispatch } = useStore();
-  const [drag, setDrag] = pS(null);
-  const proj = activeProject(state);
-  if (!proj) return null;
-  const canvases = proj.canvases;
-  const activeCanvasId = proj.activeCanvasId;
 
-  return (
-    <div style={{
-      width: 90, background: 'var(--pink-50)',
-      borderRight: '1px solid var(--line)',
-      display: 'flex', flexDirection: 'column',
-      minHeight: 0,
-    }}>
-      <div style={{
-        padding: '14px 12px 8px', fontSize: 10, fontWeight: 600,
-        color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '.1em',
-        textAlign: 'center',
-      }}>Pages</div>
-      <div className="scroll" style={{ flex: 1, overflowY: 'auto', padding: '4px 8px' }}>
-        {canvases.map((c, i) => (
-          <div key={c.id}
-            draggable
-            onDragStart={() => setDrag(i)}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() => { if (drag !== null && drag !== i) dispatch({ type: 'reorder-canvas', from: drag, to: i }); setDrag(null); }}
-            onClick={() => dispatch({ type: 'set-active-canvas', id: c.id })}
-            style={{
-              marginBottom: 8, padding: 6, borderRadius: 10,
-              background: activeCanvasId === c.id ? 'white' : 'transparent',
-              cursor: 'pointer', boxShadow: activeCanvasId === c.id ? 'var(--shadow-sm)' : 'none',
-              transition: 'background .12s',
-            }}
-          >
-            <div style={{
-              aspectRatio: `${c.w}/${c.h}`,
-              background: c.bg?.value || '#FDFBFC',
-              borderRadius: 4,
-              border: '1px solid var(--line)',
-              position: 'relative',
-              overflow: 'hidden',
-            }}>
-              {c.elements.slice(0, 6).map(el => (
-                <div key={el.id} style={{
-                  position: 'absolute',
-                  left: (el.x / c.w) * 100 + '%',
-                  top: (el.y / c.h) * 100 + '%',
-                  width: (el.w / c.w) * 100 + '%',
-                  height: (el.h / c.h) * 100 + '%',
-                  background: el.type === 'text' ? 'transparent' :
-                              el.type === 'image' ? `url(${el.src}) center/cover` :
-                              (el.fill || 'var(--pink-300)'),
-                  borderRadius: el.type === 'circle' ? '50%' : (el.radius || 0) / c.w * 100 + '%',
-                  fontSize: 5, color: el.color,
-                  fontFamily: el.fontFamily,
-                  display: 'flex', alignItems: 'center', justifyContent: el.align,
-                  overflow: 'hidden',
-                  transform: `rotate(${el.rot}deg)`,
-                }}>
-                  {el.type === 'text' && (el.text || '').slice(0, 10)}
-                </div>
-              ))}
-            </div>
-            <div style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              marginTop: 4, fontSize: 10, color: 'var(--ink-2)',
-            }}>
-              <span style={{ fontVariantNumeric: 'tabular-nums' }}>{i + 1}</span>
-              <div style={{ display: 'flex', gap: 2 }}>
-                <button className="icon-btn" style={{ width: 18, height: 18 }}
-                  onClick={(e) => { e.stopPropagation(); dispatch({ type: 'duplicate-canvas', id: c.id }); }}>
-                  <Icon name="duplicate" size={10} />
-                </button>
-                {canvases.length > 1 && (
-                  <button className="icon-btn" style={{ width: 18, height: 18 }}
-                    onClick={(e) => { e.stopPropagation(); if (confirm('Delete this page?')) dispatch({ type: 'delete-canvas', id: c.id }); }}>
-                    <Icon name="trash" size={10} />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-      <button
-        onClick={() => dispatch({ type: 'add-canvas' })}
-        style={{
-          margin: '4px 8px 10px', padding: '10px', background: 'white', borderRadius: 10,
-          border: '1.5px dashed var(--pink-400)', color: 'var(--pink-500)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-          fontSize: 11, fontWeight: 500,
-        }}>
-        <Icon name="plus" size={14} /> Page
-      </button>
-    </div>
-  );
-}
 
-Object.assign(window, { LeftRail, LeftPanel, RightPanel, PagesList, LayerArrangeControls, FONT_OPTIONS, PanelHeader, SectionLabel,
-  FONT_WEIGHTS, WEIGHT_NAMES, FONT_GROUPS, weightsFor, nearestWeight, regularWeightFor, boldWeightFor, isBoldText, toggleBoldPatch, fontChangePatch,
-  useLiveElementEdit, LiveSlider, SliderRow, FontSizeControl, FontPicker, WeightChips, ColorPicker });
+Object.assign(window, { LeftRail, LeftPanel, RightPanel, LayerArrangeControls, FONT_OPTIONS, PanelHeader, SectionLabel, FONT_WEIGHTS, WEIGHT_NAMES, FONT_GROUPS, weightsFor, nearestWeight, regularWeightFor, boldWeightFor, isBoldText, toggleBoldPatch, fontChangePatch, useLiveElementEdit, LiveSlider, SliderRow, FontSizeControl, FontPicker, WeightChips, ColorPicker });
