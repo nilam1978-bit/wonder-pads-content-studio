@@ -69,8 +69,8 @@ function SimpleStudioHome() {
     </nav>
     <main className="simple-content"><div className="simple-inner">
       {section==='create'&&<><h1 className="simple-title">Create</h1><p className="simple-muted">Start something new, or pick up where you left off.</p><div className="simple-grid">
-        <button className="simple-card" onClick={()=>go('carousel')}><span>NEW</span><h3>Write a new carousel</h3><p>Paste your words, choose the size and slides, then edit on the canvas.</p><span>Add your words →</span></button>
-        <button className="simple-card" onClick={makePost}><span>SINGLE</span><h3>Make a single post</h3><p>One slide only. Start blank, or pick a big-text or branded layout, then add your words.</p><span>Pick a layout →</span></button>
+        <button className="simple-card" onClick={()=>go('carousel')}><span>NEW</span><h3>Paste my words</h3><p>Paste your text once, then choose a carousel or a single post.</p><span>Add your words →</span></button>
+        <button className="simple-card" onClick={makePost}><span>SINGLE</span><h3>Single post from scratch</h3><p>Start blank or from a branded background. To turn pasted text into a single post, use “Write a new carousel” and choose Single post.</p><span>Pick a layout →</span></button>
         <button className="simple-card" onClick={()=>go('repurpose')}><span>REUSE</span><h3>Reuse my words</h3><p>Turn something you have already written into a carousel, a Facebook post or a TikTok script.</p><span>Paste and reuse →</span></button>
         <button className="simple-card" onClick={()=>go('ready-content')}><span>READY-MADE</span><h3>Posts &amp; templates</h3><p>Care tips, fabric stories, custom orders, new homes and pop-ups. Change the words and go.</p><span>Browse posts →</span></button>
       </div>{(hasUnsavedDraft||inProgress.length>0)&&<><h2 className="simple-title" style={{marginTop:28}}>Pick up where you left off</h2><div className="simple-grid">

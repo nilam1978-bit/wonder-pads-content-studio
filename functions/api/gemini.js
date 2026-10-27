@@ -74,7 +74,25 @@ export async function onRequestPost({ request, env }) {
   return json({ error: `${lastDetail} Both Gemini models are temporarily unavailable.` }, lastStatus);
 }
 
-export function onRequest({ request, env } = {}) {
+export async function onRequest({ request, env } = {}) {
+  if (request?.method === 'GET' && env?.GEMINI_API_KEY && new URL(request.url).searchParams.get('test')) {
+    const model = env.GEMINI_MODEL || 'gemini-3.8-flash';
+    const fallback = env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite';
+    const out = { configured: true, tests: [] };
+    for (const m of [model, fallback]) {
+      try {
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+          signal: AbortSignal.timeout(20000),
+          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Say OK' }] }], generationConfig: { maxOutputTokens: 16 } }),
+        });
+        const d = await r.json().catch(() => ({}));
+        out.tests.push({ model: m, ok: r.ok, status: r.status, message: r.ok ? 'Works' : (d?.error?.message || 'Failed') });
+      } catch (e) { out.tests.push({ model: m, ok: false, status: 0, message: 'Could not reach Google' }); }
+    }
+    return json(out);
+  }
   if (request?.method === 'GET') return json({ configured: !!env?.GEMINI_API_KEY, ...(!env?.GEMINI_API_KEY ? { error: 'Gemini is not connected. Add the GEMINI_API_KEY secret to the app server.' } : {}) });
   return json({ error: 'Method not allowed.' }, 405);
 }
