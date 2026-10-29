@@ -19,14 +19,63 @@ function SimpleStudioStyles() {
     .simple-design{flex:1;min-height:0;overflow:hidden}.simple-design>div{height:100%!important;min-height:0}
     .simple-workspace .simple-nav{justify-content:center}.simple-step-end{padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));background:white;border-top:1px solid #efdfeb;display:flex;justify-content:flex-end;flex-shrink:0}
     @media(max-width:640px){.simple-header{padding:12px 16px}.simple-header strong{font-size:20px}.simple-nav{padding:6px}.simple-nav button{padding:10px;font-size:13px}.simple-content{padding:22px 16px}.simple-title{font-size:27px}.simple-grid{grid-template-columns:1fr;gap:12px}.simple-card{padding:18px}}
+
+    .simple-shell{background:linear-gradient(180deg,#f1cfe9 0,#f8e4f2 280px,#fdf5fa 620px)}
+    .simple-shell .simple-header{background:transparent;border:0;padding:18px 28px 4px}
+    .brand-lockup{display:flex;align-items:center;gap:12px}.brand-lockup img{width:46px;height:46px;border-radius:12px;object-fit:cover;background:#fff;box-shadow:0 2px 8px rgba(150,60,120,.18)}
+    .brand-lockup strong{display:block;font:22px/1 'DM Serif Display',serif}.brand-lockup small{display:block;letter-spacing:.16em;font-size:10px;text-transform:uppercase;color:#826d7e;margin-top:5px}
+    .simple-shell .simple-nav{background:transparent;border:0;padding:12px 28px 0;gap:8px}
+    .simple-shell .simple-nav button{background:rgba(255,255,255,.72);border:1px solid #ecd3e6;border-radius:999px;padding:10px 20px;font-weight:600;font-size:14px;color:#65505f}
+    .simple-shell .simple-nav button[aria-current=true]{background:#2a1f2a;border-color:#2a1f2a;color:#fff}
+    .studio-hero{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin:6px 0 24px}
+    .studio-eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#826d7e}
+    .studio-hero h1{font:44px/1.05 'DM Serif Display',serif;margin:8px 0 6px;color:#2a1f2a}.studio-hero p{margin:0;color:#6d5868;font-size:15px;max-width:520px;line-height:1.5}
+    .hero-count{text-align:right;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#826d7e;white-space:nowrap}.hero-count b{display:block;font:36px/1 'DM Serif Display',serif;color:#2a1f2a;letter-spacing:0}
+    .studio-banner{position:relative;overflow:hidden;display:block;width:100%;border:0;text-align:left;border-radius:22px;padding:30px;color:#fff;background:linear-gradient(100deg,#2a1f2a 15%,#7d2960 62%,#c260a8)}
+    .studio-banner small{font-size:10px;letter-spacing:.16em;text-transform:uppercase;opacity:.75}.studio-banner h2{font:34px/1.1 'DM Serif Display',serif;margin:8px 0}.studio-banner p{max-width:430px;margin:0;opacity:.92;font-size:14px;line-height:1.55}
+    .studio-banner .go{display:inline-block;margin-top:16px;background:#fff;color:#2a1f2a;border-radius:999px;padding:10px 18px;font-weight:600;font-size:14px}
+    .studio-banner .deco{position:absolute;right:28px;top:-14px;display:flex;gap:10px;pointer-events:none}.studio-banner .deco i{display:block;width:86px;height:150px;border-radius:12px;background:rgba(241,207,234,.32);transform:rotate(9deg)}.studio-banner .deco i:nth-child(2){margin-top:26px;background:rgba(241,207,234,.22)}.studio-banner .deco i:nth-child(3){margin-top:4px;background:rgba(241,207,234,.4);transform:rotate(14deg)}
+    .studio-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin:16px 0}
+    .feature{display:flex;gap:14px;align-items:flex-start;background:#fff;border:1px solid #ecd3e6;border-radius:20px;padding:20px;text-align:left;color:inherit;box-shadow:0 6px 18px rgba(150,60,120,.07)}
+    .feature:hover{border-color:#c260a8}.feature .ico{flex:0 0 44px;height:44px;border-radius:12px;background:#f7e1f0;display:grid;place-items:center;color:#893773}
+    .feature small{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#826d7e}.feature h3{font:22px/1.15 'DM Serif Display',serif;margin:4px 0 6px}.feature p{margin:0;font-size:14px;color:#6d5868;line-height:1.5}.feature .open{display:inline-block;margin-top:8px;font-size:13px;font-weight:600;color:#893773}
+    .studio-strip{display:flex;justify-content:space-between;align-items:center;width:100%;background:rgba(255,255,255,.7);border:1px solid #ecd3e6;border-radius:14px;padding:12px 18px;color:#65505f;font-size:14px;text-align:left}
+    .studio-back{display:block;background:transparent;border:0;padding:0 0 8px;color:#893773;font:600 13px inherit;font-family:inherit;cursor:pointer}
+    .studio-h2{font:26px 'DM Serif Display',serif;margin:30px 0 4px;color:#2a1f2a}
+    .tile-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:22px;margin:18px 0 32px}
+    .tile{position:relative;text-align:left;background:transparent;border:0;padding:0;color:inherit;min-width:0}
+    .tile .frame{aspect-ratio:4/5;background:#fff;border-radius:16px;box-shadow:0 8px 22px rgba(150,60,120,.14);display:grid;place-items:center;overflow:hidden;border:2px solid transparent}
+    .tile .frame img{width:100%;height:100%;object-fit:contain}.tile:hover .frame{border-color:#c260a8}.tile[aria-current=true] .frame{border-color:#7d2960;box-shadow:0 0 0 3px rgba(125,41,96,.2)}
+    .tile h3{font:17px/1.2 'DM Serif Display',serif;margin:10px 2px 2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.tile small{display:block;margin:0 2px;font-size:12px;color:#826d7e}
+    .tile .chip{position:absolute;left:8px;top:8px;background:rgba(255,255,255,.92);color:#893773;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px}
+    .tile-wrap{position:relative}.tile-menu-btn{position:absolute;top:8px;right:8px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.94);border:0;font-size:18px;line-height:1;color:#2a1f2a;box-shadow:0 2px 8px rgba(0,0,0,.14)}
+    .tile-menu{position:absolute;top:48px;right:8px;z-index:20;background:#fff;border:1px solid #ecd3e6;border-radius:14px;box-shadow:0 12px 30px rgba(80,30,70,.22);min-width:190px;padding:6px;display:grid}
+    .tile-menu button{text-align:left;background:transparent;border:0;padding:11px 12px;border-radius:10px;font:inherit;font-size:14px;color:#2a1f2a}.tile-menu button:hover{background:#f7e1f0}.tile-menu .danger{color:#a02e63}
+    .sc-shell{background:linear-gradient(180deg,#f1cfe9 0,#f8e4f2 240px,#fdf5fa 560px)!important}.sc-shell .sc-header{background:transparent!important;border-bottom:0!important}
+    @media(max-width:640px){.simple-shell .simple-header{padding:14px 16px 2px}.simple-shell .simple-nav{padding:10px 16px 0}.simple-shell .simple-nav button{padding:9px 16px}.studio-hero h1{font-size:34px}.studio-banner{padding:22px}.studio-banner .deco{opacity:.5;right:6px}.tile-grid{grid-template-columns:repeat(2,1fr);gap:16px}}
   `}</style>;
+}
+
+
+function ProjectMenu({p,dispatch}) {
+  const [on,setOn]=React.useState(false);
+  React.useEffect(()=>{if(!on)return;const close=()=>setOn(false);const t=setTimeout(()=>document.addEventListener('click',close),0);return()=>{clearTimeout(t);document.removeEventListener('click',close);};},[on]);
+  return <>
+    <button className="tile-menu-btn" aria-label={`Actions for ${p.name}`} aria-expanded={on} onClick={e=>{e.stopPropagation();setOn(v=>!v);}}>⋯</button>
+    {on&&<div className="tile-menu" role="menu">
+      <button role="menuitem" onClick={()=>{const name=prompt('Rename design',p.name);if(name?.trim())dispatch({type:'rename-project',id:p.id,name:name.trim()});}}>Rename</button>
+      <button role="menuitem" onClick={()=>dispatch({type:'update-project',id:p.id,patch:{finished:!p.finished,finishedAt:p.finished?null:now()}})}>{p.finished?'Move back to in progress':'Mark as finished'}</button>
+      <button role="menuitem" onClick={()=>dispatch({type:'duplicate-project',id:p.id})}>Duplicate design</button>
+      <button role="menuitem" className="danger" onClick={()=>{if(confirm(`Delete design “${p.name}”? This removes its saved slides from this browser. Download an editable backup first if needed.`))dispatch({type:'delete-project',id:p.id});}}>Delete design</button>
+    </div>}
+  </>;
 }
 
 function SimpleStudioHome() {
   const {state,dispatch}=useStore();
   const [section,setSection]=React.useState(()=>{
     const saved=sessionStorage.getItem('wpr-simple-section');
-    return ['create','work','brand'].includes(saved)?saved:'create';
+    return ['home','create','work','brand'].includes(saved)?saved:'home';
   });
   const [workTab,setWorkTab]=React.useState('designs');
   const [workFilter,setWorkFilter]=React.useState('all');
@@ -34,26 +83,19 @@ function SimpleStudioHome() {
   const go=view=>dispatch({type:'set-view',view});
   const open=id=>dispatch({type:'open-project',id});
   const projects=[...state.projects].sort((a,b)=>b.updatedAt-a.updatedAt);
-  const makePost=()=>setSection('post');
-  const isBigText=t=>t.name.startsWith('Big text');
-  const templateCard=t=><button className="simple-card" key={t.name} onClick={()=>applyTemplate(t)}><MiniPreview canvas={{...defaultCanvas(t.name,t.preset),bg:{type:'color',value:t.bg},elements:t.els.map(e=>newElement(e.type,e.patch))}} maxW={200} maxH={200}/><h3>{t.name.replace('Big text · ','')}</h3><p>Make it your own →</p></button>;
   const inProgress=projects.filter(p=>!p.finished),finishedList=projects.filter(p=>p.finished);
   const shownProjects=projects.filter(p=>(workFilter==='all'||(workFilter==='finished'?p.finished:!p.finished))&&p.name.toLowerCase().includes(query.toLowerCase()));
   // A draft is only "unfinished" while it has slides and has not yet been saved as a design.
   const hasUnsavedDraft=(state.carousel.slides?.length>0)&&!state.projects.some(p=>p.id===state.carousel.simpleProjectId);
   React.useEffect(()=>sessionStorage.setItem('wpr-simple-section',section),[section]);
-  const projectCard=p=><article className="simple-card" key={p.id}>
-    <button onClick={()=>open(p.id)} style={{width:'100%',textAlign:'left',background:'transparent',border:0,color:'inherit'}}>
-      {p.thumbnail?<img src={p.thumbnail} alt=""/>:<MiniPreview canvas={p.canvases[0]} maxW={210} maxH={135}/>}
-      <h3>{p.name}</h3><p>{p.canvases.length===1?'Single post':`${p.canvases.length} slides`} · {timeAgo(p.updatedAt)} · {p.finished?'Finished':'In progress'}</p><span>Open design →</span>
+  const projectCard=p=><div className="tile-wrap" key={p.id}>
+    <button className="tile" onClick={()=>open(p.id)}>
+      <div className="frame">{p.thumbnail?<img src={p.thumbnail} alt=""/>:<MiniPreview canvas={p.canvases[0]} maxW={190} maxH={238}/>}</div>
+      <h3>{p.name}</h3><small>{p.canvases.length===1?'Single post':`${p.canvases.length} slides`} · {timeAgo(p.updatedAt)}</small>
     </button>
-    <div style={{display:'flex',flexWrap:'wrap',gap:8,marginTop:12}}>
-      <button onClick={()=>{const name=prompt('Rename design',p.name);if(name?.trim())dispatch({type:'rename-project',id:p.id,name:name.trim()});}}>Rename</button>
-      <button onClick={()=>dispatch({type:'update-project',id:p.id,patch:{finished:!p.finished,finishedAt:p.finished?null:now()}})}>{p.finished?'Move back to in progress':'Mark as finished'}</button>
-      <button onClick={()=>dispatch({type:'duplicate-project',id:p.id})}>Duplicate design</button>
-      <button onClick={()=>{if(confirm(`Delete design “${p.name}”? This removes its saved slides from this browser. Download an editable backup first if needed.`))dispatch({type:'delete-project',id:p.id});}}>Delete design</button>
-    </div>
-  </article>;
+    <span className="chip" style={{position:'absolute',left:8,top:8,background:'rgba(255,255,255,.92)',color:'#893773',borderRadius:999,fontSize:10,fontWeight:700,letterSpacing:'.06em',textTransform:'uppercase',padding:'4px 9px'}}>{p.finished?'Finished':'In progress'}</span>
+    <ProjectMenu p={p} dispatch={dispatch}/>
+  </div>;
   const applyTemplate=t=>{
     const p=t.canvases?{id:uid(),name:t.name,createdAt:now(),updatedAt:now(),canvases:JSON.parse(JSON.stringify(t.canvases)).map(c=>({...c,id:uid(),elements:c.elements.map(e=>({...e,id:uid()}))}))}:newProject(t.name,t.preset,t.els.map(e=>({type:e.type,patch:e.patch})));
     if(!t.canvases){
@@ -63,22 +105,36 @@ function SimpleStudioHome() {
     p.activeCanvasId=p.canvases[0].id;dispatch({type:'create-project',project:p});
   };
   return <div className="simple-shell"><SimpleStudioStyles/>
-    <header className="simple-header"><div><strong>Wonder Pads Content Studio</strong><small>A little space for your handmade business</small></div></header>
-    <nav className="simple-nav" aria-label="Main navigation">
+    <header className="simple-header"><button className="brand-lockup" aria-label="Studio home" onClick={()=>setSection('home')} style={{background:'transparent',border:0,padding:0,textAlign:'left',color:'inherit'}}><img src={state.brand?.logo||'assets/wpr-logo.png'} alt=""/><div><strong>Wonder Pads Reusables</strong><small>Content Studio</small></div></button></header>
+    {section!=='home'&&<nav className="simple-nav" aria-label="Main navigation">
       {[['create','Create'],['work','My Work'],['brand','My Brand']].map(([id,label])=><button key={id} aria-current={section===id||(id==='create'&&section==='post')} onClick={()=>setSection(id)}>{label}</button>)}
-    </nav>
+    </nav>}
     <main className="simple-content"><div className="simple-inner">
-      {section==='create'&&<><h1 className="simple-title">Create</h1><p className="simple-muted">Start something new, or pick up where you left off.</p><div className="simple-grid">
-        <button className="simple-card" onClick={()=>go('carousel')}><span>NEW</span><h3>Paste my words</h3><p>Paste your text once, then choose a carousel or a single post.</p><span>Add your words →</span></button>
-        <button className="simple-card" onClick={()=>go('ready-content')}><span>READY-MADE</span><h3>Posts &amp; templates</h3><p>Care tips, fabric stories, custom orders, new homes and pop-ups. Change the words and go.</p><span>Browse posts →</span></button>
-      </div><p className="simple-muted">Need a Facebook post or TikTok script instead? <button className="sc-link" onClick={()=>go('repurpose')}>Reuse my words →</button></p>{(hasUnsavedDraft||inProgress.length>0)&&<><h2 className="simple-title" style={{marginTop:28}}>Pick up where you left off</h2><div className="simple-grid">
-        {hasUnsavedDraft&&<button className="simple-card" onClick={()=>openCarouselDraft(state,dispatch)}><span>UNFINISHED DRAFT</span><h3>Continue your carousel</h3><p>{state.carousel.slides.length} slides are waiting for you.</p><span>Continue editing →</span></button>}
-        {inProgress.slice(0,3).map(projectCard)}
-      </div>{inProgress.length>3&&<button className="simple-action simple-secondary" onClick={()=>{setWorkTab('designs');setWorkFilter('progress');setSection('work');}}>See all {inProgress.length} in My Work</button>}</>}</>}
-      {section==='work'&&<><h1 className="simple-title">My Work</h1><nav className="simple-nav" aria-label="My Work sections" style={{padding:'0 0 12px'}}>{[['designs','Designs'],['writing','Saved writing']].map(([id,label])=><button key={id} aria-current={workTab===id} onClick={()=>setWorkTab(id)}>{label}</button>)}</nav>
-        {workTab==='designs'&&<><p className="simple-muted">{finishedList.length} finished · {inProgress.length} in progress. A design counts as finished once you download it. You can change that on any card.</p><nav className="simple-nav" aria-label="Filter designs" style={{padding:'0 0 12px'}}>{[['all','All'],['progress','In progress'],['finished','Finished']].map(([id,label])=><button key={id} aria-current={workFilter===id} onClick={()=>setWorkFilter(id)}>{label}</button>)}</nav><label className="simple-muted">Find a design <input aria-label="Find a design" value={query} onChange={e=>setQuery(e.target.value)} style={{padding:12,margin:12,borderRadius:10,border:'1px solid #dfcbd9'}}/></label><div className="simple-grid">{shownProjects.map(projectCard)}</div>{!shownProjects.length&&<p>{projects.length?'Nothing matches here. Try another filter.':'No designs yet. Choose Create to start.'}</p>}<BackupRestoreCard/></>}
+      {section==='home'&&<>
+        <div className="studio-hero"><div><span className="studio-eyebrow">Welcome back</span><h1>Your studio, in bloom.</h1><p>Design social posts and carousels for Wonder Pads Reusables, all in one soft place.</p></div><div className="hero-count"><b>{projects.length}</b>Designs</div></div>
+        <button className="studio-banner" onClick={()=>setSection('create')}><div className="deco" aria-hidden="true"><i/><i/><i/></div><small>Create</small><h2>Paste my words. Make a post.</h2><p>Paste your text once and choose a carousel or single post, start from a ready-made template, or reuse older writing.</p><span className="go">Start creating ›</span></button>
+        <div className="studio-row">
+          <button className="feature" onClick={()=>setSection('work')} style={{flexDirection:'column'}}><span style={{display:'flex',gap:14,alignItems:'flex-start',width:'100%'}}><span className="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span><span><small>My work</small><h3>Everything you've made</h3><p>{projects.length} {projects.length===1?'design':'designs'} · {inProgress.length} in progress · {finishedList.length} finished</p><span className="open">Open my work ›</span></span></span>
+            {projects.length>0&&<span style={{display:'flex',gap:10,marginTop:12}}>{projects.slice(0,4).map(p=><span key={p.id} style={{width:58,aspectRatio:'4/5',background:'#f7e1f0',borderRadius:8,overflow:'hidden',display:'grid',placeItems:'center'}}>{p.thumbnail?<img src={p.thumbnail} alt="" style={{width:'100%',height:'100%',objectFit:'contain'}}/>:<MiniPreview canvas={p.canvases[0]} maxW={58} maxH={72}/>}</span>)}</span>}</button>
+          <button className="feature" onClick={()=>setSection('brand')} style={{flexDirection:'column'}}><span style={{display:'flex',gap:14,alignItems:'flex-start',width:'100%'}}><span className="ico" style={{overflow:'hidden',padding:0}}><img src={state.brand?.logo||'assets/wpr-logo.png'} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/></span><span><small>My brand</small><h3>{state.brand?.shopName||'Wonder Pads Reusables'}</h3><p>Your logo, colours and handles, reused on every design.</p><span className="open">Open my brand ›</span></span></span>
+            <span style={{display:'flex',gap:8,marginTop:12}}>{(state.brand?.colors||[]).slice(0,6).map(c=><span key={c} style={{width:28,height:28,borderRadius:8,background:c,border:'1px solid #ecd3e6'}}/>)}</span></button>
+        </div>
+        {(hasUnsavedDraft||inProgress.length>0)&&<button className="studio-strip" onClick={()=>setSection('create')}><span>{hasUnsavedDraft?'You have an unfinished carousel':`${inProgress.length} in progress`} · pick up where you left off</span><span>›</span></button>}</>}
+      {section==='create'&&<>
+        <div className="studio-hero"><div><button className="studio-back" onClick={()=>setSection('home')}>‹ Studio home</button><span className="studio-eyebrow">Create</span><h1>Let's make something.</h1><p>Paste your words, pick a look, and post.</p></div><div className="hero-count"><b>{projects.length}</b>Designs</div></div>
+        <button className="studio-banner" onClick={()=>go('carousel')}><div className="deco" aria-hidden="true"><i/><i/><i/></div><small>New · carousel or single post</small><h2>Paste my words</h2><p>Paste your text once, then choose a carousel or a single post. Add AI polish if you like.</p><span className="go">Add your words ›</span></button>
+        <div className="studio-row">
+          <button className="feature" onClick={()=>go('ready-content')}><span className="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span><span><small>Ready-made</small><h3>Posts &amp; templates</h3><p>Care tips, fabric stories, custom orders, new homes and pop-ups. Change the words and go.</p><span className="open">Browse posts ›</span></span></button>
+          <button className="feature" onClick={()=>go('repurpose')}><span className="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg></span><span><small>Reuse</small><h3>Reuse my words</h3><p>Turn one piece of writing into a Facebook post or a TikTok script.</p><span className="open">Paste and reuse ›</span></span></button>
+        </div>
+        {(hasUnsavedDraft||inProgress.length>0)&&<><h2 className="studio-h2">Pick up where you left off</h2><div className="tile-grid">
+          {hasUnsavedDraft&&<div className="tile-wrap"><button className="tile" onClick={()=>openCarouselDraft(state,dispatch)}><div className="frame" style={{background:'#f7e1f0',padding:12,textAlign:'center',color:'#893773',fontWeight:600}}>Unfinished carousel<br/>{state.carousel.slides.length} slides</div><h3>Continue your carousel</h3><small>Tap to keep editing</small></button></div>}
+          {inProgress.slice(0,5).map(projectCard)}
+        </div>{inProgress.length>5&&<button className="simple-action simple-secondary" onClick={()=>{setWorkTab('designs');setWorkFilter('progress');setSection('work');}}>See all {inProgress.length} in My Work</button>}</>}</>}
+      {section==='work'&&<><div className="studio-hero"><div><button className="studio-back" onClick={()=>setSection('home')}>‹ Studio home</button><span className="studio-eyebrow">My work</span><h1>Everything you've made.</h1><p>Tap a design to open it. Use the ⋯ on a design to rename, finish, copy or delete.</p></div><div className="hero-count"><b>{projects.length}</b>Designs</div></div><nav className="simple-nav" aria-label="My Work sections" style={{padding:'0 0 12px'}}>{[['designs','Designs'],['writing','Saved writing']].map(([id,label])=><button key={id} aria-current={workTab===id} onClick={()=>setWorkTab(id)}>{label}</button>)}</nav>
+        {workTab==='designs'&&<><p className="simple-muted">{finishedList.length} finished · {inProgress.length} in progress. A design counts as finished once you download it. You can change that on any card.</p><nav className="simple-nav" aria-label="Filter designs" style={{padding:'0 0 12px'}}>{[['all','All'],['progress','In progress'],['finished','Finished']].map(([id,label])=><button key={id} aria-current={workFilter===id} onClick={()=>setWorkFilter(id)}>{label}</button>)}</nav><label className="simple-muted">Find a design <input aria-label="Find a design" value={query} onChange={e=>setQuery(e.target.value)} style={{padding:12,margin:12,borderRadius:10,border:'1px solid #dfcbd9'}}/></label><div className="tile-grid">{shownProjects.map(projectCard)}</div>{!shownProjects.length&&<p>{projects.length?'Nothing matches here. Try another filter.':'No designs yet. Choose Create to start.'}</p>}<BackupRestoreCard/></>}
         {workTab==='writing'&&<><p className="simple-muted">Text you have reused or written for launches, saved so you can find it again and send it to a carousel.</p><div className="simple-grid"><button className="simple-card" onClick={()=>go('history')}><h3>Open saved writing</h3><p>Reused text, saved launches and your library.</p><span>Open →</span></button></div></>}</>}
-      {section==='brand'&&<><h1 className="simple-title">My Brand</h1><p className="simple-muted">Set this up once, then reuse it as you create.</p><BrandKitSection/></>}
+      {section==='brand'&&<><div className="studio-hero"><div><button className="studio-back" onClick={()=>setSection('home')}>‹ Studio home</button><span className="studio-eyebrow">My brand</span><h1>Your look, set once.</h1><p>Your logo, colours and handles are reused on every design.</p></div></div><BrandKitSection/></>}
       <p className="simple-muted">Your work saves automatically in this browser. Keep an editable backup of anything important.</p>
     </div></main>
   </div>;

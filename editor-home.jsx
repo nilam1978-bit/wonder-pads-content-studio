@@ -108,6 +108,14 @@ const STARTER_TEMPLATES = [
   {name:'Plum · Writing frame',preset:SIZE_PRESETS[1],bg:'#7d2960',accent:'#FDFBFC',brandLayout:'frame'},
 ].map(t => ({...t,els:starterBackgroundElements(t,t.preset).map(el=>({type:el.type,patch:el}))}));
 // Big-text covers first (they are the eye-catching ones), then the blank branded backgrounds.
+// All big-text looks are 4:5 portrait. Square layouts are centred on the taller canvas (the full-bleed corner circle stays put).
+BIG_TEXT_STARTERS.forEach(t => {
+  if (t.preset.w === t.preset.h) {
+    const dy = (SIZE_PRESETS[1].h - t.preset.h) / 2;
+    t.els.forEach(e => { if (typeof e.patch.y === 'number' && e.patch.y >= 0) e.patch.y += dy; });
+    t.preset = SIZE_PRESETS[1];
+  }
+});
 STARTER_TEMPLATES.unshift(...BIG_TEXT_STARTERS);
 
 function timeAgo(ts) {
