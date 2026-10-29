@@ -166,6 +166,7 @@ function MobileEditor({ progressNav }) {
       <MobileEditorTopBar proj={proj} canvas={canvas}
         onBack={() => dispatch({ type: 'close-project' })}
         onMenu={() => setOpenSheet('menu')}
+        onLayers={() => setOpenSheet('layers')}
         onRename={() => setOpenSheet('rename')}
         onDownload={() => setOpenSheet('download')}
         onUndo={() => dispatch({ type: 'undo' })}
@@ -196,7 +197,17 @@ function MobileEditor({ progressNav }) {
           onAdd={() => setOpenSheet('add')}
           onTool={pickTool}
           onAdjust={() => setOpenSheet('properties')}
-          onMore={() => setLongPressMenu(true)}
+          locked={!!primaryEl.locked}
+          onAction={(kind) => {
+            const id = primaryEl.id;
+            if (kind === 'duplicate') dispatch({ type: 'duplicate-elements', ids: [id] });
+            else if (kind === 'front') dispatch({ type: 'reorder-element', id, to: canvas.elements.length - 1 });
+            else if (kind === 'back') dispatch({ type: 'reorder-element', id, to: 0 });
+            else if (kind === 'lock') dispatch({ type: 'update-element', id, patch: { locked: !primaryEl.locked } });
+            else if (kind === 'hide') { dispatch({ type: 'update-element', id, patch: { hidden: true } }); dispatch({ type: 'set-selection', ids: [] }); }
+            else if (kind === 'delete') dispatch({ type: 'delete-elements', ids: [id] });
+            else if (kind === 'settings') setOpenSheet('properties');
+          }}
         />
       )}
 
@@ -263,17 +274,10 @@ function MobileEditor({ progressNav }) {
           <SheetAction icon="frames" label="Frames"
             onClick={() => { closeSheet(); setTimeout(() => openTool('frames'), 100); }} />
           <SheetAction icon="icons" label="Icons" onClick={()=>openTool('icons')}/>
-          <SheetAction icon="shapes" label="Shapes" onClick={()=>openTool('shapes')}/>
-          <SheetAction icon="bg" label="Background"
-            onClick={() => { closeSheet(); setTimeout(() => openTool('bg'), 100); }} />
           <SheetAction icon="brand_kit" label="Brand kit"
             onClick={() => { closeSheet(); setTimeout(() => openTool('brand'), 100); }} />
           <SheetAction icon="templates" label="Templates"
             onClick={() => { closeSheet(); setTimeout(() => openTool('templates'), 100); }} />
-          <div style={{ height: 1, background: 'var(--line)', margin: '4px 0' }} />
-          <SheetAction icon="layer" label="Layers"
-            onClick={() => { closeSheet(); setTimeout(() => setOpenSheet('layers'), 100); }} />
-          <SheetAction icon="save" label="Editable backup" onClick={()=>exportProjectFile(proj)}/>
         </div>
       </BottomSheet>
 
@@ -351,7 +355,7 @@ function MobileEditor({ progressNav }) {
   );
 }
 
-function MobileEditorTopBar({ proj, canvas, onBack, onMenu, onRename, onDownload, onUndo, onRedo, canUndo, canRedo }) {
+function MobileEditorTopBar({ proj, canvas, onBack, onMenu, onLayers, onRename, onDownload, onUndo, onRedo, canUndo, canRedo }) {
   return (
     <div className="safe-top" style={{
       padding: '10px 12px',
@@ -380,6 +384,9 @@ function MobileEditorTopBar({ proj, canvas, onBack, onMenu, onRename, onDownload
       </button>
       <button className="icon-btn" disabled={!canRedo} onClick={onRedo}>
         <Icon name="redo" size={18} />
+      </button>
+      <button className="icon-btn" onClick={onLayers} aria-label="Layers" title="Layers">
+        <Icon name="layer" size={18} />
       </button>
       <button className="icon-btn" onClick={onDownload}
         style={{ background: 'var(--ink)', color: 'var(--cream)' }}>
@@ -978,7 +985,7 @@ function ToolBtn({ label, onClick, active, children }) {
   return (
     <button onClick={onClick} aria-label={label} aria-pressed={!!active}
       style={{
-        flex: '1 1 0', minWidth: 0, minHeight: 54, padding: '7px 2px', borderRadius: 12,
+        flex: '0 0 auto', width: 62, minHeight: 54, padding: '7px 2px', borderRadius: 12,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
         background: active ? 'var(--pink-100)' : 'transparent',
         color: active ? 'var(--pink-600)' : 'var(--ink-2)',
@@ -989,7 +996,7 @@ function ToolBtn({ label, onClick, active, children }) {
   );
 }
 
-function MobileSelectionBar({ el, activeTool, onAdd, onTool, onAdjust, onMore }) {
+function MobileSelectionBar({ el, activeTool, onAdd, onTool, onAdjust, onAction, locked }) {
   const isText = el.type === 'text';
   const tools = trayToolsFor(el);
   const swatch = (c) => (
@@ -1000,6 +1007,7 @@ function MobileSelectionBar({ el, activeTool, onAdd, onTool, onAdjust, onMore })
     <div className="safe-bottom" style={{
       display: 'flex', gap: 2, padding: '6px 6px calc(6px + env(safe-area-inset-bottom, 0px))',
       background: 'white', borderTop: '1px solid var(--line)', flexShrink: 0, zIndex: 15,
+      overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none',
     }}>
       <ToolBtn label="Add" onClick={onAdd}><Icon name="plus" size={20} /></ToolBtn>
       {isText ? <>
@@ -1020,7 +1028,15 @@ function MobileSelectionBar({ el, activeTool, onAdd, onTool, onAdjust, onMore })
         <ToolBtn label="Fade" onClick={() => onTool('opacity')} active={activeTool === 'opacity'}><Icon name="eye" size={20} /></ToolBtn>
         <ToolBtn label="Move" onClick={() => onTool('position')} active={activeTool === 'position'}><Icon name="grid" size={20} /></ToolBtn>
       </>}
-      <ToolBtn label="More" onClick={onMore}><Icon name="more" size={20} /></ToolBtn>
+      {isText && <ToolBtn label="Move" onClick={() => onTool('position')} active={activeTool === 'position'}><Icon name="grid" size={20} /></ToolBtn>}
+      <span aria-hidden="true" style={{ width: 1, background: 'var(--line)', margin: '8px 4px', flexShrink: 0 }} />
+      <ToolBtn label="Copy" onClick={() => onAction('duplicate')}><Icon name="duplicate" size={20} /></ToolBtn>
+      <ToolBtn label="Front" onClick={() => onAction('front')}><Icon name="arrow_up" size={20} /></ToolBtn>
+      <ToolBtn label="Back" onClick={() => onAction('back')}><Icon name="arrow_down" size={20} /></ToolBtn>
+      <ToolBtn label={locked ? 'Unlock' : 'Lock'} onClick={() => onAction('lock')}><Icon name={locked ? 'unlock' : 'lock'} size={20} /></ToolBtn>
+      <ToolBtn label="Hide" onClick={() => onAction('hide')}><Icon name="eye_off" size={20} /></ToolBtn>
+      <ToolBtn label="Delete" onClick={() => onAction('delete')}><Icon name="trash" size={20} /></ToolBtn>
+      <ToolBtn label="Settings" onClick={() => onAction('settings')}><Icon name="more" size={20} /></ToolBtn>
     </div>
   );
 }

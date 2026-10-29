@@ -1,6 +1,34 @@
 // Home dashboard — Recent designs, New from preset, My templates, Starter templates
 const { useState: hS, useRef: hR, useEffect: hE, useMemo: hM } = React;
 
+// Small illustration kits drawn from plain shapes, so they stay editable and recolourable on the canvas.
+const illoTent = (x, y, w, c) => { // little market stall: roof, scalloped awning, table
+  const k = w / 300, d = 75 * k;
+  return [
+    {type:'triangle',patch:{fill:c.roof,x,y,w,h:110*k}},
+    {type:'rect',patch:{fill:c.awning,x,y:y+110*k,w,h:34*k,radius:0}},
+    ...[0,1,2,3].map(i => ({type:'circle',patch:{fill:i%2 ? c.awning : c.roof,x:x+i*d,y:y+128*k,w:d,h:d*0.8}})),
+    {type:'rect',patch:{fill:c.post,x:x+14*k,y:y+150*k,w:10*k,h:120*k,radius:4}},
+    {type:'rect',patch:{fill:c.post,x:x+w-24*k,y:y+150*k,w:10*k,h:120*k,radius:4}},
+    {type:'rect',patch:{fill:c.table,x:x-6*k,y:y+250*k,w:w+12*k,h:26*k,radius:8*k}},
+  ];
+};
+const illoPad = (x, y, w, c) => { // a cloth pad with wings, seen from above
+  const k = w / 280;
+  return [
+    {type:'rect',patch:{fill:c.wing,x:x+100*k,y:y-28*k,w:80*k,h:44*k,radius:18*k}},
+    {type:'rect',patch:{fill:c.wing,x:x+100*k,y:y+68*k,w:80*k,h:44*k,radius:18*k}},
+    {type:'rect',patch:{fill:c.body,x,y,w,h:84*k,radius:42*k}},
+    {type:'rect',patch:{fill:c.line,x:x+44*k,y:y+37*k,w:192*k,h:10*k,radius:5*k}},
+    ...[0,1,2].map(i => ({type:'circle',patch:{fill:c.line,x:x+72*k+i*68*k,y:y+14*k,w:12*k,h:12*k}})),
+  ];
+};
+const illoFlower = (cx, cy, r, c) => [ // the Wonder Pads floral touch
+  ...[0,1,2,3,4].map(i => { const a = -Math.PI/2 + i*2*Math.PI/5; return {type:'circle',patch:{fill:c.petal,x:cx+Math.cos(a)*r*1.15-r*0.7,y:cy+Math.sin(a)*r*1.15-r*0.7,w:r*1.4,h:r*1.4}}; }),
+  {type:'circle',patch:{fill:c.heart,x:cx-r*0.55,y:cy-r*0.55,w:r*1.1,h:r*1.1}},
+];
+const illoSparkle = (x, y, size, color) => ({type:'icon',patch:{name:'sparkle',color,x,y,w:size,h:size,strokeWidth:2}});
+
 // Big-text covers (restored from the first version of the app). These carry their own words and layout.
 // Wording is a placeholder only: no prices, dates or customer quotes. Replace every line with your own.
 const BIG_TEXT_STARTERS = [
@@ -37,6 +65,32 @@ const BIG_TEXT_STARTERS = [
       {type:'rect',patch:{fill:'#7d2960',x:100,y:840,w:60,h:3,radius:2}},
       {type:'text',patch:{text:'— name, or a Wonder Pads customer',fontFamily:'Instrument Sans',fontSize:24,color:'#56454F',x:100,y:870,w:600,h:40,align:'left',letterSpacing:3}},
       {type:'text',patch:{text:'thank you.',fontFamily:'Caveat',fontSize:64,color:'#C260A8',x:700,y:850,w:280,h:80,align:'right',italic:true}},
+    ]},
+  // Sage pop-up announcement
+  {name:'Big text · Pop-up announcement',preset:SIZE_PRESETS[1],bg:'#4F6B53',accent:'#FDFBFC',
+    els:[
+      {type:'circle',patch:{fill:'#5C7A60',x:640,y:-160,w:620,h:620}},
+      ...illoTent(700,120,300,{roof:'#F1CFEA',awning:'#D98BC6',post:'#E3EEDF',table:'#FDFBFC'}),
+      ...illoFlower(840,1010,34,{petal:'#F1CFEA',heart:'#D98BC6'}),
+      ...illoPad(700,1160,280,{body:'#FDFBFC',wing:'#F1CFEA',line:'#D98BC6'}),
+      illoSparkle(590,200,48,'#F1CFEA'),illoSparkle(980,640,44,'#E3EEDF'),
+      {type:'text',patch:{text:'POP-UP  ·  DAY & DATE',fontFamily:'Instrument Sans',fontSize:26,color:'#E3EEDF',x:80,y:100,w:920,h:40,align:'left',letterSpacing:6,fontWeight:600}},
+      {type:'text',patch:{text:'come say\nhello.',fontFamily:'DM Serif Display',fontSize:230,color:'#FDFBFC',x:80,y:380,w:920,h:560,align:'left',italic:true,lineHeight:1}},
+      {type:'rect',patch:{fill:'#F1CFEA',x:80,y:1050,w:100,h:6,radius:4}},
+      {type:'text',patch:{text:'Event name\nTime  ·  Venue and address',fontFamily:'Instrument Sans',fontSize:36,color:'#E3EEDF',x:80,y:1090,w:600,h:140,align:'left',lineHeight:1.45}},
+    ]},
+  // Cream event reminder
+  {name:'Big text · Event reminder',preset:SIZE_PRESETS[0],bg:'#FDFBFC',accent:'#4F6B53',
+    els:[
+      {type:'circle',patch:{fill:'#EEF3EA',x:700,y:-180,w:520,h:520}},
+      ...illoTent(770,90,230,{roof:'#4F6B53',awning:'#D98BC6',post:'#4F6B53',table:'#F1CFEA'}),
+      ...illoFlower(840,830,30,{petal:'#F1CFEA',heart:'#C260A8'}),
+      ...illoPad(710,930,260,{body:'#F1CFEA',wing:'#E8B8DC',line:'#C260A8'}),
+      illoSparkle(640,120,44,'#D98BC6'),illoSparkle(960,700,40,'#4F6B53'),
+      {type:'text',patch:{text:'TOMORROW',fontFamily:'Instrument Sans',fontSize:28,color:'#4F6B53',x:100,y:130,w:880,h:40,align:'left',letterSpacing:8,fontWeight:700}},
+      {type:'text',patch:{text:'see you\nthere.',fontFamily:'DM Serif Display',fontSize:190,color:'#2A1F2A',x:100,y:220,w:880,h:460,align:'left',italic:true,lineHeight:1.05}},
+      {type:'rect',patch:{fill:'#4F6B53',x:100,y:720,w:80,h:5,radius:4}},
+      {type:'text',patch:{text:'Event name\nTime  ·  Venue',fontFamily:'Instrument Sans',fontSize:34,color:'#56454F',x:100,y:760,w:560,h:160,align:'left',lineHeight:1.45}},
     ]},
 ];
 
