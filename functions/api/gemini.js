@@ -6,10 +6,35 @@ const json = (body, status = 200) => new Response(JSON.stringify(body), {
   },
 });
 
+// Basic protection so only this app can spend your Gemini quota.
+const recentHits = new Map();
+async function guard(request, env, kind, limit) {
+  const origin = request.headers.get('Origin');
+  const site = request.headers.get('Sec-Fetch-Site');
+  const host = new URL(request.url).host;
+  let sameOrigin = false;
+  if (origin) { try { sameOrigin = new URL(origin).host === host; } catch { sameOrigin = false; } }
+  else if (site === 'same-origin' || (request.method === 'GET' && site === 'none')) sameOrigin = true;
+  if (!sameOrigin) return json({ error: 'This request is not allowed.' }, 403);
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  if (env.GEMINI_LIMITER) {
+    try { const { success } = await env.GEMINI_LIMITER.limit({ key: ip }); if (!success) return json({ error: 'Too many AI requests. Please wait a minute and try again.' }, 429); } catch {}
+  }
+  const now = Date.now(), windowMs = 10 * 60 * 1000, key = kind + ':' + ip;
+  const list = (recentHits.get(key) || []).filter(t => now - t < windowMs);
+  if (list.length >= limit) return json({ error: 'Too many AI requests in a short time. Please wait a few minutes and try again.' }, 429);
+  list.push(now); recentHits.set(key, list);
+  if (recentHits.size > 500) for (const [k, v] of recentHits) if (!v.some(t => now - t < windowMs)) recentHits.delete(k);
+  return null;
+}
+
 export async function onRequestPost({ request, env }) {
   if (!env.GEMINI_API_KEY) {
     return json({ error: 'Gemini is not connected yet. Add GEMINI_API_KEY in Cloudflare.' }, 503);
   }
+
+  const blocked = await guard(request, env, 'post', 40);
+  if (blocked) return blocked;
 
   let body;
   try { body = await request.json(); }
@@ -76,6 +101,8 @@ export async function onRequestPost({ request, env }) {
 
 export async function onRequest({ request, env } = {}) {
   if (request?.method === 'GET' && env?.GEMINI_API_KEY && new URL(request.url).searchParams.get('test')) {
+    const blocked = await guard(request, env, 'test', 8);
+    if (blocked) return blocked;
     const model = env.GEMINI_MODEL || 'gemini-3.8-flash';
     const fallback = env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite';
     const out = { configured: true, tests: [] };

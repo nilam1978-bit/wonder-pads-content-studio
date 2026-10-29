@@ -952,6 +952,7 @@ function alignElementsToPage(state, dispatch, position) {
 // localStorage holds — projects, canvases, brand, saved backgrounds, brand arrangements,
 // content-tool history, calendar, carousel state, all app data.
 function exportEditableProjectFile(state) {
+  try { localStorage.setItem('wpr-last-backup', String(Date.now())); } catch {}
   const { past, future, selection, saveStatus, savedAt, ...persist } = state;
   const payload = {
     app: 'Wonder Pads Content Studio',

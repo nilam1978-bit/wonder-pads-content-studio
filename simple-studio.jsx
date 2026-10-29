@@ -81,6 +81,10 @@ function SimpleStudioHome() {
   const [workFilter,setWorkFilter]=React.useState('all');
   const [query,setQuery]=React.useState('');
   const go=view=>dispatch({type:'set-view',view});
+  const readBackup=()=>{try{return +localStorage.getItem('wpr-last-backup')||0;}catch{return 0;}};
+  const [lastBackup,setLastBackup]=React.useState(readBackup);
+  const backupDays=lastBackup?Math.floor((Date.now()-lastBackup)/86400000):null;
+  const doBackup=()=>{exportEditableProjectFile(state);setTimeout(()=>setLastBackup(readBackup()),300);};
   const open=id=>dispatch({type:'open-project',id});
   const projects=[...state.projects].sort((a,b)=>b.updatedAt-a.updatedAt);
   const inProgress=projects.filter(p=>!p.finished),finishedList=projects.filter(p=>p.finished);
@@ -110,6 +114,7 @@ function SimpleStudioHome() {
       {[['create','Create'],['work','My Work'],['brand','My Brand']].map(([id,label])=><button key={id} aria-current={section===id||(id==='create'&&section==='post')} onClick={()=>setSection(id)}>{label}</button>)}
     </nav>}
     <main className="simple-content"><div className="simple-inner">
+        {projects.length>0&&(section==='home'||backupDays===null||backupDays>=7)&&<div className="studio-strip" role="status" style={{marginBottom:18,borderColor:backupDays===null||backupDays>=7?'#c260a8':'#ecd3e6'}}><span>{backupDays===null?'Your work is saved only in this browser. Back it up to a file so it is never lost.':backupDays>=7?`Last backup was ${backupDays} days ago.`:backupDays===0?'Backed up today. Your work is safe.':`Last backup ${backupDays} day${backupDays===1?'':'s'} ago.`}</span><button className="simple-action simple-secondary" style={{padding:'8px 14px'}} onClick={doBackup}>Back up now</button></div>}
       {section==='home'&&<>
         <div className="studio-hero"><div><span className="studio-eyebrow">Welcome back</span><h1>Your studio, in bloom.</h1><p>Design social posts and carousels for Wonder Pads Reusables, all in one soft place.</p></div><div className="hero-count"><b>{projects.length}</b>Designs</div></div>
         <button className="studio-banner" onClick={()=>setSection('create')}><div className="deco" aria-hidden="true"><i/><i/><i/></div><small>Create</small><h2>Paste my words. Make a post.</h2><p>Paste your text once and choose a carousel or single post, start from a ready-made template, or reuse older writing.</p><span className="go">Start creating ›</span></button>
