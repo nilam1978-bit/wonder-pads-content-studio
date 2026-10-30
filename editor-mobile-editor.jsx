@@ -118,8 +118,22 @@ function MobileEditor({ progressNav }) {
   // Unlike a pop-up sheet it never covers or blurs the slide, so you see every change as you make it.
   const [tray, setTray] = meS(null);
   const [longPressMenu, setLongPressMenu] = meS(false);
+  // Typing happens directly on the slide ("inline"). The slide is zoomed to the text while the keyboard is up.
+  const [editingId, setEditingId] = meS(null);
+  const beginEdit = (id) => {
+    const go = () => setEditingId(id);
+    try { ReactDOM.flushSync(go); } catch { go(); }
+    const node = document.querySelector(`[data-text-content-id="${id}"]`);
+    if (node) {
+      node.focus();
+      try { const r = document.createRange(); r.selectNodeContents(node); r.collapse(false); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); } catch {}
+    }
+  };
+  const endEdit = () => { try { document.activeElement && document.activeElement.blur && document.activeElement.blur(); } catch {} setEditingId(null); };
 
   const primaryEl = canvas ? canvas.elements.find(e => e.id === state.selection[0]) : null;
+  // Stop typing if the selection moves to something else.
+  meE(() => { if (editingId && (!primaryEl || primaryEl.id !== editingId)) endEdit(); }, [primaryEl?.id, editingId]);
 
   // Close the tray when nothing is selected, or when the chosen tool does not suit the newly selected item.
   meE(() => {
@@ -179,12 +193,13 @@ function MobileEditor({ progressNav }) {
       {/* Canvas area */}
       <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
         <MobileCanvasArea onLongPress={() => setLongPressMenu(true)}
-          onEditWords={() => setTray('words')} />
+          editingId={editingId} setEditingId={setEditingId}
+          onEditWords={(id) => beginEdit(id)} />
       </div>
 
       {/* Slide thumbnails belong beneath the canvas in the simple workflow.
           They step aside while a tool tray is open so the slide stays big. */}
-      {!tray && <MobilePagesStrip proj={proj} onOpen={() => setOpenSheet('pages')} />}
+      {!tray && !editingId && <MobilePagesStrip proj={proj} onOpen={() => setOpenSheet('pages')} />}
 
       {/* Live tool tray */}
       {primaryEl && tray && (
@@ -192,10 +207,15 @@ function MobileEditor({ progressNav }) {
       )}
 
       {/* Selection toolbar */}
-      {primaryEl && !openSheet && !tray && (
+      {primaryEl && primaryEl.type === 'text' && editingId === primaryEl.id && !openSheet && !tray && (
+        <MobileTextEditBar el={primaryEl} dispatch={dispatch}
+          onDone={endEdit}
+          onTool={(t) => { endEdit(); setTray(t); }} />
+      )}
+      {primaryEl && !openSheet && !tray && !editingId && (
         <MobileSelectionBar el={primaryEl} activeTool={tray}
           onAdd={() => setOpenSheet('add')}
-          onTool={pickTool}
+          onTool={(t) => (t === 'words' && primaryEl.type === 'text' ? beginEdit(primaryEl.id) : pickTool(t))}
           onAdjust={() => setOpenSheet('properties')}
           locked={!!primaryEl.locked}
           onAction={(kind) => {
@@ -457,7 +477,7 @@ function MobilePagesStrip({ proj, onOpen }) {
   );
 }
 
-function MobileCanvasArea({ onLongPress, onEditWords }) {
+function MobileCanvasArea({ onLongPress, onEditWords, editingId: editingIdProp, setEditingId: setEditingIdProp }) {
   const { state, dispatch } = useStore();
   const canvas = activeCanvas(state);
   const stageRef = meR(null);
@@ -466,7 +486,11 @@ function MobileCanvasArea({ onLongPress, onEditWords }) {
   const startDataRef = meR(null);
   const gestureRef = meR(null);
   const longPressRef = meR(null);
-  const [editingId, setEditingId] = meS(null);
+  const [editingLocal, setEditingLocal] = meS(null);
+  const editingId = editingIdProp !== undefined ? editingIdProp : editingLocal;
+  const setEditingId = setEditingIdProp || setEditingLocal;
+  const editingRef = meR(editingId); editingRef.current = editingId;
+  const editFitted = meR(false);
 
   // Center canvas
   meE(() => {
@@ -488,6 +512,33 @@ function MobileCanvasArea({ onLongPress, onEditWords }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canvas?.id]);
 
+  // While typing: zoom the slide so the text box fills the width and sits in the visible area above the keyboard.
+  const fitToEditing = (r) => {
+    const el = canvas.elements.find(x => x.id === editingRef.current);
+    if (!el) return;
+    const z = clamp(Math.min((r.width - 24) / Math.max(el.w, 1), 1.2), 0.1, 1.2);
+    const boxH = el.h * z;
+    const y = boxH > r.height - 24 ? 12 - el.y * z : r.height / 2 - (el.y + el.h / 2) * z;
+    skipZoomPan.current = Math.abs(z - state.zoom) > 0.0005;
+    editFitted.current = true;
+    setPan({ x: r.width / 2 - (el.x + el.w / 2) * z, y });
+    dispatch({ type: 'set-zoom', zoom: z });
+  };
+  meE(() => {
+    const node = stageRef.current;
+    if (!node || !canvas) return;
+    const r = node.getBoundingClientRect();
+    if (editingId) { fitToEditing(r); return; }
+    if (editFitted.current) {
+      editFitted.current = false;
+      const z = clamp(Math.min((r.width - 40) / canvas.w, (r.height - 40) / canvas.h), 0.05, 4);
+      skipZoomPan.current = Math.abs(z - state.zoom) > 0.0005;
+      setPan({ x: (r.width - canvas.w * z) / 2, y: (r.height - canvas.h * z) / 2 });
+      dispatch({ type: 'set-zoom', zoom: z });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingId]);
+
   // When the area under the slide changes size (tool tray opens/closes, keyboard appears),
   // keep the slide centred, and re-fit it if it was already fitted to the screen.
   const lastRect = meR(null);
@@ -500,6 +551,7 @@ function MobileCanvasArea({ onLongPress, onEditWords }) {
       const r = node.getBoundingClientRect();
       const prev = lastRect.current;
       lastRect.current = { width: r.width, height: r.height };
+      if (editingRef.current) { fitToEditing(r); return; }
       if (!prev || (prev.width === r.width && prev.height === r.height)) return;
       const wasFit = Math.abs(state.zoom - fitFor(prev)) < 0.012;
       if (wasFit) {
@@ -531,8 +583,9 @@ function MobileCanvasArea({ onLongPress, onEditWords }) {
 
   // Element interactions
   const startElementDrag = (e, elId) => {
-    e.stopPropagation();
     if (e.touches && e.touches.length > 1) return; // ignore multi-touch on element
+    if (editingRef.current === elId) return; // let the finger place the cursor inside the text
+    e.stopPropagation();
     const el = canvas.elements.find(x => x.id === elId);
     if (el?.locked) return;
 
@@ -605,7 +658,7 @@ function MobileCanvasArea({ onLongPress, onEditWords }) {
         dispatch({ type: 'commit-transient', snapshot: sd.canvasSnapshot });
       } else if (sd && wasSelected && el.type === 'text') {
         // Tapping text that is already selected opens "Edit words".
-        onEditWords?.();
+        onEditWords?.(elId);
       }
       startDataRef.current = null;
       window.removeEventListener('touchmove', move);
@@ -791,7 +844,7 @@ function MobileCanvasArea({ onLongPress, onEditWords }) {
             <div key={el.id}
               onTouchStart={(e) => { if (!el.locked) startElementDrag(e, el.id); }}
               onPointerDown={(e) => { if (e.pointerType !== 'touch' && !el.locked) startElementDrag(e, el.id); }}
-              onDoubleClick={() => { if (el.type === 'text') setEditingId(el.id); }}
+              onDoubleClick={() => { if (el.type === 'text') onEditWords?.(el.id); }}
               style={{ position: 'absolute', left: 0, top: 0,
                 cursor: el.locked ? 'not-allowed' : 'move' }}
             >
@@ -981,9 +1034,10 @@ function colourKey(el) {
   return 'stroke';
 }
 
-function ToolBtn({ label, onClick, active, children }) {
+function ToolBtn({ label, onClick, active, children, keepFocus }) {
   return (
     <button onClick={onClick} aria-label={label} aria-pressed={!!active}
+      onMouseDown={keepFocus ? (e) => e.preventDefault() : undefined}
       style={{
         flex: '0 0 auto', width: 62, minHeight: 54, padding: '7px 2px', borderRadius: 12,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
@@ -996,6 +1050,37 @@ function ToolBtn({ label, onClick, active, children }) {
   );
 }
 
+// Shown above the keyboard while typing on the slide: a Canva-style strip that scrolls sideways.
+function MobileTextEditBar({ el, dispatch, onDone, onTool }) {
+  const patch = (p) => dispatch({ type: 'update-element', id: el.id, patch: p });
+  const aligns = ['left', 'center', 'right'];
+  const nextAlign = aligns[(aligns.indexOf(el.align) + 1) % 3] || 'left';
+  const swatch = (c) => (
+    <span style={{ width: 22, height: 22, borderRadius: '50%', background: c === 'transparent' ? '#fff' : c,
+      border: '2px solid var(--line-2)', boxSizing: 'border-box', display: 'block' }} />
+  );
+  return (
+    <div className="safe-bottom" role="toolbar" aria-label="Text editing tools" style={{
+      display: 'flex', gap: 2, padding: '6px 6px 6px', background: 'white', borderTop: '1px solid var(--line)',
+      flexShrink: 0, zIndex: 15, overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none',
+    }}>
+      <button onClick={onDone} aria-label="Done typing" style={{
+        flex: '0 0 auto', minWidth: 76, minHeight: 54, borderRadius: 12, border: 0, background: 'var(--ink)', color: 'white',
+        fontWeight: 700, fontSize: 14, padding: '0 14px', position: 'sticky', left: 0, zIndex: 2 }}>✓ Done</button>
+      <ToolBtn keepFocus label="Bold" active={isBoldText(el)} onClick={() => patch(toggleBoldPatch(el))}><Icon name="bold" size={20} /></ToolBtn>
+      <ToolBtn keepFocus label="Italic" active={!!el.italic} onClick={() => patch({ italic: !el.italic })}><span style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 18, fontFamily: 'serif' }}>I</span></ToolBtn>
+      <ToolBtn keepFocus label={'Align ' + (el.align || 'left')} onClick={() => patch({ align: nextAlign })}><Icon name={el.align === 'center' ? 'align_c' : el.align === 'right' ? 'align_r' : 'align_l'} size={20} /></ToolBtn>
+      <ToolBtn keepFocus label="Smaller" onClick={() => patch({ fontSize: Math.max(8, Math.round((el.fontSize || 40) / 1.1)) })}><span style={{ fontSize: 14, fontWeight: 700 }}>A−</span></ToolBtn>
+      <ToolBtn keepFocus label="Bigger" onClick={() => patch({ fontSize: Math.round((el.fontSize || 40) * 1.1) })}><span style={{ fontSize: 18, fontWeight: 700 }}>A+</span></ToolBtn>
+      <span aria-hidden="true" style={{ width: 1, background: 'var(--line)', margin: '8px 4px', flexShrink: 0 }} />
+      <ToolBtn label="Font" onClick={() => onTool('font')}><span style={{ fontFamily: `"${el.fontFamily}", sans-serif`, fontSize: 21, lineHeight: '22px' }}>Aa</span></ToolBtn>
+      <ToolBtn label="Colour" onClick={() => onTool('colour')}>{swatch(el.color)}</ToolBtn>
+      <ToolBtn label="Size" onClick={() => onTool('size')}><span style={{ fontSize: 13, fontWeight: 700, border: '1.5px solid currentColor', borderRadius: 7, padding: '1px 6px' }}>{Math.round(el.fontSize)}</span></ToolBtn>
+      <ToolBtn label="Move" onClick={() => onTool('position')}><Icon name="grid" size={20} /></ToolBtn>
+      <ToolBtn label="✦ AI" onClick={() => onTool('words')}><span style={{ fontSize: 18 }}>✦</span></ToolBtn>
+    </div>
+  );
+}
 function MobileSelectionBar({ el, activeTool, onAdd, onTool, onAdjust, onAction, locked }) {
   const isText = el.type === 'text';
   const tools = trayToolsFor(el);
