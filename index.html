@@ -305,7 +305,7 @@
     // ONE version number for every app file. Change it each time you upload new files,
     // so phones and browsers fetch the fresh copies instead of reusing old ones.
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
-      const APP_VERSION = '2026-10-31-4';
+      const APP_VERSION = '2026-10-31-5-typing-ui';
     // Files load in this order. The data file is plain JavaScript; the rest are React (.jsx).
     const APP_FILES = [
       'editor-icons.jsx',
@@ -345,6 +345,8 @@
       const root = document.documentElement.style;
       root.setProperty('--studio-viewport-height', `${vv?.height || window.innerHeight}px`);
       root.setProperty('--studio-viewport-top', `${vv?.offsetTop || 0}px`);
+      // How much of the screen the keyboard is covering (0 when it is closed).
+      root.setProperty('--studio-keyboard', `${vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0}px`);
     };
     updateStudioViewport();
     window.addEventListener('resize', updateStudioViewport);

@@ -125,7 +125,7 @@ function MobileEditor({ progressNav }) {
     try { ReactDOM.flushSync(go); } catch { go(); }
     const node = document.querySelector(`[data-text-content-id="${id}"]`);
     if (node) {
-      node.focus();
+      try { node.focus({ preventScroll: true }); } catch { node.focus(); }
       try { const r = document.createRange(); r.selectNodeContents(node); r.collapse(false); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); } catch {}
     }
   };
@@ -197,6 +197,19 @@ function MobileEditor({ progressNav }) {
         <MobileCanvasArea onLongPress={() => setLongPressMenu(true)}
           editingId={editingId} setEditingId={setEditingId}
           onEditWords={(id) => beginEdit(id)} />
+        {/* Undo / redo float in the empty space beside the slide while typing (replaces the old top stripe). */}
+        {editingId && (() => {
+          const fb = (enabled) => ({ width: 36, height: 36, borderRadius: '50%', border: 0, padding: 0, display: 'grid', placeItems: 'center',
+            background: 'rgba(255,255,255,.92)', color: 'var(--ink)', boxShadow: '0 1px 6px rgba(80,30,70,.18)', opacity: enabled ? 1 : 0.4 });
+          return (
+            <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 6, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button aria-label="Undo" disabled={state.past.length === 0} style={fb(state.past.length > 0)}
+                onClick={() => dispatch({ type: 'undo' })}><Icon name="undo" size={18} /></button>
+              <button aria-label="Redo" disabled={state.future.length === 0} style={fb(state.future.length > 0)}
+                onClick={() => dispatch({ type: 'redo' })}><Icon name="redo" size={18} /></button>
+            </div>
+          );
+        })()}
         {/* Subtle slide switcher, like Canva: arrows at the edges and a small "1 / 5" pill that opens all slides. */}
         {!editingId && proj.canvases.length > 1 && (() => {
           const idx = Math.max(0, proj.canvases.findIndex(c => c.id === canvas.id)), n = proj.canvases.length;
@@ -397,14 +410,9 @@ function MobileEditor({ progressNav }) {
 }
 
 function MobileEditorTopBar({ proj, canvas, compact, onBack, onMenu, onLayers, onRename, onDownload, onUndo, onRedo, canUndo, canRedo }) {
-  if (compact) return (
-    <div className="safe-top" style={{ padding: '4px 10px', background: 'white', borderBottom: '1px solid var(--line)',
-      display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, zIndex: 20 }}>
-      <button className="icon-btn" disabled={!canUndo} onClick={onUndo} aria-label="Undo"><Icon name="undo" size={18} /></button>
-      <button className="icon-btn" disabled={!canRedo} onClick={onRedo} aria-label="Redo"><Icon name="redo" size={18} /></button>
-      <span style={{ flex: 1, fontSize: 12, color: 'var(--ink-3)', textAlign: 'center' }}>Typing on the slide</span>
-    </div>
-  );
+  // While typing there is no top stripe at all: undo / redo float on the canvas instead (see MobileEditor).
+  // This spacer only keeps the slide clear of the iPhone clock / notch (it is 0 height on browsers with no notch).
+  if (compact) return <div className="safe-top" style={{ flexShrink: 0 }} />;
   return (
     <div className="safe-top" style={{
       padding: '10px 12px',
@@ -550,7 +558,11 @@ function MobileCanvasArea({ onLongPress, onEditWords, editingId: editingIdProp, 
     const node = stageRef.current;
     if (!node || !canvas || typeof ResizeObserver === 'undefined') return;
     const fitFor = (r) => clamp(Math.min((r.width - 40) / canvas.w, (r.height - 40) / canvas.h), 0.05, 4);
-    const ro = new ResizeObserver(() => {
+    // While typing, the keyboard slides up in stages. Re-fitting on every stage makes the slide hop around,
+    // so wait for the size to stop changing and then re-fit once.
+    let settle = null;
+    const refit = () => {
+      settle = null;
       const r = node.getBoundingClientRect();
       const prev = lastRect.current;
       lastRect.current = { width: r.width, height: r.height };
@@ -564,9 +576,13 @@ function MobileCanvasArea({ onLongPress, onEditWords, editingId: editingIdProp, 
       } else {
         setPan(p => ({ x: p.x + (r.width - prev.width) / 2, y: p.y + (r.height - prev.height) / 2 }));
       }
+    };
+    const ro = new ResizeObserver(() => {
+      if (editingRef.current && lastRect.current) { clearTimeout(settle); settle = setTimeout(refit, 180); }
+      else refit();
     });
     ro.observe(node);
-    return () => ro.disconnect();
+    return () => { clearTimeout(settle); ro.disconnect(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canvas?.id, canvas?.w, canvas?.h, state.zoom]);
 
@@ -1058,14 +1074,14 @@ function MobileTextEditBar({ el, dispatch, onDone, onTool }) {
   const patch = (p) => dispatch({ type: 'update-element', id: el.id, patch: p });
   const aligns = ['left', 'center', 'right'];
   const nextAlign = aligns[(aligns.indexOf(el.align) + 1) % 3] || 'left';
-  const chip = (active) => ({ flex: '0 0 auto', minWidth: 44, height: 44, padding: '0 10px', borderRadius: 22, border: 0,
+  const chip = (active) => ({ flex: '0 0 auto', minWidth: 38, height: 38, padding: '0 7px', borderRadius: 19, border: 0,
     background: active ? 'var(--pink-100)' : 'transparent', color: active ? 'var(--pink-600)' : 'var(--ink)',
-    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 15, fontWeight: 600, fontFamily: 'inherit' });
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 14, fontWeight: 600, fontFamily: 'inherit' });
   const keep = (e) => e.preventDefault();
-  const Sep = () => <span aria-hidden="true" style={{ flex: '0 0 1px', width: 1, height: 24, background: 'var(--line-2)', margin: '0 4px' }} />;
+  const Sep = () => <span aria-hidden="true" style={{ flex: '0 0 1px', width: 1, height: 20, background: 'var(--line-2)', margin: '0 2px' }} />;
   return (
-    <div role="toolbar" aria-label="Text editing tools" style={{ flexShrink: 0, zIndex: 15, padding: '6px 8px calc(6px + env(safe-area-inset-bottom, 0px))', display: 'flex', alignItems: 'center', gap: 8 }}>
-      <div style={{ flex: 1, minWidth: 0, background: 'white', borderRadius: 30, boxShadow: '0 4px 16px rgba(80,30,70,.18)', padding: '4px 6px',
+    <div role="toolbar" aria-label="Text editing tools" style={{ flexShrink: 0, zIndex: 15, padding: '4px 8px calc(4px + max(0px, env(safe-area-inset-bottom, 0px) - var(--studio-keyboard, 0px)))', display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ flex: 1, minWidth: 0, background: 'white', borderRadius: 26, boxShadow: '0 4px 16px rgba(80,30,70,.18)', padding: '2px 4px',
         display: 'flex', alignItems: 'center', gap: 2, overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
         <button style={chip(false)} aria-label="Improve with AI" onClick={() => onTool('words')}><span style={{ fontSize: 18, color: 'var(--pink-600)' }}>✦</span></button>
         <Sep />
@@ -1075,7 +1091,7 @@ function MobileTextEditBar({ el, dispatch, onDone, onTool }) {
             <span style={{ width: 20, height: 4, borderRadius: 2, marginTop: 2, background: el.color, border: '1px solid var(--line-2)' }} />
           </span>
         </button>
-        <button style={{ ...chip(false), maxWidth: 130 }} aria-label="Font" onClick={() => onTool('font')}>
+        <button style={{ ...chip(false), maxWidth: 110 }} aria-label="Font" onClick={() => onTool('font')}>
           <span style={{ fontFamily: `"${el.fontFamily}", sans-serif`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{el.fontFamily}</span>
         </button>
         <button style={chip(false)} aria-label="Font size" onClick={() => onTool('size')}>{Math.round(el.fontSize)}</button>
@@ -1087,8 +1103,8 @@ function MobileTextEditBar({ el, dispatch, onDone, onTool }) {
         <button style={chip(!!el.underline)} aria-label="Underline" aria-pressed={!!el.underline} onMouseDown={keep} onClick={() => patch({ underline: !el.underline })}><span style={{ textDecoration: 'underline', fontWeight: 700, fontSize: 18 }}>U</span></button>
         <button style={chip(false)} aria-label={'Align ' + (el.align || 'left')} onMouseDown={keep} onClick={() => patch({ align: nextAlign })}><Icon name={el.align === 'center' ? 'align_c' : el.align === 'right' ? 'align_r' : 'align_l'} size={20} /></button>
       </div>
-      <button onClick={onDone} aria-label="Done typing" style={{ flex: '0 0 auto', width: 52, height: 52, borderRadius: '50%', border: 0, background: 'var(--ink)', color: 'white',
-        boxShadow: '0 4px 16px rgba(80,30,70,.25)', display: 'grid', placeItems: 'center', fontSize: 24, fontWeight: 700 }}>✓</button>
+      <button onClick={onDone} aria-label="Done typing" style={{ flex: '0 0 auto', width: 44, height: 44, borderRadius: '50%', border: 0, background: 'var(--ink)', color: 'white',
+        boxShadow: '0 4px 16px rgba(80,30,70,.25)', display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 700 }}>✓</button>
     </div>
   );
 }
