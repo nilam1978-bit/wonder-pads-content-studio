@@ -1200,13 +1200,53 @@ function CanvasProperties() {
   );
 }
 
+
+// Tap-to-open section: the title is always visible, the tools appear when tapped.
+function PropFold({ title, children }) {
+  return (
+    <details className="prop-fold" style={{ margin: '10px 0', border: '1px solid var(--line)', borderRadius: 12, background: 'var(--pink-50)' }}>
+      <summary style={{ padding: '12px 14px', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: 'var(--ink)',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {title}<span className="prop-chev" aria-hidden="true" style={{ color: 'var(--ink-3)', transition: 'transform .15s' }}>▾</span>
+      </summary>
+      <div style={{ padding: '0 14px 14px' }}>{children}</div>
+    </details>
+  );
+}
+
+// One small row of the actions people reach for most: copy, delete and layer order.
+function ElementQuickBar({ el }) {
+  const { state, dispatch } = useStore();
+  const canvas = activeCanvas(state);
+  const idx = canvas.elements.findIndex(e => e.id === el.id), max = canvas.elements.length - 1;
+  const move = (to) => dispatch({ type: 'reorder-element', id: el.id, to: Math.max(0, Math.min(max, to)) });
+  const btn = (label, icon, onClick, opts = {}) => (
+    <button key={label} className="btn btn-tonal" title={{Up:'Move forward one layer',Down:'Move backward one layer',Front:'Bring to front',Back:'Send to back',Copy:'Duplicate',Delete:'Delete'}[label]} aria-label={label} disabled={opts.disabled} onClick={onClick}
+      style={{ flexDirection: 'column', gap: 2, padding: '8px 2px', justifyContent: 'center', minWidth: 0, fontSize: 10, color: opts.danger ? 'var(--pink-600)' : undefined }}>
+      <Icon name={icon} size={15} />{label}
+    </button>
+  );
+  return (
+    <div role="group" aria-label="Quick actions" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, margin: '8px 0 12px' }}>
+      {btn('Copy', 'duplicate', () => dispatch({ type: 'duplicate-elements', ids: [el.id] }))}
+      {btn('Delete', 'trash', () => dispatch({ type: 'delete-elements', ids: [el.id] }), { danger: true })}
+      {btn('Front', 'arrow_up', () => move(max), { disabled: idx >= max })}
+      {btn('Up', 'chevron_u', () => move(idx + 1), { disabled: idx >= max })}
+      {btn('Down', 'chevron_dn', () => move(idx - 1), { disabled: idx <= 0 })}
+      {btn('Back', 'arrow_down', () => move(0), { disabled: idx <= 0 })}
+    </div>
+  );
+}
+
 function ElementProperties({ el }) {
   const { state, dispatch } = useStore();
   const update = (patch) => dispatch({ type: 'update-element', id: el.id, patch });
 
   return (
     <>
+      <style>{`details.prop-fold>summary{list-style:none}details.prop-fold>summary::-webkit-details-marker{display:none}details.prop-fold[open]>summary .prop-chev{transform:rotate(180deg)}`}</style>
       <PanelHeader title={typeLabel(el.type)} subtitle={`${Math.round(el.w)} × ${Math.round(el.h)}`} />
+      <ElementQuickBar el={el} />
 
       {/* Text-specific */}
       {el.type === 'text' && <TextProps el={el} update={update} />}
@@ -1222,52 +1262,33 @@ function ElementProperties({ el }) {
       {el.type === 'icon' && <IconProps el={el} update={update} />}
       {el.type === 'frame' && <FrameProps el={el} update={update} />}
 
-      {/* Opacity */}
-      <details><summary style={{padding:'14px 0',cursor:'pointer'}}>Advanced</summary>
-      {/* Position & size */}
-      <SectionLabel>Position</SectionLabel>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        <LabeledInput label="X" value={Math.round(el.x)} onChange={v => update({ x: +v })} />
-        <LabeledInput label="Y" value={Math.round(el.y)} onChange={v => update({ y: +v })} />
-        <LabeledInput label="W" value={Math.round(el.w)} onChange={v => update({ w: Math.max(10, +v) })} />
-        <LabeledInput label="H" value={Math.round(el.h)} onChange={v => update({ h: Math.max(10, +v) })} />
-      </div>
-      <div style={{ marginTop: 10 }}>
-        <LabeledInput label="Rotation" value={Math.round(el.rot)} suffix="°" onChange={v => update({ rot: +v })} />
-      </div>
+      {el.type === 'text' && <PropFold title="Weight, spacing & fit"><TextProps el={el} update={update} mode="advanced" /></PropFold>}
 
-      {/* Position on page — 6 quick-align buttons. Distinct from text alignment. */}
-      <SectionLabel>Position on page</SectionLabel>
-      <PagePositionControls />
+      <PropFold title="Opacity">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <input type="range" min="0" max="1" step="0.01"
+            value={el.opacity} onChange={(e) => update({ opacity: +e.target.value })} />
+          <span style={{ fontSize: 11, color: 'var(--ink-2)', width: 32, fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
+            {Math.round(el.opacity * 100)}%
+          </span>
+        </div>
+      </PropFold>
 
+      <PropFold title="Position & size">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <LabeledInput label="X" value={Math.round(el.x)} onChange={v => update({ x: +v })} />
+          <LabeledInput label="Y" value={Math.round(el.y)} onChange={v => update({ y: +v })} />
+          <LabeledInput label="W" value={Math.round(el.w)} onChange={v => update({ w: Math.max(10, +v) })} />
+          <LabeledInput label="H" value={Math.round(el.h)} onChange={v => update({ h: Math.max(10, +v) })} />
+        </div>
+        <div style={{ marginTop: 10 }}>
+          <LabeledInput label="Rotation" value={Math.round(el.rot)} suffix="°" onChange={v => update({ rot: +v })} />
+        </div>
+        <SectionLabel>Position on page</SectionLabel>
+        <PagePositionControls />
+      </PropFold>
 
-      {el.type==='text'&&<TextProps el={el} update={update} mode="advanced"/>}
-      <SectionLabel>Opacity</SectionLabel>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <input type="range" min="0" max="1" step="0.01"
-          value={el.opacity} onChange={(e) => update({ opacity: +e.target.value })} />
-        <span style={{ fontSize: 11, color: 'var(--ink-2)', width: 32, fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
-          {Math.round(el.opacity * 100)}%
-        </span>
-      </div>
-
-      {/* Layer order */}
-      <SectionLabel>Arrange</SectionLabel>
-      <LayerArrangeControls elId={el.id} />
-
-      {/* Actions */}
-      <SectionLabel>Actions</SectionLabel>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        <button className="btn btn-tonal" style={{ justifyContent: 'center' }}
-          onClick={() => dispatch({ type: 'duplicate-elements', ids: [el.id] })}>
-          <Icon name="duplicate" size={14} /> Duplicate element
-        </button>
-        <button className="btn btn-tonal" style={{ justifyContent: 'center', color: 'var(--pink-600)' }}
-          onClick={() => dispatch({ type: 'delete-elements', ids: [el.id] })}>
-          <Icon name="trash" size={14} /> Delete element
-        </button>
-      </div>
-      </details>
+      <ElementQuickBar el={el} />
     </>
   );
 }
@@ -1551,28 +1572,18 @@ function TextProps({ el, update, mode='basic' }) {
         onChange={e => update({ text: e.target.value })}
         style={{ width: '100%', minHeight: 96, resize: 'vertical', lineHeight: 1.45,
           padding: '10px 12px', boxSizing: 'border-box', marginBottom: 10 }} />
+      <button className="btn btn-tonal" disabled={aiBusy} onClick={improve} style={{ width: '100%', justifyContent: 'center', marginBottom: 6 }}>{aiBusy?'Improving…':'✦ Improve with AI'}</button>
+      {aiError&&<p role="alert">{aiError}</p>}
       <SectionLabel>Font</SectionLabel>
       <FontPicker el={el} maxHeight={220}/>
       <SectionLabel>Size</SectionLabel>
       <FontSizeControl el={el}/>
       <div style={{display:'flex',gap:8,margin:'14px 0 12px'}}>{[['left','align_l'],['center','align_c'],['right','align_r']].map(([align,icon])=><button className={'btn btn-tonal'} aria-label={'Align '+align} aria-pressed={el.align===align} key={align} onClick={()=>update({align})} style={{flex:1,justifyContent:'center',background:el.align===align?'var(--pink-200)':undefined}}><Icon name={icon} size={16}/></button>)}</div>
       <ColorPicker value={el.color} onChange={color=>update({color})}/>
-      <div style={{display:'flex',gap:8,margin:'12px 0'}}><button className="btn btn-tonal" disabled={!boldWeightFor(el.fontFamily)} title={boldWeightFor(el.fontFamily)?'':'This font has no bold'} aria-pressed={isBoldText(el)} onClick={()=>{const p=toggleBoldPatch(el);if(p)update(p);}} style={{flex:1,justifyContent:'center',fontWeight:700,background:isBoldText(el)?'var(--pink-200)':undefined}}>Bold</button><button className="btn btn-tonal" aria-pressed={!!el.italic} onClick={()=>update({italic:!el.italic})} style={{flex:1,justifyContent:'center',fontStyle:'italic',background:el.italic?'var(--pink-200)':undefined}}>Italic</button></div>
+      <div style={{display:'flex',gap:8,margin:'12px 0'}}><button className="btn btn-tonal" disabled={!boldWeightFor(el.fontFamily)} title={boldWeightFor(el.fontFamily)?'':'This font has no bold'} aria-pressed={isBoldText(el)} onClick={()=>{const p=toggleBoldPatch(el);if(p)update(p);}} style={{flex:1,justifyContent:'center',fontWeight:700,background:isBoldText(el)?'var(--pink-200)':undefined}}>Bold</button><button className="btn btn-tonal" aria-pressed={!!el.italic} onClick={()=>update({italic:!el.italic})} style={{flex:1,justifyContent:'center',fontStyle:'italic',background:el.italic?'var(--pink-200)':undefined}}>Italic</button><button className="btn btn-tonal" aria-pressed={!!el.underline} onClick={()=>update({underline:!el.underline})} style={{flex:1,justifyContent:'center',textDecoration:'underline',background:el.underline?'var(--pink-200)':undefined}}>Underline</button></div>
       </>}
       {mode==='advanced'&&<>
-      <button className="btn btn-tonal" disabled={aiBusy} onClick={improve}>{aiBusy?'Improving…':'Improve selected text with AI'}</button>
-      {aiError&&<p role="alert">{aiError}</p>}
-      <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 5 }}>Font library · {ALL_FONT_OPTIONS.length} fonts</div>
-      <select className="pk-select" style={{ width: '100%', padding: '10px 24px 10px 12px', fontSize: 13, fontFamily: el.fontFamily }}
-        value={el.fontFamily} onChange={async e => update(await fontChangePatch(el, e.target.value))}>
-        {FONT_GROUPS.map(g => (
-          <optgroup key={g.kind} label={g.label}>
-            {ALL_FONT_OPTIONS.filter(f => f.kind === g.kind).map(f => <option key={f.family} value={f.family} style={{ fontFamily: f.family }}>{f.label}</option>)}
-          </optgroup>
-        ))}
-      </select>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
-        <LabeledInput label="Size" value={el.fontSize} onChange={v => update({ fontSize: Math.max(6, +v) })} />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <div>
           <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 4 }}>Weight</div>
           <select className="pk-select" style={{ width: '100%' }}
@@ -1580,8 +1591,9 @@ function TextProps({ el, update, mode='basic' }) {
             {weightsFor(el.fontFamily).map(w => <option key={w} value={w}>{WEIGHT_NAMES[w] || w}</option>)}
           </select>
         </div>
+        <LabeledInput label="Letter spacing" value={el.letterSpacing} onChange={v => update({ letterSpacing: +v })} />
+        <LabeledInput label="Line spacing" value={el.lineHeight} onChange={v => update({ lineHeight: +v })} />
       </div>
-
       {/* Fit text to the current box + a subtle hint about corner-drag scaling */}
       <button onClick={() => {
         // Auto-fit: estimate how many chars fit per line at various sizes, pick the largest that fits.
@@ -1633,32 +1645,6 @@ function TextProps({ el, update, mode='basic' }) {
         <b style={{ color: 'var(--ink-2)' }}>Tip:</b> Drag a <b>corner</b> handle to scale the text; drag a <b>side</b> to reflow it.
       </div>
 
-      <div style={{ display: 'flex', gap: 4, marginTop: 10 }}>
-        <button className={'icon-btn' + (el.italic ? ' active' : '')} onClick={() => update({ italic: !el.italic })}>
-          <Icon name="italic" size={16} />
-        </button>
-        <button className={'icon-btn' + (el.underline ? ' active' : '')} onClick={() => update({ underline: !el.underline })}>
-          <Icon name="underline" size={16} />
-        </button>
-        <div style={{ width: 1, background: 'var(--line)', margin: '0 6px' }} />
-        <button className={'icon-btn' + (el.align === 'left' ? ' active' : '')} onClick={() => update({ align: 'left' })}>
-          <Icon name="align_l" size={16} />
-        </button>
-        <button className={'icon-btn' + (el.align === 'center' ? ' active' : '')} onClick={() => update({ align: 'center' })}>
-          <Icon name="align_c" size={16} />
-        </button>
-        <button className={'icon-btn' + (el.align === 'right' ? ' active' : '')} onClick={() => update({ align: 'right' })}>
-          <Icon name="align_r" size={16} />
-        </button>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10 }}>
-        <LabeledInput label="Letter" value={el.letterSpacing} onChange={v => update({ letterSpacing: +v })} />
-        <LabeledInput label="Line" value={el.lineHeight} onChange={v => update({ lineHeight: +v })} />
-      </div>
-
-      <SectionLabel>Color</SectionLabel>
-      <ColorPicker value={el.color} onChange={v => update({ color: v })} />
       </>}
     </>
   );
