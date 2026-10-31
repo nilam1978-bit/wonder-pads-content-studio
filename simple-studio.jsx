@@ -40,6 +40,7 @@ function SimpleStudioStyles() {
     .feature:hover{border-color:#c260a8}.feature .ico{flex:0 0 44px;height:44px;border-radius:12px;background:#f7e1f0;display:grid;place-items:center;color:#893773}
     .feature small{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#826d7e}.feature h3{font:22px/1.15 'DM Serif Display',serif;margin:4px 0 6px}.feature p{margin:0;font-size:14px;color:#6d5868;line-height:1.5}.feature .open{display:inline-block;margin-top:8px;font-size:13px;font-weight:600;color:#893773}
     .studio-strip{display:flex;justify-content:space-between;align-items:center;width:100%;background:rgba(255,255,255,.7);border:1px solid #ecd3e6;border-radius:14px;padding:12px 18px;color:#65505f;font-size:14px;text-align:left}
+    body.wpr-typing [aria-label="Slide actions"]{display:none!important}
     .studio-back{display:block;background:transparent;border:0;padding:0 0 8px;color:#893773;font:600 13px inherit;font-family:inherit;cursor:pointer}
     .studio-h2{font:26px 'DM Serif Display',serif;margin:30px 0 4px;color:#2a1f2a}
     .tile-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:22px;margin:18px 0 32px}

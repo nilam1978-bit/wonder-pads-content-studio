@@ -129,6 +129,8 @@ function MobileEditor({ progressNav }) {
       try { const r = document.createRange(); r.selectNodeContents(node); r.collapse(false); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); } catch {}
     }
   };
+  // Hides the slide-count row above the editor while typing (see .wpr-typing in the studio styles).
+  meE(() => { document.body.classList.toggle('wpr-typing', !!editingId); return () => document.body.classList.remove('wpr-typing'); }, [editingId]);
   const endEdit = () => { try { document.activeElement && document.activeElement.blur && document.activeElement.blur(); } catch {} setEditingId(null); };
 
   const primaryEl = canvas ? canvas.elements.find(e => e.id === state.selection[0]) : null;
@@ -177,7 +179,7 @@ function MobileEditor({ progressNav }) {
       background: 'var(--pink-100)',
     }}>
       {/* Top bar */}
-      <MobileEditorTopBar proj={proj} canvas={canvas}
+      <MobileEditorTopBar proj={proj} canvas={canvas} compact={!!editingId}
         onBack={() => dispatch({ type: 'close-project' })}
         onMenu={() => setOpenSheet('menu')}
         onLayers={() => setOpenSheet('layers')}
@@ -188,18 +190,37 @@ function MobileEditor({ progressNav }) {
         canUndo={state.past.length > 0}
         canRedo={state.future.length > 0}
       />
-      {progressNav}
+      {!editingId && progressNav}
 
       {/* Canvas area */}
       <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
         <MobileCanvasArea onLongPress={() => setLongPressMenu(true)}
           editingId={editingId} setEditingId={setEditingId}
           onEditWords={(id) => beginEdit(id)} />
+        {/* Subtle slide switcher, like Canva: arrows at the edges and a small "1 / 5" pill that opens all slides. */}
+        {!editingId && proj.canvases.length > 1 && (() => {
+          const idx = Math.max(0, proj.canvases.findIndex(c => c.id === canvas.id)), n = proj.canvases.length;
+          const goTo = (i) => dispatch({ type: 'set-active-canvas', id: proj.canvases[Math.max(0, Math.min(n - 1, i))].id });
+          const arrow = (dir, disabled) => (
+            <button aria-label={dir < 0 ? 'Previous slide' : 'Next slide'} disabled={disabled} onClick={() => goTo(idx + dir)}
+              style={{ position: 'absolute', top: '50%', [dir < 0 ? 'left' : 'right']: 4, transform: 'translateY(-50%)', width: 34, height: 52,
+                borderRadius: 17, border: 0, background: 'rgba(255,255,255,.72)', color: 'var(--ink-2)', boxShadow: '0 1px 6px rgba(80,30,70,.16)',
+                opacity: disabled ? 0 : 1, pointerEvents: disabled ? 'none' : 'auto', zIndex: 5, display: 'grid', placeItems: 'center' }}>
+              <Icon name="chevron_r" size={18} style={dir < 0 ? { transform: 'rotate(180deg)' } : undefined} />
+            </button>
+          );
+          return <>
+            {arrow(-1, idx === 0)}{arrow(1, idx === n - 1)}
+            <button aria-label="All slides" onClick={() => setOpenSheet('pages')}
+              style={{ position: 'absolute', left: '50%', bottom: 10, transform: 'translateX(-50%)', zIndex: 5, border: 0, borderRadius: 999,
+                background: 'rgba(255,255,255,.9)', boxShadow: '0 1px 6px rgba(80,30,70,.16)', padding: '6px 14px', fontSize: 12, fontWeight: 600,
+                color: 'var(--ink-2)', fontVariantNumeric: 'tabular-nums' }}>{idx + 1} / {n}</button>
+          </>;
+        })()}
       </div>
 
       {/* Slide thumbnails belong beneath the canvas in the simple workflow.
           They step aside while a tool tray is open so the slide stays big. */}
-      {!tray && !editingId && <MobilePagesStrip proj={proj} onOpen={() => setOpenSheet('pages')} />}
 
       {/* Live tool tray */}
       {primaryEl && tray && (
@@ -375,7 +396,15 @@ function MobileEditor({ progressNav }) {
   );
 }
 
-function MobileEditorTopBar({ proj, canvas, onBack, onMenu, onLayers, onRename, onDownload, onUndo, onRedo, canUndo, canRedo }) {
+function MobileEditorTopBar({ proj, canvas, compact, onBack, onMenu, onLayers, onRename, onDownload, onUndo, onRedo, canUndo, canRedo }) {
+  if (compact) return (
+    <div className="safe-top" style={{ padding: '4px 10px', background: 'white', borderBottom: '1px solid var(--line)',
+      display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, zIndex: 20 }}>
+      <button className="icon-btn" disabled={!canUndo} onClick={onUndo} aria-label="Undo"><Icon name="undo" size={18} /></button>
+      <button className="icon-btn" disabled={!canRedo} onClick={onRedo} aria-label="Redo"><Icon name="redo" size={18} /></button>
+      <span style={{ flex: 1, fontSize: 12, color: 'var(--ink-3)', textAlign: 'center' }}>Typing on the slide</span>
+    </div>
+  );
   return (
     <div className="safe-top" style={{
       padding: '10px 12px',
@@ -490,7 +519,6 @@ function MobileCanvasArea({ onLongPress, onEditWords, editingId: editingIdProp, 
   const editingId = editingIdProp !== undefined ? editingIdProp : editingLocal;
   const setEditingId = setEditingIdProp || setEditingLocal;
   const editingRef = meR(editingId); editingRef.current = editingId;
-  const editFitted = meR(false);
 
   // Center canvas
   meE(() => {
@@ -507,37 +535,12 @@ function MobileCanvasArea({ onLongPress, onEditWords, editingId: editingIdProp, 
     const rect = stageRef.current.getBoundingClientRect();
     const availW = rect.width - 40;
     const availH = rect.height - 40;
-    const z = Math.min(availW / canvas.w, availH / canvas.h);
-    dispatch({ type: 'set-zoom', zoom: clamp(z, 0.05, 4) });
+    const z = clamp(Math.min(availW / canvas.w, availH / canvas.h), 0.05, 4);
+    skipZoomPan.current = Math.abs(z - state.zoom) > 0.0005;
+    setPan({ x: (rect.width - canvas.w * z) / 2, y: (rect.height - canvas.h * z) / 2 });
+    dispatch({ type: 'set-zoom', zoom: z });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canvas?.id]);
-
-  // While typing: zoom the slide so the text box fills the width and sits in the visible area above the keyboard.
-  const fitToEditing = (r) => {
-    const el = canvas.elements.find(x => x.id === editingRef.current);
-    if (!el) return;
-    const z = clamp(Math.min((r.width - 24) / Math.max(el.w, 1), 1.2), 0.1, 1.2);
-    const boxH = el.h * z;
-    const y = boxH > r.height - 24 ? 12 - el.y * z : r.height / 2 - (el.y + el.h / 2) * z;
-    skipZoomPan.current = Math.abs(z - state.zoom) > 0.0005;
-    editFitted.current = true;
-    setPan({ x: r.width / 2 - (el.x + el.w / 2) * z, y });
-    dispatch({ type: 'set-zoom', zoom: z });
-  };
-  meE(() => {
-    const node = stageRef.current;
-    if (!node || !canvas) return;
-    const r = node.getBoundingClientRect();
-    if (editingId) { fitToEditing(r); return; }
-    if (editFitted.current) {
-      editFitted.current = false;
-      const z = clamp(Math.min((r.width - 40) / canvas.w, (r.height - 40) / canvas.h), 0.05, 4);
-      skipZoomPan.current = Math.abs(z - state.zoom) > 0.0005;
-      setPan({ x: (r.width - canvas.w * z) / 2, y: (r.height - canvas.h * z) / 2 });
-      dispatch({ type: 'set-zoom', zoom: z });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingId]);
 
   // When the area under the slide changes size (tool tray opens/closes, keyboard appears),
   // keep the slide centred, and re-fit it if it was already fitted to the screen.
@@ -551,7 +554,6 @@ function MobileCanvasArea({ onLongPress, onEditWords, editingId: editingIdProp, 
       const r = node.getBoundingClientRect();
       const prev = lastRect.current;
       lastRect.current = { width: r.width, height: r.height };
-      if (editingRef.current) { fitToEditing(r); return; }
       if (!prev || (prev.width === r.width && prev.height === r.height)) return;
       const wasFit = Math.abs(state.zoom - fitFor(prev)) < 0.012;
       if (wasFit) {
@@ -1050,34 +1052,43 @@ function ToolBtn({ label, onClick, active, children, keepFocus }) {
   );
 }
 
-// Shown above the keyboard while typing on the slide: a Canva-style strip that scrolls sideways.
+// Shown just above the keyboard while typing on the slide: one floating pill, like Canva.
+// It scrolls sideways, and the round tick on the right finishes typing.
 function MobileTextEditBar({ el, dispatch, onDone, onTool }) {
   const patch = (p) => dispatch({ type: 'update-element', id: el.id, patch: p });
   const aligns = ['left', 'center', 'right'];
   const nextAlign = aligns[(aligns.indexOf(el.align) + 1) % 3] || 'left';
-  const swatch = (c) => (
-    <span style={{ width: 22, height: 22, borderRadius: '50%', background: c === 'transparent' ? '#fff' : c,
-      border: '2px solid var(--line-2)', boxSizing: 'border-box', display: 'block' }} />
-  );
+  const chip = (active) => ({ flex: '0 0 auto', minWidth: 44, height: 44, padding: '0 10px', borderRadius: 22, border: 0,
+    background: active ? 'var(--pink-100)' : 'transparent', color: active ? 'var(--pink-600)' : 'var(--ink)',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 15, fontWeight: 600, fontFamily: 'inherit' });
+  const keep = (e) => e.preventDefault();
+  const Sep = () => <span aria-hidden="true" style={{ flex: '0 0 1px', width: 1, height: 24, background: 'var(--line-2)', margin: '0 4px' }} />;
   return (
-    <div className="safe-bottom" role="toolbar" aria-label="Text editing tools" style={{
-      display: 'flex', gap: 2, padding: '6px 6px 6px', background: 'white', borderTop: '1px solid var(--line)',
-      flexShrink: 0, zIndex: 15, overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none',
-    }}>
-      <button onClick={onDone} aria-label="Done typing" style={{
-        flex: '0 0 auto', minWidth: 76, minHeight: 54, borderRadius: 12, border: 0, background: 'var(--ink)', color: 'white',
-        fontWeight: 700, fontSize: 14, padding: '0 14px', position: 'sticky', left: 0, zIndex: 2 }}>✓ Done</button>
-      <ToolBtn keepFocus label="Bold" active={isBoldText(el)} onClick={() => patch(toggleBoldPatch(el))}><Icon name="bold" size={20} /></ToolBtn>
-      <ToolBtn keepFocus label="Italic" active={!!el.italic} onClick={() => patch({ italic: !el.italic })}><span style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 18, fontFamily: 'serif' }}>I</span></ToolBtn>
-      <ToolBtn keepFocus label={'Align ' + (el.align || 'left')} onClick={() => patch({ align: nextAlign })}><Icon name={el.align === 'center' ? 'align_c' : el.align === 'right' ? 'align_r' : 'align_l'} size={20} /></ToolBtn>
-      <ToolBtn keepFocus label="Smaller" onClick={() => patch({ fontSize: Math.max(8, Math.round((el.fontSize || 40) / 1.1)) })}><span style={{ fontSize: 14, fontWeight: 700 }}>A−</span></ToolBtn>
-      <ToolBtn keepFocus label="Bigger" onClick={() => patch({ fontSize: Math.round((el.fontSize || 40) * 1.1) })}><span style={{ fontSize: 18, fontWeight: 700 }}>A+</span></ToolBtn>
-      <span aria-hidden="true" style={{ width: 1, background: 'var(--line)', margin: '8px 4px', flexShrink: 0 }} />
-      <ToolBtn label="Font" onClick={() => onTool('font')}><span style={{ fontFamily: `"${el.fontFamily}", sans-serif`, fontSize: 21, lineHeight: '22px' }}>Aa</span></ToolBtn>
-      <ToolBtn label="Colour" onClick={() => onTool('colour')}>{swatch(el.color)}</ToolBtn>
-      <ToolBtn label="Size" onClick={() => onTool('size')}><span style={{ fontSize: 13, fontWeight: 700, border: '1.5px solid currentColor', borderRadius: 7, padding: '1px 6px' }}>{Math.round(el.fontSize)}</span></ToolBtn>
-      <ToolBtn label="Move" onClick={() => onTool('position')}><Icon name="grid" size={20} /></ToolBtn>
-      <ToolBtn label="✦ AI" onClick={() => onTool('words')}><span style={{ fontSize: 18 }}>✦</span></ToolBtn>
+    <div role="toolbar" aria-label="Text editing tools" style={{ flexShrink: 0, zIndex: 15, padding: '6px 8px calc(6px + env(safe-area-inset-bottom, 0px))', display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ flex: 1, minWidth: 0, background: 'white', borderRadius: 30, boxShadow: '0 4px 16px rgba(80,30,70,.18)', padding: '4px 6px',
+        display: 'flex', alignItems: 'center', gap: 2, overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
+        <button style={chip(false)} aria-label="Improve with AI" onClick={() => onTool('words')}><span style={{ fontSize: 18, color: 'var(--pink-600)' }}>✦</span></button>
+        <Sep />
+        <button style={chip(false)} aria-label="Text colour" onClick={() => onTool('colour')}>
+          <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
+            <span style={{ fontSize: 20, fontWeight: 700 }}>A</span>
+            <span style={{ width: 20, height: 4, borderRadius: 2, marginTop: 2, background: el.color, border: '1px solid var(--line-2)' }} />
+          </span>
+        </button>
+        <button style={{ ...chip(false), maxWidth: 130 }} aria-label="Font" onClick={() => onTool('font')}>
+          <span style={{ fontFamily: `"${el.fontFamily}", sans-serif`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{el.fontFamily}</span>
+        </button>
+        <button style={chip(false)} aria-label="Font size" onClick={() => onTool('size')}>{Math.round(el.fontSize)}</button>
+        <button style={chip(false)} aria-label="Smaller" onMouseDown={keep} onClick={() => patch({ fontSize: Math.max(8, Math.round((el.fontSize || 40) / 1.1)) })}>A−</button>
+        <button style={chip(false)} aria-label="Bigger" onMouseDown={keep} onClick={() => patch({ fontSize: Math.round((el.fontSize || 40) * 1.1) })}>A+</button>
+        <Sep />
+        <button style={chip(isBoldText(el))} aria-label="Bold" aria-pressed={isBoldText(el)} onMouseDown={keep} onClick={() => patch(toggleBoldPatch(el))}><Icon name="bold" size={20} /></button>
+        <button style={chip(!!el.italic)} aria-label="Italic" aria-pressed={!!el.italic} onMouseDown={keep} onClick={() => patch({ italic: !el.italic })}><span style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 19, fontFamily: 'serif' }}>I</span></button>
+        <button style={chip(!!el.underline)} aria-label="Underline" aria-pressed={!!el.underline} onMouseDown={keep} onClick={() => patch({ underline: !el.underline })}><span style={{ textDecoration: 'underline', fontWeight: 700, fontSize: 18 }}>U</span></button>
+        <button style={chip(false)} aria-label={'Align ' + (el.align || 'left')} onMouseDown={keep} onClick={() => patch({ align: nextAlign })}><Icon name={el.align === 'center' ? 'align_c' : el.align === 'right' ? 'align_r' : 'align_l'} size={20} /></button>
+      </div>
+      <button onClick={onDone} aria-label="Done typing" style={{ flex: '0 0 auto', width: 52, height: 52, borderRadius: '50%', border: 0, background: 'var(--ink)', color: 'white',
+        boxShadow: '0 4px 16px rgba(80,30,70,.25)', display: 'grid', placeItems: 'center', fontSize: 24, fontWeight: 700 }}>✓</button>
     </div>
   );
 }
