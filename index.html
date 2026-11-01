@@ -44,7 +44,16 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
-  #root { height: 100%; width: 100%; }
+  #root { position:fixed; inset:0; top:var(--studio-viewport-top,0px); height:var(--studio-viewport-height,100dvh); width:100%; overflow:hidden; isolation:isolate; }
+  html, body { width:100%; overscroll-behavior:none; }
+  #root > * { min-width:0; }
+  .simple-shell, .simple-workspace, .sc-shell { width:100%; max-width:100%; min-width:0; min-height:0; box-sizing:border-box; }
+  .simple-content, .sc-main { overflow-x:hidden!important; overscroll-behavior:contain; scrollbar-gutter:stable; min-width:0; min-height:0; -webkit-overflow-scrolling:touch; }
+  .simple-inner, .sc-inner { width:100%; min-width:0; box-sizing:border-box; }
+  .simple-header, .sc-header, .simple-nav, .sc-footer { flex-shrink:0; }
+  .simple-nav, .ready-sections, .scroll { overscroll-behavior:contain; }
+  .simple-content img, .sc-main img { max-width:100%; }
+  @media(max-width:640px){.simple-content,.sc-main{scrollbar-gutter:auto;}}
   button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; padding: 0; }
   input, textarea { font-family: inherit; }
   ::selection { background: var(--pink-400); color: white; }
@@ -305,7 +314,7 @@
     // ONE version number for every app file. Change it each time you upload new files,
     // so phones and browsers fetch the fresh copies instead of reusing old ones.
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
-      const APP_VERSION = '2026-11-01-standard-cta';
+      const APP_VERSION = '2026-11-01-mobile-dialog-shell';
     // Files load in this order. The data file is plain JavaScript; the rest are React (.jsx).
     const APP_FILES = [
       'editor-icons.jsx',
