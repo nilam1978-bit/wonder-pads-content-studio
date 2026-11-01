@@ -118,20 +118,29 @@ function MobileEditor({ progressNav, onPreview, slideActions }) {
   // Unlike a pop-up sheet it never covers or blurs the slide, so you see every change as you make it.
   const [tray, setTray] = meS(null);
   const [longPressMenu, setLongPressMenu] = meS(false);
-  // Typing happens directly on the slide ("inline"). The slide is zoomed to the text while the keyboard is up.
-  const [editingId, setEditingId] = meS(null);
+  // Draft words separately; the canvas never becomes a keyboard input.
+  const [wordDraft, setWordDraft] = meS(null);
+  const [frozenCanvasHeight, setFrozenCanvasHeight] = meS(null);
+  const canvasHost = meR(null);
+  const closeTimer = meR(null);
+  meE(() => () => clearTimeout(closeTimer.current), []);
+  const editingId = null;
+  const setEditingId = () => {};
+  const endEdit = () => {};
   const beginEdit = (id) => {
-    const go = () => setEditingId(id);
-    try { ReactDOM.flushSync(go); } catch { go(); }
-    const node = document.querySelector(`[data-text-content-id="${id}"]`);
-    if (node) {
-      try { node.focus({ preventScroll: true }); } catch { node.focus(); }
-      try { const r = document.createRange(); r.selectNodeContents(node); r.collapse(false); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); } catch {}
-    }
+    const el = canvas.elements.find(e => e.id === id);
+    if (!el || el.locked || el.type !== 'text') return;
+    clearTimeout(closeTimer.current);
+    setFrozenCanvasHeight(canvasHost.current?.getBoundingClientRect().height || null);
+    setWordDraft({id, text: el.text || '', original: el.text || ''});
   };
-  // Hides the slide-count row above the editor while typing (see .wpr-typing in the studio styles).
-  meE(() => { document.body.classList.toggle('wpr-typing', !!editingId); return () => document.body.classList.remove('wpr-typing'); }, [editingId]);
-  const endEdit = () => { try { document.activeElement && document.activeElement.blur && document.activeElement.blur(); } catch {} setEditingId(null); };
+  const closeWords = (save) => {
+    if (save && wordDraft.text !== wordDraft.original)
+      dispatch({type:'update-element', id:wordDraft.id, patch:{text:wordDraft.text}});
+    document.activeElement?.blur?.();
+    setWordDraft(null);
+    closeTimer.current = setTimeout(() => setFrozenCanvasHeight(null), 350);
+  };
 
   const primaryEl = canvas ? canvas.elements.find(e => e.id === state.selection[0]) : null;
   // Stop typing if the selection moves to something else.
@@ -178,6 +187,7 @@ function MobileEditor({ progressNav, onPreview, slideActions }) {
       display: 'flex', flexDirection: 'column',
       background: 'var(--pink-100)',
     }}>
+      {wordDraft && <MobileWordsDialog draft={wordDraft} onChange={text=>setWordDraft(d=>({...d,text}))} onCancel={()=>closeWords(false)} onDone={()=>closeWords(true)} />}
       {/* Top bar */}
       <MobileEditorTopBar proj={proj} canvas={canvas} compact={!!editingId} onDone={endEdit}
         onBack={() => dispatch({ type: 'close-project' })}
@@ -193,7 +203,7 @@ function MobileEditor({ progressNav, onPreview, slideActions }) {
       {!editingId && progressNav}
 
       {/* Canvas area */}
-      <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+      <div ref={canvasHost} style={{ flex: frozenCanvasHeight ? '0 0 '+frozenCanvasHeight+'px' : 1, minHeight: 0, position: 'relative' }}>
         <MobileCanvasArea onLongPress={() => setLongPressMenu(true)}
           editingId={editingId} setEditingId={setEditingId}
           onEditWords={(id) => beginEdit(id)} />
@@ -260,6 +270,7 @@ function MobileEditor({ progressNav, onPreview, slideActions }) {
             else if (kind === 'lock') dispatch({ type: 'update-element', id, patch: { locked: !primaryEl.locked } });
             else if (kind === 'hide') { dispatch({ type: 'update-element', id, patch: { hidden: true } }); dispatch({ type: 'set-selection', ids: [] }); }
             else if (kind === 'delete') dispatch({ type: 'delete-elements', ids: [id] });
+            else if (kind === 'more') setLongPressMenu(true);
             else if (kind === 'settings') setOpenSheet('properties');
           }}
         />
@@ -385,6 +396,7 @@ function MobileEditor({ progressNav, onPreview, slideActions }) {
         <BottomSheet open onClose={() => setLongPressMenu(false)}
           title={typeLabel(primaryEl.type)} height="auto">
           <div style={{ display: 'grid', gap: 4, paddingBottom: 8 }}>
+            <SheetAction icon="plus" label="Add an element" onClick={()=>{setLongPressMenu(false);setOpenSheet('add');}} />
             <SheetAction icon="duplicate" label="Duplicate"
               onClick={() => { dispatch({ type: 'duplicate-elements', ids: [primaryEl.id] }); setLongPressMenu(false); }} />
             <SheetAction icon="grid" label="Move & align"
@@ -540,52 +552,23 @@ function MobileCanvasArea({ onLongPress, onEditWords, editingId: editingIdProp, 
     const availW = rect.width - 40;
     const availH = rect.height - 40;
     const z = clamp(Math.min(availW / canvas.w, availH / canvas.h), 0.05, 4);
-    skipZoomPan.current = Math.abs(z - state.zoom) > 0.0005;
+    skipZoomPan.current = z;
     setPan({ x: (rect.width - canvas.w * z) / 2, y: (rect.height - canvas.h * z) / 2 });
     dispatch({ type: 'set-zoom', zoom: z });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canvas?.id]);
 
-  // When the area under the slide changes size (tool tray opens/closes, keyboard appears),
-  // keep the slide centred, and re-fit it if it was already fitted to the screen.
-  const lastRect = meR(null);
+  // Tool trays and the keyboard must not change the user's canvas framing.
+  // Initial fit and explicit zoom remain available.
   const skipZoomPan = meR(false);
-  meE(() => {
-    const node = stageRef.current;
-    if (!node || !canvas || typeof ResizeObserver === 'undefined') return;
-    const fitFor = (r) => clamp(Math.min((r.width - 40) / canvas.w, (r.height - 40) / canvas.h), 0.05, 4);
-    // While typing, the keyboard slides up in stages. Re-fitting on every stage makes the slide hop around,
-    // so wait for the size to stop changing and then re-fit once.
-    let settle = null;
-    const refit = () => {
-      settle = null;
-      const r = node.getBoundingClientRect();
-      const prev = lastRect.current;
-      lastRect.current = { width: r.width, height: r.height };
-      if (!prev || (prev.width === r.width && prev.height === r.height)) return;
-      const wasFit = Math.abs(state.zoom - fitFor(prev)) < 0.012;
-      if (wasFit) {
-        const z = fitFor(r);
-        skipZoomPan.current = Math.abs(z - state.zoom) > 0.0005;
-        setPan({ x: (r.width - canvas.w * z) / 2, y: (r.height - canvas.h * z) / 2 });
-        dispatch({ type: 'set-zoom', zoom: z });
-      } else {
-        setPan(p => ({ x: p.x + (r.width - prev.width) / 2, y: p.y + (r.height - prev.height) / 2 }));
-      }
-    };
-    const ro = new ResizeObserver(() => {
-      if (editingRef.current && lastRect.current) { clearTimeout(settle); settle = setTimeout(refit, 180); }
-      else refit();
-    });
-    ro.observe(node);
-    return () => { clearTimeout(settle); ro.disconnect(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canvas?.id, canvas?.w, canvas?.h, state.zoom]);
 
   const prevZoom = meR(state.zoom);
   meE(() => {
     if (!stageRef.current) return;
-    if (skipZoomPan.current) { skipZoomPan.current = false; prevZoom.current = state.zoom; return; }
+    if (skipZoomPan.current !== false) {
+      if (Math.abs(skipZoomPan.current - state.zoom) < 0.0005) { skipZoomPan.current = false; prevZoom.current = state.zoom; }
+      return;
+    }
     const rect = stageRef.current.getBoundingClientRect();
     const cx = rect.width / 2, cy = rect.height / 2;
     setPan(p => ({
@@ -670,9 +653,6 @@ function MobileCanvasArea({ onLongPress, onEditWords, editingId: editingIdProp, 
       const sd = startDataRef.current;
       if (sd?.moved) {
         dispatch({ type: 'commit-transient', snapshot: sd.canvasSnapshot });
-      } else if (sd && wasSelected && el.type === 'text') {
-        // Tapping text that is already selected opens "Edit words".
-        onEditWords?.(elId);
       }
       startDataRef.current = null;
       window.removeEventListener('touchmove', move);
@@ -858,7 +838,7 @@ function MobileCanvasArea({ onLongPress, onEditWords, editingId: editingIdProp, 
             <div key={el.id}
               onTouchStart={(e) => { if (!el.locked) startElementDrag(e, el.id); }}
               onPointerDown={(e) => { if (e.pointerType !== 'touch' && !el.locked) startElementDrag(e, el.id); }}
-              onDoubleClick={() => { if (el.type === 'text') onEditWords?.(el.id); }}
+
               style={{ position: 'absolute', left: 0, top: 0,
                 cursor: el.locked ? 'not-allowed' : 'move' }}
             >
@@ -1036,7 +1016,7 @@ const SHAPE_TYPES = ['rect', 'circle', 'triangle', 'star', 'heart', 'diamond', '
 
 // Which tray tools make sense for each kind of item.
 function trayToolsFor(el) {
-  if (el.type === 'text') return ['words', 'font', 'size', 'colour', 'format', 'position'];
+  if (el.type === 'text') return ['font', 'size', 'colour', 'format', 'position'];
   if (SHAPE_TYPES.includes(el.type) || ['line', 'arrow', 'icon'].includes(el.type)) return ['colour', 'size', 'opacity', 'position'];
   return ['size', 'opacity', 'position']; // image, frame
 }
@@ -1053,13 +1033,13 @@ function ToolBtn({ label, onClick, active, children, keepFocus }) {
     <button onClick={onClick} aria-label={label} aria-pressed={!!active}
       onMouseDown={keepFocus ? (e) => e.preventDefault() : undefined}
       style={{
-        flex: '0 0 auto', width: 62, minHeight: 54, padding: '7px 2px', borderRadius: 12,
+        flex: '0 0 auto', width: 48, minHeight: 48, padding: '4px 2px', borderRadius: 12,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
         background: active ? 'var(--pink-100)' : 'transparent',
         color: active ? 'var(--pink-600)' : 'var(--ink-2)',
       }}>
       <span style={{ height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', maxWidth: '100%' }}>{children}</span>
-      <span style={{ fontSize: 10, fontWeight: 600, whiteSpace: 'nowrap', letterSpacing: '.01em' }}>{label}</span>
+      <span style={{ fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', letterSpacing: '.01em' }}>{label}</span>
     </button>
   );
 }
@@ -1101,9 +1081,9 @@ function MobileSelectionBar({ el, activeTool, onAdd, onTool, onAdjust, onAction,
       background: 'white', borderTop: '1px solid var(--line)', flexShrink: 0, zIndex: 15,
       overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none',
     }}>
-      <ToolBtn label="Add" onClick={onAdd}><Icon name="plus" size={20} /></ToolBtn>
+      
       {isText ? <>
-        <ToolBtn label="Edit" onClick={() => onTool('words')} active={activeTool === 'words'}><Icon name="edit" size={19} /></ToolBtn>
+        <ToolBtn label="Words" onClick={() => onTool('words')} active={activeTool === 'words'}><Icon name="edit" size={19} /></ToolBtn>
         <ToolBtn label="Font" onClick={() => onTool('font')} active={activeTool === 'font'}>
           <span style={{ fontFamily: `"${el.fontFamily}", sans-serif`, fontSize: 21, lineHeight: '22px' }}>Aa</span>
         </ToolBtn>
@@ -1120,15 +1100,7 @@ function MobileSelectionBar({ el, activeTool, onAdd, onTool, onAdjust, onAction,
         <ToolBtn label="Fade" onClick={() => onTool('opacity')} active={activeTool === 'opacity'}><Icon name="eye" size={20} /></ToolBtn>
         <ToolBtn label="Move" onClick={() => onTool('position')} active={activeTool === 'position'}><Icon name="grid" size={20} /></ToolBtn>
       </>}
-      {isText && <ToolBtn label="Move" onClick={() => onTool('position')} active={activeTool === 'position'}><Icon name="grid" size={20} /></ToolBtn>}
-      <span aria-hidden="true" style={{ width: 1, background: 'var(--line)', margin: '8px 4px', flexShrink: 0 }} />
-      <ToolBtn label="Copy" onClick={() => onAction('duplicate')}><Icon name="duplicate" size={20} /></ToolBtn>
-      <ToolBtn label="Front" onClick={() => onAction('front')}><Icon name="arrow_up" size={20} /></ToolBtn>
-      <ToolBtn label="Back" onClick={() => onAction('back')}><Icon name="arrow_down" size={20} /></ToolBtn>
-      <ToolBtn label={locked ? 'Unlock' : 'Lock'} onClick={() => onAction('lock')}><Icon name={locked ? 'unlock' : 'lock'} size={20} /></ToolBtn>
-      <ToolBtn label="Hide" onClick={() => onAction('hide')}><Icon name="eye_off" size={20} /></ToolBtn>
-      <ToolBtn label="Delete" onClick={() => onAction('delete')}><Icon name="trash" size={20} /></ToolBtn>
-      <ToolBtn label="Settings" onClick={() => onAction('settings')}><Icon name="more" size={20} /></ToolBtn>
+      <ToolBtn label="More" onClick={() => onAction('more')}><Icon name="more" size={20}/></ToolBtn>
     </div>
   );
 }
@@ -1141,14 +1113,14 @@ function MobileToolTray({ el, tool, setTool, onClose }) {
     <div className="safe-bottom" style={{
       background: 'white', borderTop: '1px solid var(--line)', flexShrink: 0, zIndex: 15,
       display: 'flex', flexDirection: 'column',
-      maxHeight: `calc(var(--studio-viewport-height, 100dvh) * ${tall ? 0.5 : 0.42})`,
+      maxHeight: 'min(320px, calc(var(--studio-viewport-height, 100dvh) * 0.36))',
       boxShadow: '0 -8px 24px rgba(150,60,120,.10)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 8px', borderBottom: '1px solid var(--line)', flexShrink: 0 }}>
         <div className="scroll" role="tablist" style={{ display: 'flex', gap: 2, flex: 1, overflowX: 'auto', minWidth: 0 }}>
           {tabs.map(t => (
             <button key={t} role="tab" aria-selected={tool === t} onClick={() => setTool(t)}
-              style={{ padding: '10px 8px', minWidth: 46, borderRadius: 10, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0,
+              style={{ padding: '6px 8px', minHeight:44, minWidth: 46, borderRadius: 10, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0,
                 background: tool === t ? 'var(--pink-200)' : 'transparent', color: tool === t ? 'var(--pink-600)' : 'var(--ink-2)' }}>
               {TRAY_LABELS[t]}
             </button>
@@ -1159,7 +1131,7 @@ function MobileToolTray({ el, tool, setTool, onClose }) {
           <Icon name="check" size={18} />
         </button>
       </div>
-      <div className="scroll" style={{ overflowY: 'auto', padding: '12px 16px 14px', minHeight: 0 }}>
+      <div className="scroll" style={{ overflowY: 'auto', padding: '8px 12px 10px', minHeight: 0 }}>
         {tool === 'words' && <WordsTool el={el} />}
         {tool === 'font' && <FontPicker el={el} maxHeight={Math.round((window.visualViewport?.height || window.innerHeight) * 0.27)} />}
         {tool === 'size' && <SizeTool el={el} />}
@@ -1459,3 +1431,32 @@ Object.assign(window, {
   MobileCanvasArea, MobileSelectionOverlay, MobileEditorBottomBar,
   MobileSelectionBar, MobilePagesList, MobileDownloadOptions, MobileRenameSheet,
 });
+
+function MobileWordsDialog({draft,onChange,onCancel,onDone}) {
+  const field=meR(null),cancel=meR(null),done=meR(null),dialog=meR(null);
+  meE(()=>{
+    const previous=document.activeElement;
+    const siblings=[...dialog.current.parentElement.children].filter(el=>el!==dialog.current);
+    const old=siblings.map(el=>el.inert);
+    siblings.forEach(el=>{el.inert=true;});
+    field.current?.focus({preventScroll:true});
+    return ()=>{siblings.forEach((el,i)=>{el.inert=old[i];});previous?.focus?.({preventScroll:true});};
+  },[]);
+  const keys=e=>{
+    if(e.key==='Escape'){e.preventDefault();onCancel();}
+    if(e.key==='Tab'){
+      const items=[cancel.current,done.current,field.current],i=items.indexOf(document.activeElement);
+      e.preventDefault();items[(i+(e.shiftKey?2:1))%3]?.focus();
+    }
+  };
+  return <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby="mobile-words-title" onKeyDown={keys}
+    style={{position:'fixed',inset:0,height:'var(--studio-viewport-height, 100dvh)',zIndex:2000,background:'var(--cream, #fff)',display:'flex',flexDirection:'column',boxSizing:'border-box',paddingTop:'env(safe-area-inset-top, 0px)'}}>
+    <header style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,padding:'8px 12px',borderBottom:'1px solid var(--line)',flexShrink:0}}>
+      <button ref={cancel} className="btn btn-ghost" style={{minHeight:44}} onClick={onCancel}>Cancel</button>
+      <span id="mobile-words-title">Edit words</span>
+      <button ref={done} className="btn btn-primary" style={{minHeight:44}} onClick={onDone}>Done</button>
+    </header>
+    <textarea ref={field} aria-label="Edit selected words" value={draft.text} onChange={e=>onChange(e.target.value)}
+      style={{flex:1,minHeight:0,width:'100%',boxSizing:'border-box',resize:'none',border:0,padding:20,font:'18px/1.6 Montserrat, sans-serif',color:'var(--ink)',background:'transparent',outlineOffset:-3}} />
+  </div>;
+}
