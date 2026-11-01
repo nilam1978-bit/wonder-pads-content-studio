@@ -56,4 +56,3 @@ function FinalProjectWorkspace({isMobile}){
   </div>;
 }
 Object.assign(window,{FinalProjectWorkspace});
-
