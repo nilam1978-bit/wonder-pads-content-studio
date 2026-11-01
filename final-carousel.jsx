@@ -39,6 +39,7 @@ const CAROUSEL_STYLE_PAIRS = [
   {id:'popup',name:'Pop-up & events',description:'A deep sage green that stands out. Cover and closing words are filled in for an event.',bg:'#4F6B53',ink:'#FDFBFC',size:108,kit:{label:'POP-UP',cover:{title:'Come say hello',body:'Wonder Pads is popping up near you.'},cta:'visit'}},
 ];
 const CAROUSEL_CTA_CHOICES = {
+  generic:{title:'A little more comfort, your way.',body:'Follow @ecoclothpad for more cloth pad tips.\nShare this with a friend who might find it helpful.\n\nExplore ready-to-ship pads and fabrics:\nwonder-pads.com\n\nNeed help choosing? Message me—I’m happy to help.',icon:'chat',label:'Stay connected'},
   save:{title:'Save this for later',body:'Keep these tips handy for when you need them.',icon:'bookmark',label:'Save'},
   share:{title:'Share this with a friend',body:'Pass this on to someone who would find it helpful.',icon:'share',label:'Share'},
   follow:{title:'Follow for cloth pad tips',body:'Practical tips and handmade updates for your flow.',icon:'user_plus',label:'Follow'},
@@ -52,6 +53,7 @@ function endpointSlide(kind,heading,body,label,s,brand,W,H,markedHeading=false){
   const pair=CAROUSEL_STYLE_PAIRS.find(p=>p.id===s.pair)||CAROUSEL_STYLE_PAIRS[0];
   const c={id:uid(),name:kind==='hook'?'Cover':'Closing slide',slideKind:kind,stylePair:pair.id,w:W,h:H,bg:{type:'color',value:pair.bg},elements:[]};
   const els=c.elements,m=86;
+  const genericClosing=kind==='cta'&&heading===CAROUSEL_CTA_CHOICES.generic.title;
   const addText=(role,text,y,size,w=W-2*m,align='left',x=m,extra={})=>{
     if(!text)return null;
     const style=role==='heading'?'h1':role==='label'?'label':'body';
@@ -60,7 +62,7 @@ function endpointSlide(kind,heading,body,label,s,brand,W,H,markedHeading=false){
   };
   const top=pair.split?112:Math.round(H*.18);
   const tag=addText('label',label,top,30,W-2*m,'left',m,{letterSpacing:3});
-  const title=addText('heading',heading,tag?tag.y+tag.h+40:top,pair.size,W-2*m,'left',m,{italic:markedHeading||!!pair.italic,fontWeight:pair.italic?400:600});
+  const title=addText('heading',heading,tag?tag.y+tag.h+40:top,genericClosing?80:pair.size,W-2*m,'left',m,{italic:markedHeading||!!pair.italic,fontWeight:pair.italic?400:600});
   let y=title.y+title.h+40;
   if(pair.split){
     const split=Math.max(H*.43,y+12);
@@ -70,7 +72,7 @@ function endpointSlide(kind,heading,body,label,s,brand,W,H,markedHeading=false){
     els.push(newElement('rect',{x:m,y,w:100,h:3,fill:pair.ink,radius:0,endpointDecoration:true}));
     y+=40;
   }
-  const supporting=addText('body',body,y,42);
+  const supporting=addText('body',body,y,genericClosing?34:42);
   if(pair.split&&supporting)supporting.color='#2A1F2A';
   if(kind==='hook'){
     if(s.logo)els.push(...brandBackgroundElements('hook',c,brand));
@@ -129,8 +131,8 @@ function createSimpleCanvases(text,s,brand){
   });
   if(kitCover)result.unshift(endpointSlide('hook',kit.cover.title,kit.cover.body,s.hookLabel||'',s,brand,W,H));
   if(s.outro){
-    const choice=CAROUSEL_CTA_CHOICES[s.cta]||CAROUSEL_CTA_CHOICES.save;
-    result.push(endpointSlide('cta',choice.title,choice.body,'YOUR NEXT STEP',s,brand,W,H));
+    const choice=CAROUSEL_CTA_CHOICES.generic;
+    result.push(endpointSlide('cta',choice.title,choice.body,'',s,brand,W,H));
   }
   return result;
 }
@@ -138,12 +140,12 @@ function CarouselPairPicker({settings,onChange,brand}){
   const [ready,setReady]=React.useState(false);
   React.useEffect(()=>{let live=true;Promise.all([document.fonts.load('600 112px "Cormorant Garamond"'),document.fonts.load('italic 400 108px "Cormorant Garamond"'),document.fonts.load('400 42px "Montserrat"')]).then(()=>{if(live)setReady(true);});return()=>{live=false;};},[]);
   return <section className="sc-panel"><h2>Choose your first &amp; last slide style</h2><p className="simple-muted">A matching opening + closing pair. Middle slides stay soft pink and white. Custom order, new home and pop-up styles fill in the cover and closing words for you, so your text becomes the slides in between.</p><div className="pair-options" role="group" aria-label="Opening and closing slide style">{CAROUSEL_STYLE_PAIRS.map(pair=>{
-    const p={...settings,pair:pair.id,cover:true,outro:true,count:'',swipe:false,hookLabel:pair.kit?pair.kit.label:'YOUR STORY'};
+    const p={...settings,pair:pair.id,cover:true,outro:true,count:'',swipe:false,hookLabel:''};
     const hook=endpointSlide('hook',pair.kit?pair.kit.cover.title:'A little comfort, made for you.',pair.kit?pair.kit.cover.body:'Handmade cloth pads for your everyday rhythm.',p.hookLabel,p,brand,1080,settings.size==='portrait'?1350:1080);
-    const action=CAROUSEL_CTA_CHOICES[pair.kit?pair.kit.cta:settings.cta]||CAROUSEL_CTA_CHOICES.save;
-    const close=endpointSlide('cta',action.title,action.body,'YOUR NEXT STEP',p,brand,1080,hook.h);
-    return <button type="button" key={pair.id} className="pair-option" aria-pressed={(settings.pair||'clear')===pair.id} onClick={()=>{onChange('pair',pair.id);if(pair.kit){onChange('hookLabel',pair.kit.label);onChange('cta',pair.kit.cta);}}}><strong>{pair.name}</strong><span>{pair.description}</span><div className="pair-samples" aria-hidden="true"><div><MiniPreview canvas={hook} maxW={100} maxH={120}/><small>Opening</small></div><div><MiniPreview canvas={close} maxW={100} maxH={120}/><small>Closing</small></div></div></button>;
-  })}</div><label className="final-count">What should readers do next?<select aria-label="What should readers do next?" value={settings.cta||'save'} onChange={e=>onChange('cta',e.target.value)}>{Object.entries(CAROUSEL_CTA_CHOICES).map(([id,c])=><option key={id} value={id}>{c.label}</option>)}</select></label><label className="final-count">Small hook label (optional)<input aria-label="Small hook label" type="text" maxLength="32" value={settings.hookLabel||''} onChange={e=>onChange('hookLabel',e.target.value)} placeholder="e.g. CLOTH PAD TIPS"/></label>{(!settings.cover||!settings.outro)&&<p className="simple-muted">The pair applies to the opening and closing slides you enable above.</p>}</section>;
+    const action=CAROUSEL_CTA_CHOICES.generic;
+    const close=endpointSlide('cta',action.title,action.body,'',p,brand,1080,hook.h);
+    return <button type="button" key={pair.id} className="pair-option" aria-pressed={(settings.pair||'clear')===pair.id} onClick={()=>onChange('pair',pair.id)}><strong>{pair.name}</strong><span>{pair.description}</span><div className="pair-samples" aria-hidden="true"><div><MiniPreview canvas={hook} maxW={100} maxH={120}/><small>Opening</small></div><div><MiniPreview canvas={close} maxW={100} maxH={120}/><small>Closing</small></div></div></button>;
+  })}</div>{(!settings.cover||!settings.outro)&&<p className="simple-muted">The pair applies to the opening and closing slides you enable above.</p>}</section>;
 }
 
 // Turns the carousel draft (state.carousel.slides) into a saved project and opens it.
@@ -187,7 +189,7 @@ function FinalCarouselFlow(){
   const postLayouts=STARTER_TEMPLATES.filter(t=>t.name.startsWith('Big text'));
   const [connection,setConnection]=React.useState(''),[checking,setChecking]=React.useState(false);
   const checkConnection=async()=>{setChecking(true);setConnection('');try{const r=await fetch('/api/gemini?test=1');const p=await r.json();if(!p.configured)setConnection(p.error||'Gemini is not connected.');else if(p.tests)setConnection(p.tests.map(t=>`${t.model}: ${t.ok?'works':`error ${t.status} — ${t.message}`}`).join(' | '));else setConnection('Key found. Generation will check access.');}catch{setConnection('The AI server is unavailable here. Use the deployed app.');}finally{setChecking(false);}};
-  const [s,setSettings]=React.useState({size:'portrait',count:'',cover:true,outro:true,numbers:false,logo:true,handles:true,swipe:true,cta:'save',pair:'clear'});
+  const [s,setSettings]=React.useState({size:'portrait',count:'',cover:true,outro:true,numbers:false,logo:true,handles:true,swipe:true,cta:'generic',pair:'clear'});
   const set=(key,value)=>setSettings(prev=>({...prev,[key]:value}));
   const create=async()=>{
     if(!input.trim()){setError('Add your words first.');return;}
