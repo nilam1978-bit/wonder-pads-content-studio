@@ -34,8 +34,8 @@ function FinalProjectWorkspace({isMobile}){
       ?<div role="status" style={{display:'flex',alignItems:'center',gap:6,padding:'2px 4px 2px 12px',background:'#fff3d6',fontSize:12}}><button style={{flex:1,textAlign:'left',padding:'8px 0',background:'transparent',color:'inherit',fontSize:12}} onClick={()=>go(crowded[0]-1)}>⚠ Check slide{crowded.length>1?'s':''} {crowded.join(', ')} — text is tiny or off the page. Tap to open.</button><button aria-label="Dismiss this notice" style={{width:40,height:36,background:'transparent',fontSize:16,color:'inherit'}} onClick={()=>setDismissedCheck(crowded.join(','))}>✕</button></div>
       :<div role="status" style={{padding:'6px 12px',background:'#fff3d6',fontSize:12}}>Check slides {crowded.join(', ')}: some text is very small or extends outside the page. Resize it or use Fit text.</div>)}
     {project.aiError&&<p role="alert" style={{margin:0,padding:'8px 12px',background:'#fff3d6',fontSize:13}}>{project.aiError}</p>}
-    {step==='design'&&slideActions}
-    {step==='design'?<div className="simple-design">{isMobile?<MobileEditor progressNav={nav}/>:<EditorScreen progressNav={nav}/>}</div>:<>{nav}<main className="simple-content"><div className="final-review">
+    {step==='design'&&!isMobile&&slideActions}
+    {step==='design'?<div className="simple-design">{isMobile?<MobileEditor onPreview={()=>setStep('preview')} slideActions={slideActions}/>:<EditorScreen progressNav={nav}/>}</div>:<>{nav}<main className="simple-content"><div className="final-review">
       <h2 style={{margin:0}}>Preview your carousel</h2><p className="simple-muted" style={{margin:0}}>{canvas.w} × {canvas.h} · saved automatically in this browser</p>
       <div className="preview-image" onTouchStart={e=>{touch.current=e.touches[0].clientX;}} onTouchEnd={e=>{if(touch.current==null)return;const dx=e.changedTouches[0].clientX-touch.current;if(Math.abs(dx)>40)go(index+(dx<0?1:-1));touch.current=null;}}><MiniPreview canvas={canvas} maxW={Math.min(440,window.innerWidth-48)} maxH={Math.min(540,window.innerHeight*.56)}/></div>
       <div className="preview-buttons"><button aria-label="Previous preview slide" disabled={index===0} onClick={()=>go(index-1)}>←</button><span>Slide {index+1} of {project.canvases.length}</span><button aria-label="Next preview slide" disabled={index===project.canvases.length-1} onClick={()=>go(index+1)}>→</button></div>
@@ -56,3 +56,4 @@ function FinalProjectWorkspace({isMobile}){
   </div>;
 }
 Object.assign(window,{FinalProjectWorkspace});
+
