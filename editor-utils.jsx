@@ -255,6 +255,16 @@ function reducer(state, action) {
         if(entry.packId!=='wp-weeks-1-8')return entry;
         const source=action.posts.find(p=>p.id===entry.id),patch={};
         if(!source)return entry;
+        // Convert untouched Reel library copy as one unit. Keep personal edits,
+        // posted entries and already-created designs intact.
+        if(source.reelConversionFrom && entry.format==='Reel'){
+          const unchanged=Object.entries(source.reelConversionFrom).every(([key,value])=>
+            JSON.stringify(entry[key]??null)===JSON.stringify(value));
+          const hasDesign=(state.projects||[]).some(p=>p.contentEntryId===entry.id);
+          if(entry.status==='posted'||hasDesign||!unchanged)return entry;
+          updated=true;
+          return {...entry,...source,platform:'instagram-carousel',text:source.caption+'\n\n'+source.hashtags};
+        }
         for(const key of ['librarySection','priority','stylePair','middleStyle','defaultSize','archived','hookLabel'])
           if(entry[key]===undefined&&source[key]!==undefined)patch[key]=source[key];
         for(const [key,old] of Object.entries(entry.status==='posted'?{}:source.previousCopy||{}))
