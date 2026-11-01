@@ -1459,4 +1459,3 @@ Object.assign(window, {
   MobileCanvasArea, MobileSelectionOverlay, MobileEditorBottomBar,
   MobileSelectionBar, MobilePagesList, MobileDownloadOptions, MobileRenameSheet,
 });
-
