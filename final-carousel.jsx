@@ -269,4 +269,3 @@ function SimpleCarouselStyles() { return <style>{`
   @media(max-width:640px){.sc-header{height:auto;padding:10px 12px;gap:8px}.sc-header strong{font-size:17px}.sc-header small,.sc-header>.simple-action{display:none}.sc-back{font-size:12px;padding:5px}.sc-main{padding:12px}.sc-panel{padding:15px;border-radius:14px}.sc-stage h1,.sc-stage h2{font-size:20px}.sc-source-tabs{display:grid;grid-template-columns:1fr 1fr}.sc-source-tabs button{padding:9px 6px;font-size:12px}.sc-aspects{grid-template-columns:1fr 1fr}.sc-section-head{display:block}.sc-slide{padding:14px}.sc-slide input{font-size:16px}.sc-slide textarea{min-height:92px}.sc-footer{padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))}.sc-footer span{display:none}.sc-footer .simple-action{width:100%}}
 `}</style>; }
 Object.assign(window,{FinalCarouselFlow,createSimpleCanvases,distributeCarouselText,makeCarouselProject,openCarouselDraft,getExampleText,SimpleCarouselStyles});
-
