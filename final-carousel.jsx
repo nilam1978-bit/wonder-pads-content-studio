@@ -2,14 +2,15 @@
 // "# " starts a slide, "## " is a subheading inside it. Phones sometimes turn "#" lines oddly, so only "# " / "## " followed by a space count.
 const SLIDE_MARK=/^\s*#(?!#)\s+\S/, SUB_MARK=/^\s*##\s+\S/;
 function hasSlideMarks(text){return String(text||'').split('\n').some(l=>SLIDE_MARK.test(l));}
-function markedChunks(text){
-  const chunks=[];let cur=null;
+function markedChunks(text, withMetadata=false){
+  const chunks=[];let cur=null, marked=false;
+  const push=()=>{if(cur!==null&&cur.trim())chunks.push({text:cur.replace(/\s+$/,''),marked});};
   for(const line of String(text||'').replace(/\r/g,'').split('\n')){
-    if(SLIDE_MARK.test(line)){if(cur!==null&&cur.trim())chunks.push(cur);cur=line.replace(/^\s*#\s+/,'');}
+    if(SLIDE_MARK.test(line)){push();cur=line.replace(/^\s*#\s+/,'');marked=true;}
     else cur=cur===null?(line.trim()?line:null):cur+'\n'+line;
   }
-  if(cur!==null&&cur.trim())chunks.push(cur);
-  return chunks.map(c=>c.replace(/\s+$/,''));
+  push();
+  return withMetadata?chunks:chunks.map(c=>c.text);
 }
 function distributeCarouselText(text, count, keepCover=false) {
   const chunks=text.trim().split(/\n\s*---+\s*\n/).filter(s=>s.trim()); // blank lines no longer split slides; use # marks
@@ -47,7 +48,7 @@ const CAROUSEL_CTA_CHOICES = {
   thanks:{title:'Thank you for choosing handmade',body:'Every pad is made by hand. Message @ecoclothpad any time.',icon:'chat',label:'Thank you'},
   visit:{title:'See you there!',body:'Questions before then? Message @ecoclothpad.',icon:'chat',label:'Visit us'},
 };
-function endpointSlide(kind,heading,body,label,s,brand,W,H){
+function endpointSlide(kind,heading,body,label,s,brand,W,H,markedHeading=false){
   const pair=CAROUSEL_STYLE_PAIRS.find(p=>p.id===s.pair)||CAROUSEL_STYLE_PAIRS[0];
   const c={id:uid(),name:kind==='hook'?'Cover':'Closing slide',slideKind:kind,stylePair:pair.id,w:W,h:H,bg:{type:'color',value:pair.bg},elements:[]};
   const els=c.elements,m=86;
@@ -59,7 +60,7 @@ function endpointSlide(kind,heading,body,label,s,brand,W,H){
   };
   const top=pair.split?112:Math.round(H*.18);
   const tag=addText('label',label,top,30,W-2*m,'left',m,{letterSpacing:3});
-  const title=addText('heading',heading,tag?tag.y+tag.h+40:top,pair.size,W-2*m,'left',m,{italic:!!pair.italic,fontWeight:pair.italic?400:600});
+  const title=addText('heading',heading,tag?tag.y+tag.h+40:top,pair.size,W-2*m,'left',m,{italic:markedHeading||!!pair.italic,fontWeight:pair.italic?400:600});
   let y=title.y+title.h+40;
   if(pair.split){
     const split=Math.max(H*.43,y+12);
@@ -90,11 +91,12 @@ function createSimpleCanvases(text,s,brand){
   const kit=(CAROUSEL_STYLE_PAIRS.find(p=>p.id===s.pair)||{}).kit,kitCover=!!(kit&&s.cover);
   const marked=hasSlideMarks(text);
   const chunks=marked?markedChunks(text):distributeCarouselText(text,s.count?Math.max(1,Number(s.count)-(s.outro?1:0)-(kitCover?1:0)):0,kitCover?false:s.cover);
+  const headingMarks=marked?markedChunks(text,true).map(c=>c.marked):[];
   const result=chunks.map((chunk,i)=>{
     const cover=s.cover&&!kitCover&&i===0,els=[];
     if(cover){
       const lines=chunk.trim().replace(/^\s*##\s+/gm,'').split('\n'),tag=lines[0].match(/^([^:\n]{1,32}):\s*(.+)$/);
-      return endpointSlide('hook',tag?tag[2]:lines[0],lines.slice(1).join('\n').trim(),tag?tag[1]:(s.hookLabel||''),s,brand,W,H);
+      return endpointSlide('hook',tag?tag[2]:lines[0],lines.slice(1).join('\n').trim(),tag?tag[1]:(s.hookLabel||''),s,brand,W,H,!!headingMarks[i]);
     }
     const add=(role,words,y,align='left',extra={})=>{
       if(!words)return null;
@@ -104,7 +106,7 @@ function createSimpleCanvases(text,s,brand){
     };
     const lines=chunk.trim().split('\n'),heading=lines[0].replace(/^[A-Z][A-Z0-9 ·-]{2,20}:\s+/,''),body=lines.slice(1).join('\n').trim();
     if(s.numbers&&!cover)add('number',String(i+1).padStart(2,'0'),65);
-    const title=add('heading',heading,cover?Math.round(H*.25):160);
+    const title=add('heading',heading,cover?Math.round(H*.25):160,'left',headingMarks[i]?{italic:true}:{});
     if(marked&&/^\s*##\s+/m.test(body)){
       let y=title?title.y+title.h+42:160,buf=[];
       const flush=()=>{const t=buf.join('\n').trim();buf=[];if(t){const e=add('body',t,y);if(e)y=e.y+e.h+34;}};
@@ -202,7 +204,7 @@ function FinalCarouselFlow(){
         const p=newProject(head.split('\n')[0].slice(0,50),t.preset,t.els.map(e=>({type:e.type,patch:e.patch})));
         const c=p.canvases[0];c.bg={type:'color',value:t.bg};
         const texts=c.elements.filter(e=>e.type==='text').sort((a,b)=>b.fontSize-a.fontSize);
-        if(texts[0])texts[0].text=head;
+        if(texts[0]){texts[0].text=head;if(hasSlideMarks(words)&&markedChunks(words,true)[0]?.marked)texts[0].italic=true;}
         const small=c.elements.filter(e=>e.type==='text'&&e!==texts[0]).pop();
         if(small&&rest)small.text=rest;
         p.activeCanvasId=c.id;p.sourceText=input;
@@ -267,3 +269,4 @@ function SimpleCarouselStyles() { return <style>{`
   @media(max-width:640px){.sc-header{height:auto;padding:10px 12px;gap:8px}.sc-header strong{font-size:17px}.sc-header small,.sc-header>.simple-action{display:none}.sc-back{font-size:12px;padding:5px}.sc-main{padding:12px}.sc-panel{padding:15px;border-radius:14px}.sc-stage h1,.sc-stage h2{font-size:20px}.sc-source-tabs{display:grid;grid-template-columns:1fr 1fr}.sc-source-tabs button{padding:9px 6px;font-size:12px}.sc-aspects{grid-template-columns:1fr 1fr}.sc-section-head{display:block}.sc-slide{padding:14px}.sc-slide input{font-size:16px}.sc-slide textarea{min-height:92px}.sc-footer{padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))}.sc-footer span{display:none}.sc-footer .simple-action{width:100%}}
 `}</style>; }
 Object.assign(window,{FinalCarouselFlow,createSimpleCanvases,distributeCarouselText,makeCarouselProject,openCarouselDraft,getExampleText,SimpleCarouselStyles});
+
