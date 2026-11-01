@@ -108,7 +108,7 @@ function SheetAction({ icon, label, onClick, danger }) {
   );
 }
 
-function MobileEditor({ progressNav }) {
+function MobileEditor({ progressNav, onPreview, slideActions }) {
   const { state, dispatch } = useStore();
   const proj = activeProject(state);
   const canvas = activeCanvas(state);
@@ -179,12 +179,12 @@ function MobileEditor({ progressNav }) {
       background: 'var(--pink-100)',
     }}>
       {/* Top bar */}
-      <MobileEditorTopBar proj={proj} canvas={canvas} compact={!!editingId}
+      <MobileEditorTopBar proj={proj} canvas={canvas} compact={!!editingId} onDone={endEdit}
         onBack={() => dispatch({ type: 'close-project' })}
         onMenu={() => setOpenSheet('menu')}
         onLayers={() => setOpenSheet('layers')}
         onRename={() => setOpenSheet('rename')}
-        onDownload={() => setOpenSheet('download')}
+        onDownload={() => onPreview ? onPreview() : setOpenSheet('download')}
         onUndo={() => dispatch({ type: 'undo' })}
         onRedo={() => dispatch({ type: 'redo' })}
         canUndo={state.past.length > 0}
@@ -211,7 +211,7 @@ function MobileEditor({ progressNav }) {
           );
         })()}
         {/* Subtle slide switcher, like Canva: arrows at the edges and a small "1 / 5" pill that opens all slides. */}
-        {!editingId && proj.canvases.length > 1 && (() => {
+        {!editingId && proj.canvases.length > 0 && (() => {
           const idx = Math.max(0, proj.canvases.findIndex(c => c.id === canvas.id)), n = proj.canvases.length;
           const goTo = (i) => dispatch({ type: 'set-active-canvas', id: proj.canvases[Math.max(0, Math.min(n - 1, i))].id });
           const arrow = (dir, disabled) => (
@@ -314,6 +314,7 @@ function MobileEditor({ progressNav }) {
 
       {/* Pages sheet */}
       <BottomSheet open={openSheet === 'pages'} onClose={closeSheet} title="Pages">
+        {slideActions}
         <MobilePagesList onSwitch={closeSheet} />
       </BottomSheet>
 
@@ -339,6 +340,8 @@ function MobileEditor({ progressNav }) {
       <BottomSheet open={openSheet === 'menu'} onClose={closeSheet}
         title="File" height="auto">
         <div style={{ display: 'grid', gap: 4, paddingBottom: 8 }}>
+          <SheetAction icon="layer" label="Layers" onClick={() => setOpenSheet('layers')} />
+          <SheetAction icon="image_export" label="Download formats" onClick={() => setOpenSheet('download')} />
           <SheetAction icon="templates" label="Back to home"
             onClick={() => { closeSheet(); dispatch({ type: 'close-project' }); }} />
           <SheetAction icon="plus" label="New page"
@@ -409,10 +412,10 @@ function MobileEditor({ progressNav }) {
   );
 }
 
-function MobileEditorTopBar({ proj, canvas, compact, onBack, onMenu, onLayers, onRename, onDownload, onUndo, onRedo, canUndo, canRedo }) {
+function MobileEditorTopBar({ proj, canvas, compact, onDone, onBack, onMenu, onLayers, onRename, onDownload, onUndo, onRedo, canUndo, canRedo }) {
   // While typing there is no top stripe at all: undo / redo float on the canvas instead (see MobileEditor).
   // This spacer only keeps the slide clear of the iPhone clock / notch (it is 0 height on browsers with no notch).
-  if (compact) return <div className="safe-top" style={{ flexShrink: 0 }} />;
+  if (compact) return <div className="safe-top" style={{flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'6px 12px',background:'white'}}><span style={{fontSize:13}}>Editing text</span><button className="btn btn-tonal" onClick={onDone}>Done</button></div>;
   return (
     <div className="safe-top" style={{
       padding: '10px 12px',
@@ -420,7 +423,7 @@ function MobileEditorTopBar({ proj, canvas, compact, onBack, onMenu, onLayers, o
       display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
       zIndex: 20,
     }}>
-      <button className="icon-btn" onClick={onBack}>
+      <button className="icon-btn" aria-label="Back to home" onClick={onBack}>
         <Icon name="chevron_r" size={20} style={{ transform: 'rotate(180deg)' }} />
       </button>
 
@@ -431,25 +434,18 @@ function MobileEditorTopBar({ proj, canvas, compact, onBack, onMenu, onLayers, o
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {proj.name}
         </div>
-        <div style={{ fontSize: 10, color: 'var(--ink-3)', marginTop: 1 }}>
-          {canvas.w}×{canvas.h}
-        </div>
+
       </button>
 
-      <button className="icon-btn" disabled={!canUndo} onClick={onUndo}>
+      <button className="icon-btn" aria-label="Undo" disabled={!canUndo} onClick={onUndo}>
         <Icon name="undo" size={18} />
       </button>
-      <button className="icon-btn" disabled={!canRedo} onClick={onRedo}>
-        <Icon name="redo" size={18} />
-      </button>
-      <button className="icon-btn" onClick={onLayers} aria-label="Layers" title="Layers">
-        <Icon name="layer" size={18} />
-      </button>
-      <button className="icon-btn" onClick={onDownload}
+
+      <button className="icon-btn" aria-label="Preview and download" onClick={onDownload}
         style={{ background: 'var(--ink)', color: 'var(--cream)' }}>
         <Icon name="upload" size={16} style={{ transform: 'rotate(180deg)' }} />
       </button>
-      <button className="icon-btn" onClick={onMenu}>
+      <button className="icon-btn" aria-label="More actions" onClick={onMenu}>
         <Icon name="more" size={20} />
       </button>
     </div>
@@ -902,7 +898,7 @@ function MobileCanvasArea({ onLongPress, onEditWords, editingId: editingIdProp, 
         </div>
 
         {/* Selection overlay */}
-        {primary && (
+        {primary && !editingId && (
           <MobileSelectionOverlay el={primary} scale={state.zoom}
             onResize={(handle, e) => startResize(e, primary.id, handle)}
             onRotate={(e) => startRotate(e, primary.id)}
@@ -1083,28 +1079,12 @@ function MobileTextEditBar({ el, dispatch, onDone, onTool }) {
     <div role="toolbar" aria-label="Text editing tools" style={{ flexShrink: 0, zIndex: 15, padding: '4px 8px calc(4px + max(0px, env(safe-area-inset-bottom, 0px) - var(--studio-keyboard, 0px)))', display: 'flex', alignItems: 'center', gap: 6 }}>
       <div style={{ flex: 1, minWidth: 0, background: 'white', borderRadius: 26, boxShadow: '0 4px 16px rgba(80,30,70,.18)', padding: '2px 4px',
         display: 'flex', alignItems: 'center', gap: 2, overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
-        <button style={chip(false)} aria-label="Improve with AI" onClick={() => onTool('words')}><span style={{ fontSize: 18, color: 'var(--pink-600)' }}>✦</span></button>
-        <Sep />
-        <button style={chip(false)} aria-label="Text colour" onClick={() => onTool('colour')}>
-          <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
-            <span style={{ fontSize: 20, fontWeight: 700 }}>A</span>
-            <span style={{ width: 20, height: 4, borderRadius: 2, marginTop: 2, background: el.color, border: '1px solid var(--line-2)' }} />
-          </span>
-        </button>
-        <button style={{ ...chip(false), maxWidth: 110 }} aria-label="Font" onClick={() => onTool('font')}>
-          <span style={{ fontFamily: `"${el.fontFamily}", sans-serif`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{el.fontFamily}</span>
-        </button>
-        <button style={chip(false)} aria-label="Font size" onClick={() => onTool('size')}>{Math.round(el.fontSize)}</button>
-        <button style={chip(false)} aria-label="Smaller" onMouseDown={keep} onClick={() => patch({ fontSize: Math.max(8, Math.round((el.fontSize || 40) / 1.1)) })}>A−</button>
-        <button style={chip(false)} aria-label="Bigger" onMouseDown={keep} onClick={() => patch({ fontSize: Math.round((el.fontSize || 40) * 1.1) })}>A+</button>
-        <Sep />
         <button style={chip(isBoldText(el))} aria-label="Bold" aria-pressed={isBoldText(el)} onMouseDown={keep} onClick={() => patch(toggleBoldPatch(el))}><Icon name="bold" size={20} /></button>
         <button style={chip(!!el.italic)} aria-label="Italic" aria-pressed={!!el.italic} onMouseDown={keep} onClick={() => patch({ italic: !el.italic })}><span style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 19, fontFamily: 'serif' }}>I</span></button>
         <button style={chip(!!el.underline)} aria-label="Underline" aria-pressed={!!el.underline} onMouseDown={keep} onClick={() => patch({ underline: !el.underline })}><span style={{ textDecoration: 'underline', fontWeight: 700, fontSize: 18 }}>U</span></button>
         <button style={chip(false)} aria-label={'Align ' + (el.align || 'left')} onMouseDown={keep} onClick={() => patch({ align: nextAlign })}><Icon name={el.align === 'center' ? 'align_c' : el.align === 'right' ? 'align_r' : 'align_l'} size={20} /></button>
       </div>
-      <button onClick={onDone} aria-label="Done typing" style={{ flex: '0 0 auto', width: 44, height: 44, borderRadius: '50%', border: 0, background: 'var(--ink)', color: 'white',
-        boxShadow: '0 4px 16px rgba(80,30,70,.25)', display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 700 }}>✓</button>
+      <button className="btn btn-tonal" onClick={() => onTool('format')}>More</button>
     </div>
   );
 }
@@ -1479,3 +1459,4 @@ Object.assign(window, {
   MobileCanvasArea, MobileSelectionOverlay, MobileEditorBottomBar,
   MobileSelectionBar, MobilePagesList, MobileDownloadOptions, MobileRenameSheet,
 });
+
