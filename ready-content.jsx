@@ -10,7 +10,7 @@ function readyPostSlides(post){
 function fullSinglePostCanvas(post,size,pairId,brand){
   const W=1080,H=size==='portrait'?1350:1080,pair=CAROUSEL_STYLE_PAIRS.find(p=>p.id===pairId)||CAROUSEL_STYLE_PAIRS[0];
   const paragraphs=(post.caption||'').trim().split(/\n\s*\n/);
-  const titleText=paragraphs.shift()||post.imageText||post.title||'',bodyText=paragraphs.join('\n\n');
+  const titleText=post.layout==='uploaded-single'?post.slides[0].title:(paragraphs.shift()||post.imageText||post.title||''),bodyText=post.layout==='uploaded-single'?post.slides[0].body:paragraphs.join('\n\n');
   const c={id:uid(),name:'Post',slideKind:'content',w:W,h:H,bg:{type:'color',value:pair.bg},elements:[]};
   const title=newElement('text',{...SLIDE_TEXT_STYLES.h1,textStyle:'h1',__role:'heading',text:titleText,x:86,y:86,w:908,fontSize:pair.kit?104:84,color:pair.ink,italic:!!pair.italic});
   const body=newElement('text',{...SLIDE_TEXT_STYLES.body,textStyle:'body',__role:'body',text:bodyText,x:86,y:0,w:908,fontSize:42,lineHeight:1.4,color:pair.split?'#2A1F2A':pair.ink});
@@ -80,6 +80,7 @@ function posterCanvas(post,size,brand){
   return c;
 }
 function readyPostCanvases(post, size, pair, brand) {
+  if(post.layout==='uploaded-single')return [fullSinglePostCanvas(post,size,pair,brand)];
   if(!post.slides?.length&&post.layout==='poster')return [posterCanvas(post,size,brand)];
   if(!post.slides?.length&&post.layout==='bigtext')return [bigTextCanvas(post,size,pair,brand)];
   if(!post.slides?.length&&post.includeFullText!==false)return [fullSinglePostCanvas(post,size,pair,brand)];
@@ -143,7 +144,7 @@ function canvasSlideText(canvases){
     .slice().sort((a,b)=>a.y-b.y||a.x-b.x).map(e=>e.text).filter(Boolean).join('\n\n')).join('\n\n---\n\n');
 }
 const READY_CONTENT_SECTIONS=[
-  {id:'priority',name:'New & priority'},{id:'all',name:'All content'},
+  {id:'uploads',name:'My uploads'},{id:'priority',name:'New & priority'},{id:'all',name:'All content'},
   {id:'orders',name:'Custom orders & new homes'},{id:'posters',name:'Question posters'},{id:'events',name:'Events & pop-ups'},
   {id:'start',name:'Start here'},{id:'fit',name:'Find your fit'},
   {id:'care',name:'Care & troubleshooting'},{id:'brand',name:'About Wonder Pads'},
@@ -162,10 +163,16 @@ function filterReadyLibrary(posts,{section='all',format='',status='',search=''}=
 }
 function readySectionName(post){return READY_CONTENT_SECTIONS.find(s=>s.id===post.librarySection)?.name||'About Wonder Pads';}
 function ReadyContentPlan(){
+  const [uploadOpen,setUploadOpen]=React.useState(false),[lastBatch,setLastBatch]=React.useState(null);
   const {state,dispatch}=useStore();
   const [section,setSection]=React.useState('priority'),[selected,setSelected]=React.useState(null),[size,setSize]=React.useState('portrait'),[pair,setPair]=React.useState('clear'),[busy,setBusy]=React.useState(false),[notice,setNotice]=React.useState('');
   React.useEffect(()=>{dispatch({type:'import-ready-posts',posts:window.WONDER_READY_POSTS||[]});},[]);
-  const posts=(state.calendar||[]).filter(p=>p.packId==='wp-weeks-1-8').sort((a,b)=>(a.priority??100)-(b.priority??100)||String(a.date||'').localeCompare(String(b.date||'')));
+  const posts=(state.calendar||[]).filter(p=>p.packId==='wp-weeks-1-8'||p.packId==='user-uploads').sort((a,b)=>(a.priority??100)-(b.priority??100)||String(a.date||'').localeCompare(String(b.date||'')));
+  const importBatch=items=>{
+    const batch=uid();
+    const entries=items.map(p=>({id:uid(),packId:'user-uploads',librarySection:'uploads',importBatchId:batch,uploadKey:p.uploadKey,title:p.title,hook:p.headline,caption:p.caption,hashtags:p.hashtags,imageText:p.headline,slides:[{title:p.headline,body:p.body}],layout:'uploaded-single',includeFullText:false,format:'Static post',platform:'instagram-caption',status:'queued',defaultSize:'portrait',stylePair:'clear',confirmation:'',notes:'Uploaded content. Caption and hashtags stay off the image.',ts:Date.now()}));
+    dispatch({type:'add-content-batch',entries});setLastBatch(batch);setUploadOpen(false);setSection('uploads');setFormat('');setStatus('');setSearch('');
+  };
   const post=posts.find(p=>p.id===selected);
   const patch=changes=>dispatch({type:'update-calendar-entry',id:post.id,patch:changes});
   const caption=post?[post.caption,post.hashtags].filter(Boolean).join('\n\n'):'';
@@ -195,6 +202,8 @@ function ReadyContentPlan(){
     <header className="simple-header"><div><strong>Content Library</strong><small>Choose what you want to post today</small></div><button className="simple-action simple-secondary" onClick={post?()=>{setSelected(null);setNotice('');}:home}>{post?'← All posts':'← Home'}</button></header>
     <main className="simple-content"><div className="simple-inner">
     {!post?<>
+      <div className="ready-actions"><button className="simple-action" onClick={()=>setUploadOpen(true)}>Add content</button>{lastBatch&&<button className="simple-action simple-secondary" onClick={()=>{dispatch({type:'undo-content-batch',batchId:lastBatch});setLastBatch(null);}}>Undo last import</button>}</div>
+      {uploadOpen&&<ContentUpload existing={posts} onImport={importBatch} onClose={()=>setUploadOpen(false)}/>}
       <p className="simple-muted">Choose any topic, create editable slides, then download and post. New posts come first; the original plan dates are optional. Your edits and saved designs stay in this browser and your app backup.</p>
       <nav className="ready-sections" aria-label="Content sections">{READY_CONTENT_SECTIONS.map(s=><button key={s.id} aria-pressed={section===s.id} onClick={()=>setSection(s.id)}>{s.name}</button>)}</nav>
       <div className="ready-filters">
@@ -219,7 +228,7 @@ function ReadyContentPlan(){
       {notice&&<p role="status">{notice}</p>}
       {post.format!=='Reel'&&<div className="ready-actions"><button className="simple-action simple-secondary" onClick={copyWords}>Copy all slide text</button></div>}
       {copyFallback&&<textarea aria-label="Slide text to copy" readOnly value={copyFallback} onFocus={e=>e.target.select()}/>}
-      {post.format==='Reel'?<><h2>Filming script</h2><pre style={{whiteSpace:'pre-wrap',font:'inherit',lineHeight:1.7}}>{post.script}</pre><p className="simple-muted">This app does not produce video. Film these scenes separately.</p></>:<p className="simple-muted">{post.format==='Carousel'?'Exact slide order, with no extra CTA page. Fonts, text and elements remain editable on the canvas.':'Full written content wraps onto one page by default. Hashtags stay in the caption, not on the slide.'}</p>}
+      {post.format==='Reel'?<><h2>Filming script</h2><pre style={{whiteSpace:'pre-wrap',font:'inherit',lineHeight:1.7}}>{post.script}</pre><p className="simple-muted">This app does not produce video. Film these scenes separately.</p></>:<p className="simple-muted">{post.format==='Carousel'?'Exact slide order, with no extra CTA page. Fonts, text and elements remain editable on the canvas.':post.layout==='uploaded-single'?'Your headline and body go on the image. Caption and hashtags stay separate.':'Full written content wraps onto one page by default. Hashtags stay in the caption, not on the slide.'}</p>}
       {post.confirmation&&<div role="status"><p>{post.confirmation}</p>{unresolved?<p>Unfilled prices/quantities remain. Replace them in Edit words below.</p>:<label><input type="checkbox" checked={!!post.confirmed} onChange={e=>patch({confirmed:e.target.checked})}/> I checked this against my actual products and care instructions</label>}</div>}
       {post.format==='Static post'&&<label><input type="checkbox" checked={post.includeFullText!==false} onChange={e=>patch({includeFullText:e.target.checked})}/> Put the full written content on this one-page slide (uncheck for headline/photo only)</label>}
       {post.format==='Static post'&&!post.slides?.length&&<label>One-page layout <select aria-label="One-page layout" value={post.layout||''} onChange={e=>patch({layout:e.target.value})}><option value="">Standard (headline and writing)</option><option value="bigtext">Big text (quotation mark and big lead line)</option><option value="poster">Question poster (big Kalam question, logo and WhatsApp)</option></select></label>}
@@ -245,3 +254,54 @@ function ReadyContentPlan(){
     </div></main>
   </div>;
 }
+
+function parseContentUpload(input){
+  const posts=[],errors=[];let current=null,mode='body';
+  const start=title=>({title,headline:'',body:[],caption:[],hashtags:[]});
+  const finish=()=>{
+    if(!current)return;
+    if(!current.headline.trim())errors.push('“'+(current.title||'Untitled post')+'” needs a ## headline.');
+    else posts.push({title:current.title.trim()||current.headline.trim(),headline:current.headline.trim(),body:current.body.join('\n').trim(),caption:current.caption.join('\n').trim(),hashtags:current.hashtags.join('\n').trim()});
+  };
+  for(const [index,line] of String(input||'').replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n').split('\n').entries()){
+    const title=line.match(/^#\s+(.+)$/),heading=line.match(/^##\s+(.+)$/),label=line.match(/^\s*(Caption|Hashtags):\s*(.*)$/i);
+    if(title){finish();current=start(title[1]);mode='body';continue;}
+    if(heading){if(!current)current=start('');else if(current.headline){finish();current=start('');}current.headline=heading[1];mode='body';continue;}
+    if(!current){if(line.trim())errors.push('Line '+(index+1)+': start with # Title or ## Headline.');continue;}
+    if(label){mode=label[1].toLowerCase();if(label[2])current[mode].push(label[2]);continue;}
+    current[mode].push(line);
+  }
+  finish();return {posts,errors};
+}
+function contentUploadKey(post){
+  return JSON.stringify([post.title,post.headline,post.body,post.caption,post.hashtags].map(s=>String(s||'').trim()));
+}
+function ContentUpload({existing,onImport,onClose}){
+  const [source,setSource]=React.useState(''),[error,setError]=React.useState(''),[excluded,setExcluded]=React.useState([]);
+  const result=React.useMemo(()=>parseContentUpload(source),[source]);
+  const prior=new Set(existing.map(p=>p.uploadKey).filter(Boolean)),seen=new Set();
+  const rows=result.posts.map((post,i)=>{const key=contentUploadKey(post),duplicate=prior.has(key)||seen.has(key);seen.add(key);return {post,key,duplicate,i};});
+  const chosen=rows.filter(r=>!r.duplicate&&!excluded.includes(r.i));
+  const change=text=>{setSource(text);setExcluded([]);setError('');};
+  const read=async e=>{const file=e.target.files?.[0];if(!file)return;try{if(!/\.(txt|md)$/i.test(file.name))throw new Error('Choose a .txt or .md file.');if(file.size>2000000)throw new Error('Please use a text file smaller than 2 MB.');change(await file.text());}catch(err){setError(err.message);}e.target.value='';};
+  return <section className="simple-card ready-fields" aria-label="Upload content">
+    <div className="ready-actions"><h2 style={{flex:1,margin:0}}>Add content</h2><button className="simple-action simple-secondary" onClick={onClose}>Close</button></div>
+    <p>Import single posts. # starts a library post; ## is its large headline. Plain paragraphs become smaller text on the image. Caption: and Hashtags: stay off the image. Another # or ## starts the next post.</p>
+    <p>If you start with ##, its headline is also the library name. Without Caption:, the caption is empty. No AI rewriting or automatic slide splitting.</p>
+    <label>Upload .txt or .md<input type="file" accept=".txt,.md,text/plain,text/markdown" onChange={read}/></label>
+    <label>Or paste your batch<textarea aria-label="Batch content" value={source} onChange={e=>change(e.target.value)} placeholder={'# Library title\n## Headline on the image\nSmaller body text on the image.\n\nCaption:\nWords for your social caption.\n\nHashtags:\n#WonderPadsSG'}/></label>
+    {error&&<p role="alert">{error}</p>}
+    {result.errors.length>0&&<div role="alert">{result.errors.map((e,i)=><p key={i}>{e}</p>)}</div>}
+    <p role="status">{rows.length} posts found · {rows.filter(r=>r.duplicate).length} duplicates skipped · {chosen.length} selected</p>
+    {rows.map(({post,key,duplicate,i})=><details key={i} style={{padding:'12px 0',borderTop:'1px solid var(--line)'}}><summary>{post.title}{duplicate?' — already imported or repeated':''}</summary>
+      <label><input type="checkbox" disabled={duplicate} checked={!duplicate&&!excluded.includes(i)} onChange={e=>setExcluded(xs=>e.target.checked?xs.filter(x=>x!==i):[...xs,i])}/> Add this post</label>
+      <h3>On the image</h3><strong style={{display:'block',whiteSpace:'pre-wrap'}}>{post.headline}</strong><p style={{whiteSpace:'pre-wrap'}}>{post.body||'No body text'}</p>
+      {(post.headline.length>100||post.body.length>500)&&<p role="status">Long image text: review before creating. The design builder will flag text that cannot fit legibly; no words are cut.</p>}
+      <h3>Caption — not on the image</h3><p style={{whiteSpace:'pre-wrap'}}>{post.caption||'No caption'}</p>
+      <h3>Hashtags</h3><p style={{whiteSpace:'pre-wrap'}}>{post.hashtags||'No hashtags'}</p>
+    </details>)}
+    <button className="simple-action" disabled={!chosen.length||!!result.errors.length} onClick={()=>onImport(chosen.map(r=>({...r.post,uploadKey:r.key})))}>Add {chosen.length} posts to library</button>
+    <p className="simple-muted">Saved in this browser. Include your uploads in an editable backup to move them to another device.</p>
+  </section>;
+}
+Object.assign(window,{parseContentUpload,contentUploadKey,ContentUpload});
