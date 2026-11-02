@@ -584,6 +584,13 @@ function reducer(state, action) {
       return { ...state, savedLaunches: state.savedLaunches.filter(e => e.id !== action.id) };
 
     // ---------- Calendar ----------
+    case 'add-content-batch': {
+      const keys=new Set((state.calendar||[]).map(p=>p.uploadKey).filter(Boolean));
+      const entries=action.entries.filter(p=>{if(!p.uploadKey||keys.has(p.uploadKey))return false;keys.add(p.uploadKey);return true;});
+      return entries.length?{...state,calendar:[...(state.calendar||[]),...entries]}:state;
+    }
+    case 'undo-content-batch':
+      return {...state,calendar:(state.calendar||[]).filter(p=>p.importBatchId!==action.batchId)};
     case 'add-calendar-entry':
       return { ...state, calendar: [...(state.calendar || []), { id: 'c_' + uid(), status: 'queued', ...action.entry }] };
     case 'update-calendar-entry':
