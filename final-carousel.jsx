@@ -118,6 +118,7 @@ function createSimpleCanvases(text,s,brand){
       }
       flush();
     }else add('body',body,title?title.y+title.h+42:160);
+    fitCarouselContent(els,H,i+1);
     const canvas={id:uid(),name:cover?'Cover':`Slide ${i+1+(kitCover?1:0)}`,slideKind:cover?'hook':'content',w:W,h:H,bg:{type:'color',value:cover?accent:(i%2?'#FDFBFC':'#FBF0F7')},elements:els};
     if(cover){
       if(s.logo)els.push(...brandBackgroundElements('hook',canvas,brand));
@@ -136,6 +137,22 @@ function createSimpleCanvases(text,s,brand){
   }
   return result;
 }
+
+function fitCarouselContent(elements,height,slideNumber){
+  const blocks=elements.filter(e=>['heading','sub','body'].includes(e.__role));
+  if(!blocks.length)return;
+  const top=blocks[0].y,bottom=height-180;
+  for(let attempt=0;attempt<45;attempt++){
+    let y=top;
+    for(const el of blocks){el.y=y;el.h=textLayout(el).height;y+=el.h+(el.__role==='heading'?42:el.__role==='sub'?18:34);}
+    if(blocks.at(-1).y+blocks.at(-1).h<=bottom)return;
+    let changed=false;
+    for(const el of blocks){const min=el.__role==='heading'?36:el.__role==='sub'?32:28;const next=Math.max(min,Math.floor(el.fontSize*.95));if(next<el.fontSize){el.fontSize=next;changed=true;}}
+    if(!changed)break;
+  }
+  throw new Error('Slide '+slideNumber+' has too much text to fit legibly. Shorten it or use # to start another slide. No words were removed.');
+}
+
 function CarouselPairPicker({settings,onChange,brand}){
   const [ready,setReady]=React.useState(false);
   React.useEffect(()=>{let live=true;Promise.all([document.fonts.load('600 112px "Cormorant Garamond"'),document.fonts.load('italic 400 108px "Cormorant Garamond"'),document.fonts.load('400 42px "Montserrat"')]).then(()=>{if(live)setReady(true);});return()=>{live=false;};},[]);
@@ -224,7 +241,7 @@ function FinalCarouselFlow(){
       }
       if(!text.trim())throw new Error('No text was returned. Try without AI.');
       const canvases=createSimpleCanvases(text,s,state.brand);
-      dispatch({type:'create-project',project:{id:uid(),name:text.trim().split('\n')[0].replace(/^#{1,2}\s+/,'').slice(0,50),createdAt:now(),updatedAt:now(),thumbnail:null,projectType:'carousel',canvases,activeCanvasId:canvases[0].id,carouselSettings:s,sourceText:input,aiError}});
+      dispatch({type:'create-project',project:{id:uid(),name:text.trim().split('\n')[0].replace(/^#{1,2}\s+/,'').slice(0,50),createdAt:now(),updatedAt:now(),thumbnail:null,projectType:'carousel',canvases,activeCanvasId:canvases[0].id,carouselSettings:s,sourceText:input,generatedSourceText:text,aiError}});
       try{sessionStorage.removeItem('wpr-social-create-draft');}catch{}
     }catch(e){setError(e.message||'Could not create slides.');}finally{setBusy(false);}
   };
