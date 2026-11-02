@@ -1016,11 +1016,11 @@ const SHAPE_TYPES = ['rect', 'circle', 'triangle', 'star', 'heart', 'diamond', '
 
 // Which tray tools make sense for each kind of item.
 function trayToolsFor(el) {
-  if (el.type === 'text') return ['font', 'size', 'colour', 'format', 'position'];
+  if (el.type === 'text') return ['font', 'size', 'colour', 'styles', 'format', 'position'];
   if (SHAPE_TYPES.includes(el.type) || ['line', 'arrow', 'icon'].includes(el.type)) return ['colour', 'size', 'opacity', 'position'];
   return ['size', 'opacity', 'position']; // image, frame
 }
-const TRAY_LABELS = { words: 'Edit', font: 'Font', size: 'Size', colour: 'Colour', format: 'Format', opacity: 'Fade', position: 'Move' };
+const TRAY_LABELS = { styles: 'Styles', words: 'Edit', font: 'Font', size: 'Size', colour: 'Colour', format: 'Format', opacity: 'Fade', position: 'Move' };
 // The property that holds this item's main colour.
 function colourKey(el) {
   if (el.type === 'text' || el.type === 'icon') return 'color';
@@ -1069,44 +1069,34 @@ function MobileTextEditBar({ el, dispatch, onDone, onTool }) {
   );
 }
 function MobileSelectionBar({ el, activeTool, onAdd, onTool, onAdjust, onAction, locked }) {
-  const isText = el.type === 'text';
-  const tools = trayToolsFor(el);
-  const swatch = (c) => (
-    <span style={{ width: 22, height: 22, borderRadius: '50%', background: c === 'transparent' ? '#fff' : c,
-      border: '2px solid var(--line-2)', boxSizing: 'border-box', display: 'block' }} />
-  );
-  return (
-    <div className="safe-bottom" style={{
-      display: 'flex', gap: 2, padding: '6px 6px calc(6px + env(safe-area-inset-bottom, 0px))',
-      background: 'white', borderTop: '1px solid var(--line)', flexShrink: 0, zIndex: 15,
-      overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none',
-    }}>
-      
-      {isText ? <>
-        <ToolBtn label="Words" onClick={() => onTool('words')} active={activeTool === 'words'}><Icon name="edit" size={19} /></ToolBtn>
-        <ToolBtn label="Font" onClick={() => onTool('font')} active={activeTool === 'font'}>
-          <span style={{ fontFamily: `"${el.fontFamily}", sans-serif`, fontSize: 21, lineHeight: '22px' }}>Aa</span>
-        </ToolBtn>
-        <ToolBtn label="Size" onClick={() => onTool('size')} active={activeTool === 'size'}>
-          <span style={{ fontSize: 13, fontWeight: 700, border: '1.5px solid currentColor', borderRadius: 7, padding: '1px 6px', fontVariantNumeric: 'tabular-nums' }}>{Math.round(el.fontSize)}</span>
-        </ToolBtn>
-        <ToolBtn label="Colour" onClick={() => onTool('colour')} active={activeTool === 'colour'}>{swatch(el.color)}</ToolBtn>
-        <ToolBtn label="Format" onClick={() => onTool('format')} active={activeTool === 'format'}><Icon name="bold" size={20} /></ToolBtn>
-      </> : <>
-        {tools.includes('colour')
-          ? <ToolBtn label="Colour" onClick={() => onTool('colour')} active={activeTool === 'colour'}>{swatch(el[colourKey(el)])}</ToolBtn>
-          : <ToolBtn label="Adjust" onClick={onAdjust}><Icon name="images" size={20} /></ToolBtn>}
-        <ToolBtn label="Size" onClick={() => onTool('size')} active={activeTool === 'size'}><Icon name="fit" size={20} /></ToolBtn>
-        <ToolBtn label="Fade" onClick={() => onTool('opacity')} active={activeTool === 'opacity'}><Icon name="eye" size={20} /></ToolBtn>
-        <ToolBtn label="Move" onClick={() => onTool('position')} active={activeTool === 'position'}><Icon name="grid" size={20} /></ToolBtn>
-      </>}
-      <ToolBtn label="More" onClick={() => onAction('more')}><Icon name="more" size={20}/></ToolBtn>
-    </div>
-  );
+  const {dispatch}=useStore();
+  const change=patch=>{if(!locked&&patch)dispatch({type:'update-element',id:el.id,patch});};
+  const chip={flex:'0 0 auto',minHeight:44,minWidth:44,padding:'0 10px',borderRadius:9,border:'1px solid var(--line)',background:'white',color:'var(--ink)',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,fontSize:12};
+  const tool=(label,key,content=label)=><button key={key} style={chip} aria-label={label} aria-pressed={activeTool===key} onClick={()=>onTool(key)}>{content}</button>;
+  return <div role="toolbar" aria-label="Selected element tools" style={{display:'flex',gap:6,padding:'6px 8px calc(6px + env(safe-area-inset-bottom,0px))',background:'var(--pink-50)',borderTop:'1px solid var(--line)',flexShrink:0,overflowX:'auto',overscrollBehaviorX:'contain'}}>
+    {el.type==='text'?<>
+      {tool('Edit words','words')}
+      {tool('Font: '+el.fontFamily,'font',<span style={{fontFamily:el.fontFamily,maxWidth:140,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{el.fontFamily}</span>)}
+      {tool('Font size','size',Math.round(el.fontSize)+' px')}
+      {tool('Text colour','colour',<><span style={{width:18,height:18,borderRadius:'50%',background:el.color,border:'1px solid var(--line)'}}/>Colour</>)}
+      <button style={chip} aria-label="Bold" aria-pressed={isBoldText(el)} disabled={locked||!boldWeightFor(el.fontFamily)} onClick={()=>change(toggleBoldPatch(el))}><b>B</b></button>
+      <button style={chip} aria-label="Italic" aria-pressed={!!el.italic} disabled={locked} onClick={()=>change({italic:!el.italic})}><i>I</i></button>
+      <button style={chip} aria-label={'Alignment: '+el.align} disabled={locked} onClick={()=>change({align:el.align==='left'?'center':el.align==='center'?'right':'left'})}><Icon name={el.align==='center'?'align_c':el.align==='right'?'align_r':'align_l'} size={16}/></button>
+      {tool('Text styles','styles')}
+      {tool('Weight and spacing','format','Spacing')}
+    </>:<>
+      {tool('Size','size')}
+      {trayToolsFor(el).includes('colour')?tool('Colour','colour'):<button style={chip} onClick={onAdjust}>Adjust</button>}
+      {tool('Opacity','opacity')}{tool('Move','position')}
+    </>}
+    <button style={chip} aria-label="More actions" onClick={()=>onAction('more')}>More</button>
+  </div>;
 }
 
 // The strip that opens under the slide. Tabs along the top switch tools without closing it.
 function MobileToolTray({ el, tool, setTool, onClose }) {
+  const {dispatch}=useStore();
+  const dispatchStylePatch=(id,patch)=>dispatch({type:'update-element',id,patch});
   const tabs = trayToolsFor(el);
   const tall = false;
   return (
@@ -1133,6 +1123,7 @@ function MobileToolTray({ el, tool, setTool, onClose }) {
       </div>
       <div className="scroll" style={{ overflowY: 'auto', padding: '8px 12px 10px', minHeight: 0 }}>
         {tool === 'words' && <WordsTool el={el} />}
+        {tool === 'styles' && <TextLookPicker el={el} update={patch=>{if(!el.locked)dispatchStylePatch(el.id,patch);}} />}
         {tool === 'font' && <FontPicker el={el} maxHeight={Math.round((window.visualViewport?.height || window.innerHeight) * 0.27)} />}
         {tool === 'size' && <SizeTool el={el} />}
         {tool === 'colour' && <ColourTool el={el} />}
