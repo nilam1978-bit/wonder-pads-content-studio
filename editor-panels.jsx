@@ -1566,6 +1566,7 @@ function TextProps({ el, update, mode='basic' }) {
     <>
       {mode==='basic'&&<>
       <SectionLabel>Text</SectionLabel>
+      <details style={{marginBottom:12}}><summary style={{padding:'10px 0',cursor:'pointer'}}>Text looks</summary><TextLookPicker el={el} update={update}/></details>
       <SlideTextStyleControls el={el} update={update}/>
       <textarea className="text-input" value={el.text || ''}
         aria-label="Edit selected text"
@@ -1887,3 +1888,28 @@ function layerPreviewGlyph(el) {
 
 
 Object.assign(window, { LeftRail, LeftPanel, RightPanel, LayerArrangeControls, FONT_OPTIONS, PanelHeader, SectionLabel, FONT_WEIGHTS, WEIGHT_NAMES, FONT_GROUPS, weightsFor, nearestWeight, regularWeightFor, boldWeightFor, isBoldText, toggleBoldPatch, fontChangePatch, useLiveElementEdit, LiveSlider, SliderRow, FontSizeControl, FontPicker, WeightChips, ColorPicker });
+
+const TEXT_LOOKS = [
+  {name:'Editorial',fontFamily:'Cormorant Garamond',fontWeight:600,italic:false,lineHeight:1.1,letterSpacing:0},
+  {name:'Soft quote',fontFamily:'Cormorant Garamond',fontWeight:400,italic:true,lineHeight:1.15,letterSpacing:0},
+  {name:'Handmade',fontFamily:'Caveat',fontWeight:600,italic:false,lineHeight:1.1,letterSpacing:0},
+  {name:'Clean body',fontFamily:'Montserrat',fontWeight:400,italic:false,lineHeight:1.4,letterSpacing:0},
+  {name:'Label',fontFamily:'Space Grotesk',fontWeight:500,italic:false,lineHeight:1.15,letterSpacing:1.2},
+];
+function TextLookPicker({el,update}) {
+  const [busy,setBusy]=React.useState(false),[error,setError]=React.useState('');
+  const apply=async look=>{
+    setBusy(true);setError('');
+    try{
+      await document.fonts.load((look.italic?'italic ':'')+look.fontWeight+' '+el.fontSize+'px "'+look.fontFamily+'"');
+      const {name,...patch}=look;
+      update({...patch,underline:false});
+    }catch{setError('The font could not load. Please try again.');}
+    finally{setBusy(false);}
+  };
+  return <div><p style={{fontSize:12,margin:'0 0 10px',color:'var(--ink-2)'}}>Style the selected text. Your words, size, colour and position stay the same.</p>
+    <div style={{display:'grid',gap:8}}>{TEXT_LOOKS.map(look=><button key={look.name} disabled={busy||el.locked} onClick={()=>apply(look)} style={{textAlign:'left',padding:'12px',minHeight:44,border:'1px solid var(--line)',borderRadius:10,background:'var(--pink-50)',color:'var(--ink)'}}><span style={{fontFamily:look.fontFamily,fontStyle:look.italic?'italic':'normal',fontWeight:look.fontWeight,fontSize:22}}>{look.name}</span></button>)}</div>
+    {error&&<p role="alert">{error}</p>}
+  </div>;
+}
+Object.assign(window,{TextLookPicker,TEXT_LOOKS});
