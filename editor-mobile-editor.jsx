@@ -108,7 +108,7 @@ function SheetAction({ icon, label, onClick, danger }) {
   );
 }
 
-function MobileEditor({ progressNav, onPreview, slideActions }) {
+function MobileEditor({ progressNav, onPreview, onSource, slideActions }) {
   const { state, dispatch } = useStore();
   const proj = activeProject(state);
   const canvas = activeCanvas(state);
@@ -351,6 +351,7 @@ function MobileEditor({ progressNav, onPreview, slideActions }) {
       <BottomSheet open={openSheet === 'menu'} onClose={closeSheet}
         title="File" height="auto">
         <div style={{ display: 'grid', gap: 4, paddingBottom: 8 }}>
+          {onSource&&<SheetAction icon="text" label="View / edit pasted text" onClick={()=>{closeSheet();onSource();}} />}
           <SheetAction icon="layer" label="Layers" onClick={() => setOpenSheet('layers')} />
           <SheetAction icon="image_export" label="Download formats" onClick={() => setOpenSheet('download')} />
           <SheetAction icon="templates" label="Back to home"
