@@ -115,7 +115,7 @@ function floralEndpointSlide(kind,heading,body,label,s,brand,W,H,pair,markedHead
   };
   if(look==='soft'||look==='handmade')shape('rect',{x:32,y:32,w:W-64,h:H-64,fill:'transparent',stroke:pair.ink,strokeWidth:3,radius:0});
   if(look==='soft')shape('circle',{x:W-232,y:42,w:170,h:170,fill:'#849879'});
-  if(look==='editorial')shape('rect',{x:0,y:H-190,w:W,h:190,fill:pair.accent,radius:0});
+  if(look==='editorial')shape('rect',{x:0,y:H-(s.footerLine?320:190),w:W,h:s.footerLine?320:190,fill:pair.accent,radius:0});
   const start=closing?150:look==='soft'?230:160;
   if(label)text('label',label,27,{letterSpacing:2});
   const parts=closing||look==='question'?[heading]:floralHeadlineParts(heading);
@@ -133,7 +133,7 @@ function floralEndpointSlide(kind,heading,body,label,s,brand,W,H,pair,markedHead
   });
   const supporting=text('body',body,closing?34:40,{align:look==='soft'?'center':'left'});
   // Reserve space for branding, swipe hint and closing actions. Never silently clip words.
-  const bottom=H-(closing?360:look==='playful'?310:210);
+  const bottom=H-(closing?360:s.footerLine?350:look==='playful'?310:210);
   let fits=false;
   for(let pass=0;pass<60;pass++){
     let y=start;
@@ -156,6 +156,12 @@ function floralEndpointSlide(kind,heading,body,label,s,brand,W,H,pair,markedHead
     c.elements.push(...branding);
   }else{
     if(s.logo)c.elements.push(...brandBackgroundElements('hook',c,brand));
+    if(s.footerLine){
+      const footer=newElement('text',{text:s.footerLine,x:m,y:H-280,w:inner,fontFamily:'Montserrat',fontWeight:600,fontSize:38,lineHeight:1.2,align:'center',color:look==='editorial'?'#2A1F2A':pair.ink,__role:'body',textStyle:'body'});
+      footer.h=textLayout(footer).height;
+      if(footer.h>110)throw new Error('The footer is too long. Shorten it so it fits above your branding.');
+      c.elements.push(footer);
+    }
     c.elements.push(newElement('text',{text:brand.name||'Wonder Pads Reusables',x:m,y:H-150,w:inner,h:48,fontFamily:'Montserrat',fontWeight:600,fontSize:27,letterSpacing:3,align:'center',color:look==='editorial'?'#2A1F2A':pair.ink,__role:'brandName',fromBrand:true}));
     if(s.swipe)c.elements.push(newElement('text',{text:'Swipe →',x:W-280,y:H-94,w:194,h:40,fontFamily:'Montserrat',fontWeight:500,fontSize:27,color:look==='editorial'?'#2A1F2A':pair.ink,__role:'swipe',textStyle:'label'}));
   }
