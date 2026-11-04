@@ -29,10 +29,12 @@ function distributeCarouselText(text, count, keepCover=false) {
   return Array.from({length:count},(_,i)=>words.slice(boundaries[i],boundaries[i+1]).join(' '));
 }
 const CAROUSEL_STYLE_PAIRS = [
-  {id:'clear',name:'Big & clear',description:'A bold hook and a strong, simple CTA.',bg:'#F1CFEA',ink:'#2A1F2A',size:112},
-  {id:'gentle',name:'Soft & gentle',description:'Softer type for personal stories and reassuring tips.',bg:'#F1CFEA',ink:'#2A1F2A',size:108,italic:true},
-  {id:'informative',name:'Neat & informative',description:'A colour-block heading with room for helpful details.',bg:'#F1CFEA',ink:'#2A1F2A',size:100,split:true},
-  {id:'colourful',name:'Bold & colourful',description:'Rich plum and contrasting type for announcements.',bg:'#7d2960',ink:'#FDFBFC',size:112},
+  {id:'clear',name:'Big & clear',description:'Oversized bold type with a petal-pink highlight.',bg:'#78265F',ink:'#FFF9FC',accent:'#F0CEE7',accentInk:'#2A1F2A',floral:true,look:'highlight',sample:['Small stash. Big comfort.','Start with what you actually use.']},
+  {id:'gentle',name:'Soft & bold',description:'Petal pink, bold words and a graceful italic finish.',bg:'#F0CEE7',ink:'#78265F',accent:'#849879',floral:true,look:'soft',sample:['Your pace. Your period. Your choice.','']},
+  {id:'colourful',name:'Bold question',description:'Orchid colour and a headline that starts a conversation.',bg:'#BC5AA6',ink:'#2A1F2A',accent:'#F0CEE7',floral:true,look:'question',sample:['Who said more is better?','Let’s talk stashes.']},
+  {id:'informative',name:'Editorial',description:'Warm white, berry serif type and a rose colour block.',bg:'#FFF9FC',ink:'#78265F',accent:'#D489C3',floral:true,look:'editorial',sample:['Comfort is personal.','There is no one-size-fits-all routine.']},
+  {id:'playful',name:'Fresh & playful',description:'Bold plum, a rose highlight and a leafy flower accent.',bg:'#F0CEE7',ink:'#78265F',accent:'#D489C3',accentInk:'#2A1F2A',floral:true,look:'playful',sample:['Less rush. More reuse.','']},
+  {id:'handmade',name:'Warm & handmade',description:'Deep aubergine, pink lettering and an elegant frame.',bg:'#2A1F2A',ink:'#F0CEE7',accent:'#D489C3',floral:true,look:'handmade',sample:['Built slowly. Loved longer.','A little at a time is enough.']},
   // Occasion styles: colours plus ready-made cover and closing words. Your own words become the slides in between.
   {id:'order',name:'Custom order',description:'Cover and closing words are filled in for a custom order. Add the details in between.',bg:'#E8B8DC',ink:'#2A1F2A',size:104,kit:{label:'CUSTOM ORDER',cover:{title:"This week's custom order",body:'Made by hand for one special person.'},cta:'order'}},
   {id:'newhome',name:'Off to a new home',description:'Cover and closing words are filled in for a pad going to its new owner.',bg:'#D98BC6',ink:'#2A1F2A',size:108,kit:{label:'NEW HOME',cover:{title:'Off to its new home',body:'Another handmade set is on its way.'},cta:'thanks'}},
@@ -51,6 +53,7 @@ const CAROUSEL_CTA_CHOICES = {
 };
 function endpointSlide(kind,heading,body,label,s,brand,W,H,markedHeading=false){
   const pair=CAROUSEL_STYLE_PAIRS.find(p=>p.id===s.pair)||CAROUSEL_STYLE_PAIRS[0];
+  if(pair.floral)return floralEndpointSlide(kind,heading,body,label,s,brand,W,H,pair,markedHeading);
   const c={id:uid(),name:kind==='hook'?'Cover':'Closing slide',slideKind:kind,stylePair:pair.id,w:W,h:H,bg:{type:'color',value:pair.bg},elements:[]};
   const els=c.elements,m=86;
   const genericClosing=kind==='cta'&&heading===CAROUSEL_CTA_CHOICES.generic.title;
@@ -83,6 +86,78 @@ function endpointSlide(kind,heading,body,label,s,brand,W,H,markedHeading=false){
     const branding=brandBackgroundElements('signature',c,{...brand,logo:s.logo?brand.logo:''});
     for(const el of branding)if(el.type==='text')el.color=pair.split?'#2A1F2A':pair.ink;
     els.push(...branding);
+  }
+  return c;
+}
+
+// Use the same editable primitives and measured wrapping as canvas and export.
+function loadCarouselFonts(){
+  return Promise.all(['800 150px "Montserrat"','italic 800 150px "Montserrat"','400 38px "Montserrat"','600 112px "Cormorant Garamond"','italic 400 108px "Cormorant Garamond"','400 140px "DM Serif Display"','italic 400 140px "DM Serif Display"'].map(font=>document.fonts.load(font)));
+}
+function floralHeadlineParts(text){
+  const words=String(text||'').trim();
+  const sentences=words.match(/[^.!?]+[.!?]+(?:[”"’']|$)?|[^.!?]+$/g)||[words];
+  if(sentences.length>1)return [sentences.slice(0,-1).join('').trim(),sentences.at(-1).trim()];
+  const tokens=words.split(/\s+/);
+  if(tokens.length<3)return [words];
+  const cut=Math.ceil(tokens.length*.55);
+  return [tokens.slice(0,cut).join(' '),tokens.slice(cut).join(' ')];
+}
+function floralEndpointSlide(kind,heading,body,label,s,brand,W,H,pair,markedHeading){
+  const closing=kind==='cta',look=pair.look,m=84,inner=W-m*2;
+  const c={id:uid(),name:closing?'Closing slide':'Cover',slideKind:kind,stylePair:pair.id,w:W,h:H,bg:{type:'color',value:pair.bg},elements:[]};
+  const decor=[],blocks=[];
+  const shape=(type,patch)=>decor.push(newElement(type,{endpointDecoration:true,...patch}));
+  const text=(role,value,size,extra={})=>{
+    if(!value)return null;
+    const e=newElement('text',{text:value,__role:role,textStyle:role==='heading'?'h1':role==='body'?'body':'label',x:m,y:0,w:inner,fontFamily:'Montserrat',fontWeight:role==='heading'?800:400,fontSize:Math.round(size*(s.textScale||1)),lineHeight:role==='heading'?1.06:1.4,align:'left',color:pair.ink,...extra});
+    blocks.push(e);return e;
+  };
+  if(look==='soft'||look==='handmade')shape('rect',{x:32,y:32,w:W-64,h:H-64,fill:'transparent',stroke:pair.ink,strokeWidth:3,radius:0});
+  if(look==='soft')shape('circle',{x:W-232,y:42,w:170,h:170,fill:'#849879'});
+  if(look==='editorial')shape('rect',{x:0,y:H-190,w:W,h:190,fill:pair.accent,radius:0});
+  const start=closing?150:look==='soft'?230:160;
+  if(label)text('label',label,27,{letterSpacing:2});
+  const parts=closing||look==='question'?[heading]:floralHeadlineParts(heading);
+  parts.forEach((part,i)=>{
+    const emphasis=i===parts.length-1&&parts.length>1;
+    const serif=look==='editorial'||(emphasis&&(look==='soft'||look==='handmade'));
+    const headlineSize=look==='highlight'?(emphasis?114:210):look==='question'?190:look==='soft'?(serif?180:160):look==='editorial'?184:look==='playful'?170:serif?174:158;
+    text('heading',part,closing?82:headlineSize,{
+      fontFamily:serif?'DM Serif Display':'Montserrat',fontWeight:serif?400:800,
+      italic:serif&&(emphasis||markedHeading),
+      color:emphasis&&look==='handmade'?pair.accent:pair.ink,
+      align:look==='soft'?'center':'left',
+      floralHighlight:emphasis&&(look==='highlight'||look==='playful')
+    });
+  });
+  const supporting=text('body',body,closing?34:40,{align:look==='soft'?'center':'left'});
+  // Reserve space for branding, swipe hint and closing actions. Never silently clip words.
+  const bottom=H-(closing?360:look==='playful'?310:210);
+  let fits=false;
+  for(let pass=0;pass<60;pass++){
+    let y=start;
+    for(const e of blocks){e.y=y;e.h=textLayout(e).height;y+=e.h+(e.floralHighlight?46:e.__role==='heading'?28:24);}
+    if(!blocks.length||blocks.at(-1).y+blocks.at(-1).h<=bottom){fits=true;break;}
+    let changed=false;
+    for(const e of blocks){const min=e.__role==='heading'?44:28,next=Math.max(min,Math.floor(e.fontSize*.95));if(next<e.fontSize){e.fontSize=next;changed=true;}}
+    if(!changed)break;
+  }
+  if(!fits)throw new Error((closing?'Closing slide':'Cover')+' has too much text to fit legibly. Shorten it or use # to move details to another slide. No words were removed.');
+  for(const e of blocks)if(e.floralHighlight){shape('rect',{x:m-16,y:e.y-8,w:inner+32,h:e.h+16,fill:pair.accent,radius:0});e.color=pair.accentInk||pair.ink;}
+  if(look==='question'&&supporting&&!closing){shape('rect',{x:m-18,y:supporting.y-9,w:inner+36,h:supporting.h+18,fill:pair.accent,radius:28});}
+  if(look==='editorial'&&supporting)shape('rect',{x:m,y:supporting.y-14,w:inner,h:2,fill:pair.ink,radius:0});
+  if(look==='playful'&&!closing){for(const [dx,dy] of [[-38,-38],[38,-38],[-38,38],[38,38]])shape('circle',{x:W-210+dx,y:H-280+dy,w:82,h:82,fill:'#849879'});}
+  c.elements=[...decor,...blocks];
+  if(closing){
+    c.elements.push(...ctaEngagementElements(c,pair.ink));
+    const branding=brandBackgroundElements('signature',c,{...brand,logo:s.logo?brand.logo:''});
+    for(const e of branding)if(e.type==='text')e.color=look==='editorial'?'#2A1F2A':pair.ink;
+    c.elements.push(...branding);
+  }else{
+    if(s.logo)c.elements.push(...brandBackgroundElements('hook',c,brand));
+    c.elements.push(newElement('text',{text:brand.name||'Wonder Pads Reusables',x:m,y:H-150,w:inner,h:48,fontFamily:'Montserrat',fontWeight:600,fontSize:27,letterSpacing:3,align:'center',color:look==='editorial'?'#2A1F2A':pair.ink,__role:'brandName',fromBrand:true}));
+    if(s.swipe)c.elements.push(newElement('text',{text:'Swipe →',x:W-280,y:H-94,w:194,h:40,fontFamily:'Montserrat',fontWeight:500,fontSize:27,color:look==='editorial'?'#2A1F2A':pair.ink,__role:'swipe',textStyle:'label'}));
   }
   return c;
 }
@@ -153,16 +228,22 @@ function fitCarouselContent(elements,height,slideNumber){
   throw new Error('Slide '+slideNumber+' has too much text to fit legibly. Shorten it or use # to start another slide. No words were removed.');
 }
 
+function CarouselPairPreview({hook,close}){
+  const ref=React.useRef(null),[width,setWidth]=React.useState(252);
+  React.useEffect(()=>{const node=ref.current;if(!node)return;const update=()=>setWidth(node.clientWidth);update();const observer=new ResizeObserver(update);observer.observe(node);return()=>observer.disconnect();},[]);
+  const opening=Math.min(180,Math.max(1,width-12)*.66),closing=Math.min(92,Math.max(1,width-12)*.34);
+  return <div ref={ref} className="pair-samples" aria-hidden="true"><div><MiniPreview canvas={hook} maxW={opening} maxH={opening*hook.h/hook.w}/><small>Opening</small></div><div><MiniPreview canvas={close} maxW={closing} maxH={closing*close.h/close.w}/><small>Closing</small></div></div>;
+}
 function CarouselPairPicker({settings,onChange,brand}){
   const [ready,setReady]=React.useState(false);
-  React.useEffect(()=>{let live=true;Promise.all([document.fonts.load('600 112px "Cormorant Garamond"'),document.fonts.load('italic 400 108px "Cormorant Garamond"'),document.fonts.load('400 42px "Montserrat"')]).then(()=>{if(live)setReady(true);});return()=>{live=false;};},[]);
-  return <section className="sc-panel"><h2>Choose your first &amp; last slide style</h2><p className="simple-muted">A matching opening + closing pair. Middle slides stay soft pink and white. Custom order, new home and pop-up styles fill in the cover and closing words for you, so your text becomes the slides in between.</p><div className="pair-options" role="group" aria-label="Opening and closing slide style">{CAROUSEL_STYLE_PAIRS.map(pair=>{
-    const p={...settings,pair:pair.id,cover:true,outro:true,count:'',swipe:false,hookLabel:''};
-    const hook=endpointSlide('hook',pair.kit?pair.kit.cover.title:'A little comfort, made for you.',pair.kit?pair.kit.cover.body:'Handmade cloth pads for your everyday rhythm.',p.hookLabel,p,brand,1080,settings.size==='portrait'?1350:1080);
-    const action=CAROUSEL_CTA_CHOICES.generic;
-    const close=endpointSlide('cta',action.title,action.body,'',p,brand,1080,hook.h);
-    return <button type="button" key={pair.id} className="pair-option" aria-pressed={(settings.pair||'clear')===pair.id} onClick={()=>onChange('pair',pair.id)}><strong>{pair.name}</strong><span>{pair.description}</span><div className="pair-samples" aria-hidden="true"><div><MiniPreview canvas={hook} maxW={100} maxH={120}/><small>Opening</small></div><div><MiniPreview canvas={close} maxW={100} maxH={120}/><small>Closing</small></div></div></button>;
-  })}</div>{(!settings.cover||!settings.outro)&&<p className="simple-muted">The pair applies to the opening and closing slides you enable above.</p>}</section>;
+  React.useEffect(()=>{let live=true;loadCarouselFonts().then(()=>{if(live)setReady(true);});return()=>{live=false;};},[]);
+  return <section className="sc-panel"><h2>Choose your cover style</h2><p className="simple-muted">Six floral looks with matching closing slides. Text and shapes stay editable. Portrait 4:5 is the default; previews follow your selected size.</p>{[false,true].map(occasion=><React.Fragment key={String(occasion)}>{occasion&&<><h3>Occasion starters</h3><p className="simple-muted">Ready-made opening words for an order, a new home or an event. Your words fill the middle slides.</p></>}<div className="pair-options" role="group" aria-label={occasion?'Occasion starters':'Floral cover styles'}>{CAROUSEL_STYLE_PAIRS.filter(pair=>!!pair.kit===occasion).map(pair=>{
+    const p={...settings,pair:pair.id,cover:true,outro:true,count:'',swipe:false,hookLabel:'',textScale:1};
+    const sample=pair.sample||[pair.kit.cover.title,pair.kit.cover.body];
+    const hook=endpointSlide('hook',sample[0],sample[1],'',p,brand,1080,settings.size==='portrait'?1350:1080);
+    const action=CAROUSEL_CTA_CHOICES.generic,close=endpointSlide('cta',action.title,action.body,'',p,brand,1080,hook.h);
+    return <button type="button" key={pair.id} className="pair-option" aria-pressed={(settings.pair||'clear')===pair.id} onClick={()=>onChange('pair',pair.id)}><strong>{pair.name}</strong><span>{pair.description}</span><CarouselPairPreview hook={hook} close={close} key={String(ready)}/></button>;
+  })}</div></React.Fragment>)}{(!settings.cover||!settings.outro)&&<p className="simple-muted">The style applies to the opening and closing slides you enable above.</p>}</section>;
 }
 
 // Turns the carousel draft (state.carousel.slides) into a saved project and opens it.
@@ -212,7 +293,7 @@ function FinalCarouselFlow(){
     if(!input.trim()){setError('Add your words first.');return;}
     setBusy(true);setError('');
     try{
-      await Promise.all([document.fonts.load('600 112px "Cormorant Garamond"'),document.fonts.load('italic 400 108px "Cormorant Garamond"'),document.fonts.load('400 46px "Montserrat"'),document.fonts.load('500 30px "Montserrat"')]);let text=input;
+      await loadCarouselFonts();let text=input;
       if(format==='post'){
         const t=postLayouts[layout]||postLayouts[0];
         let words=input.trim();
@@ -246,11 +327,11 @@ function FinalCarouselFlow(){
     }catch(e){setError(e.message||'Could not create slides.');}finally{setBusy(false);}
   };
   const aiCheck=<div style={{marginTop:12}}><button className="sc-link" disabled={checking} onClick={checkConnection}>{checking?'Checking…':'Check Gemini connection'}</button>{connection&&<p role="status">{connection}</p>}</div>;
-  return <div className="sc-shell"><SimpleStudioStyles/><SimpleCarouselStyles/><style>{`.final-options{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}.final-options label{display:flex;gap:8px;align-items:center}.final-options input{width:20px;height:20px}.final-count{display:flex;gap:12px;align-items:center;margin-top:18px}.final-count select{font-size:16px;padding:10px;max-width:70%} .pair-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.pair-option{border:1px solid #dfcbd9;border-radius:12px;background:#fff;padding:16px;text-align:left;color:#2A1F2A;min-width:0}.pair-option[aria-pressed=true]{border:2px solid #963d80;background:#fcf1f8}.pair-option strong{display:block;font-size:17px}.pair-option>span{display:block;font-size:13px;line-height:1.5;margin:8px 0}.pair-samples{display:flex;gap:12px;justify-content:center;align-items:flex-start}.pair-samples small{display:block;margin-top:6px;text-align:center}.final-count input{min-width:0;padding:10px;font-size:16px;max-width:60%}@media(max-width:500px){.pair-options{grid-template-columns:1fr}.final-count{flex-wrap:wrap}.final-count select,.final-count input{max-width:100%}}`}</style>
+  return <div className="sc-shell"><SimpleStudioStyles/><SimpleCarouselStyles/><style>{`.final-options{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}.final-options label{display:flex;gap:8px;align-items:center}.final-options input{width:20px;height:20px}.final-count{display:flex;gap:12px;align-items:center;margin-top:18px}.final-count select{font-size:16px;padding:10px;max-width:70%} .pair-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.pair-option{border:1px solid #dfcbd9;border-radius:12px;background:#fff;padding:16px;text-align:left;color:#2A1F2A;min-width:0}.pair-option[aria-pressed=true]{border:2px solid #963d80;background:#fcf1f8}.pair-option strong{display:block;font-size:17px}.pair-option>span{display:block;font-size:13px;line-height:1.5;margin:8px 0}.pair-samples{display:flex;gap:12px;justify-content:center;align-items:flex-start}.pair-samples>div{min-width:0;flex:none}.pair-samples small{display:block;margin-top:6px;text-align:center}.final-count input{min-width:0;padding:10px;font-size:16px;max-width:60%}@media(max-width:500px){.pair-options{grid-template-columns:1fr}.final-count{flex-wrap:wrap}.final-count select,.final-count input{max-width:100%}}`}</style>
     <header className="sc-header"><button className="sc-back" onClick={()=>dispatch({type:'set-view',view:'home'})}>← Home</button><div><strong>Create</strong><small>Text → Canvas → Download</small></div></header>
     <main className="sc-main"><div className="sc-inner"><section className="sc-panel"><h2>Your words</h2><div className="mark-ribbon" role="toolbar" aria-label="Mark slides"><button type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>markLine('# ')}>+ Slide</button><button type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>markLine('## ')}>+ Subheading</button><button type="button" onMouseDown={e=>e.preventDefault()} onClick={clearMarks}>Clear marks</button><span>{slideCount?`${slideCount} slide${slideCount===1?'':'s'} marked`:'Tap a line, then + Slide'}</span></div><textarea ref={srcRef} aria-label="Your carousel text" className="sc-source" value={input} onChange={e=>setInput(e.target.value)} placeholder="Paste your words. Tap a line and press + Slide to start a slide there. Blank lines stay inside the slide. Text with no marks becomes one slide."/><div className="sc-row"><button className="sc-link" onClick={()=>setInput(getExampleText())}>Try example</button><button className="sc-link" onClick={()=>setInput('')}>Clear</button></div><label><input type="checkbox" checked={reuse} onChange={e=>setReuse(e.target.checked)}/> Reuse / improve with AI (optional)</label>{aiCheck}</section>
     <section className="sc-panel"><h2>What do you want to make?</h2><div className="sc-aspects">{[['carousel','Carousel','Several slides'],['post','Single post','One slide']].map(([id,label,sub])=><button key={id} aria-current={format===id} onClick={()=>setFormat(id)}>{label}<small>{sub}</small></button>)}</div>{format==='post'&&<><p className="simple-muted">First paragraph becomes the big headline. A second paragraph becomes the smaller line. Pick a look:</p><div className="tile-grid" style={{gridTemplateColumns:'repeat(auto-fill,minmax(130px,1fr))'}}>{postLayouts.map((t,i)=><button key={t.name} className="tile" aria-current={layout===i} onClick={()=>setLayout(i)}><div className="frame"><MiniPreview canvas={{...defaultCanvas(t.name,t.preset),bg:{type:'color',value:t.bg},elements:t.els.map(e=>newElement(e.type,e.patch))}} maxW={150} maxH={188}/></div><h3>{t.name.replace('Big text · ','')}</h3></button>)}</div></>}</section>
-    {format==='carousel'&&<details className="sc-panel"><summary><strong>Carousel options</strong> (size, slides, extras — optional)</summary><section className="sc-panel"><h2>Carousel settings</h2><div className="sc-aspects">{[['post','Square · 1:1','1080 × 1080'],['portrait','Portrait · 4:5','1080 × 1350']].map(([id,label,size])=><button key={id} aria-current={s.size===id} onClick={()=>set('size',id)}>{label}<small>{size}</small></button>)}</div><label className="final-count">Total slides<select aria-label="Total slides" value={s.count} onChange={e=>set('count',e.target.value)}><option value="">Auto — my text breaks</option>{Array.from({length:19},(_,i)=>i+2).map(n=><option key={n} value={n}>{n} slides</option>)}</select></label><p className="simple-muted">{slideCount?"You marked slides with #, so the slide count follows your marks. ":""}Includes cover and closing slides. A chosen count divides all your words without removing any.</p><div className="final-options">{[['cover','First slide / hook'],['outro','Closing slide'],['numbers','Slide numbers'],['logo','Brand logo'],['handles','Social / website'],['swipe','Swipe hint']].map(([key,label])=><label key={key}><input type="checkbox" checked={s[key]} onChange={e=>set(key,e.target.checked)}/>{label}</label>)}</div><p className="simple-muted">Hook and closing slides share one colour. Middle slides use white and soft pink. The closing slide always includes your contact details.</p></section><CarouselPairPicker settings={s} onChange={set} brand={state.brand}/></details>}{error&&<p role="alert">{error}</p>}
+    {format==='carousel'&&<details className="sc-panel"><summary><strong>Carousel options</strong> (size, slides, extras — optional)</summary><section className="sc-panel"><h2>Carousel settings</h2><div className="sc-aspects">{[['post','Square · 1:1','1080 × 1080'],['portrait','Portrait · 4:5','1080 × 1350']].map(([id,label,size])=><button key={id} aria-current={s.size===id} onClick={()=>set('size',id)}>{label}<small>{size}</small></button>)}</div><label className="final-count">Total slides<select aria-label="Total slides" value={s.count} onChange={e=>set('count',e.target.value)}><option value="">Auto — my text breaks</option>{Array.from({length:19},(_,i)=>i+2).map(n=><option key={n} value={n}>{n} slides</option>)}</select></label><p className="simple-muted">{slideCount?"You marked slides with #, so the slide count follows your marks. ":""}Includes cover and closing slides. A chosen count divides all your words without removing any.</p><div className="final-options">{[['cover','First slide / hook'],['outro','Closing slide'],['numbers','Slide numbers'],['logo','Brand logo'],['handles','Social / website'],['swipe','Swipe hint']].map(([key,label])=><label key={key}><input type="checkbox" checked={s[key]} onChange={e=>set(key,e.target.checked)}/>{label}</label>)}</div><p className="simple-muted">Cover and closing slides share a coordinated palette. Middle slides use white and soft pink. The closing slide always includes your contact details.</p></section><CarouselPairPicker settings={s} onChange={set} brand={state.brand}/></details>}{error&&<p role="alert">{error}</p>}
     <div className="create-submit"><button className="simple-action" disabled={busy} onClick={create}>{busy?'Creating…':(format==='post'?'Create post →':'Create carousel →')}</button></div>
     </div></main>
   </div>;

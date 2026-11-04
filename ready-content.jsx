@@ -192,7 +192,7 @@ function ReadyContentPlan(){
       if(unresolved)throw new Error('Replace the bracketed prices and quantities in Edit words first.');
       if(post.confirmation&&!post.confirmed)throw new Error('Confirm the product details below before creating your design.');
       const allSlides=readyPostSlides(post);if(allSlides.length&&(!allSlides[0].title.trim()||!allSlides[allSlides.length-1].title.trim()))throw new Error('Add a title to the opening and closing slides in Edit words.');
-      await Promise.all([document.fonts.load('600 112px "Cormorant Garamond"'),document.fonts.load('400 50px "Montserrat"')]);
+      await loadCarouselFonts(); await Promise.all([document.fonts.load('600 112px "Cormorant Garamond"'),document.fonts.load('400 50px "Montserrat"')]);
       const canvases=readyPostCanvases(post,size,pair,state.brand),id=uid();
       dispatch({type:'create-project',project:{id,name:post.title.slice(0,70),createdAt:now(),updatedAt:now(),canvases,activeCanvasId:canvases[0].id,projectType:post.format==='Carousel'?'carousel':'post',contentEntryId:post.id,caption,contentDate:post.date}});
       patch({designCreated:true});
