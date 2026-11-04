@@ -36,9 +36,9 @@ const CAROUSEL_STYLE_PAIRS = [
   {id:'playful',name:'Fresh & playful',description:'Bold plum, a rose highlight and a leafy flower accent.',bg:'#F0CEE7',ink:'#78265F',accent:'#D489C3',accentInk:'#2A1F2A',floral:true,look:'playful',sample:['Less rush. More reuse.','']},
   {id:'handmade',name:'Warm & handmade',description:'Deep aubergine, pink lettering and an elegant frame.',bg:'#2A1F2A',ink:'#F0CEE7',accent:'#D489C3',floral:true,look:'handmade',sample:['Built slowly. Loved longer.','A little at a time is enough.']},
   // Occasion styles: colours plus ready-made cover and closing words. Your own words become the slides in between.
-  {id:'order',name:'Custom order',description:'Cover and closing words are filled in for a custom order. Add the details in between.',bg:'#E8B8DC',ink:'#2A1F2A',size:104,kit:{label:'CUSTOM ORDER',cover:{title:"This week's custom order",body:'Made by hand for one special person.'},cta:'order'}},
-  {id:'newhome',name:'Off to a new home',description:'Cover and closing words are filled in for a pad going to its new owner.',bg:'#D98BC6',ink:'#2A1F2A',size:108,kit:{label:'NEW HOME',cover:{title:'Off to its new home',body:'Another handmade set is on its way.'},cta:'thanks'}},
-  {id:'popup',name:'Pop-up & events',description:'A deep sage green that stands out. Cover and closing words are filled in for an event.',bg:'#4F6B53',ink:'#FDFBFC',size:108,kit:{label:'POP-UP',cover:{title:'Come say hello',body:'Wonder Pads is popping up near you.'},cta:'visit'}},
+  {id:'order',name:'Custom order',description:'A plum frame, bold pink type and an italic finish for something made just for you.',bg:'#78265F',ink:'#F0CEE7',accent:'#D489C3',floral:true,look:'handmade',kit:{label:'CUSTOM ORDER',cover:{title:"This week's custom order",body:'Made by hand for one special person.'},cta:'order'}},
+  {id:'newhome',name:'Off to a new home',description:'Petal pink, a rose highlight and a leafy flower to celebrate its next chapter.',bg:'#F0CEE7',ink:'#78265F',accent:'#D489C3',accentInk:'#2A1F2A',floral:true,look:'playful',kit:{label:'NEW HOME',cover:{title:'Off to its new home',body:'Another handmade set is on its way.'},cta:'thanks'}},
+  {id:'popup',name:'Pop-up & events',description:'Oversized cream lettering on deep leafy green, with a pink invitation strip.',bg:'#4F6B53',ink:'#FFF9FC',accent:'#F0CEE7',accentInk:'#2A1F2A',floral:true,look:'question',kit:{label:'POP-UP',cover:{title:'Come say hello',body:'Wonder Pads is popping up near you.'},cta:'visit'}},
 ];
 const CAROUSEL_CTA_CHOICES = {
   generic:{title:'A little more comfort, your way.',body:'Follow @ecoclothpad for more cloth pad tips.\nShare this with a friend who might find it helpful.\n\nExplore ready-to-ship pads and fabrics:\nwonder-pads.com\n\nNeed help choosing? Message me—I’m happy to help.',icon:'chat',label:'Stay connected'},
@@ -115,7 +115,7 @@ function floralEndpointSlide(kind,heading,body,label,s,brand,W,H,pair,markedHead
   };
   if(look==='soft'||look==='handmade')shape('rect',{x:32,y:32,w:W-64,h:H-64,fill:'transparent',stroke:pair.ink,strokeWidth:3,radius:0});
   if(look==='soft')shape('circle',{x:W-232,y:42,w:170,h:170,fill:'#849879'});
-  if(look==='editorial')shape('rect',{x:0,y:H-190,w:W,h:190,fill:pair.accent,radius:0});
+  if(look==='editorial')shape('rect',{x:0,y:H-(s.footerLine?320:190),w:W,h:s.footerLine?320:190,fill:pair.accent,radius:0});
   const start=closing?150:look==='soft'?230:160;
   if(label)text('label',label,27,{letterSpacing:2});
   const parts=closing||look==='question'?[heading]:floralHeadlineParts(heading);
@@ -133,7 +133,7 @@ function floralEndpointSlide(kind,heading,body,label,s,brand,W,H,pair,markedHead
   });
   const supporting=text('body',body,closing?34:40,{align:look==='soft'?'center':'left'});
   // Reserve space for branding, swipe hint and closing actions. Never silently clip words.
-  const bottom=H-(closing?360:look==='playful'?310:210);
+  const bottom=H-(closing?360:s.footerLine?350:look==='playful'?310:210);
   let fits=false;
   for(let pass=0;pass<60;pass++){
     let y=start;
@@ -145,7 +145,7 @@ function floralEndpointSlide(kind,heading,body,label,s,brand,W,H,pair,markedHead
   }
   if(!fits)throw new Error((closing?'Closing slide':'Cover')+' has too much text to fit legibly. Shorten it or use # to move details to another slide. No words were removed.');
   for(const e of blocks)if(e.floralHighlight){shape('rect',{x:m-16,y:e.y-8,w:inner+32,h:e.h+16,fill:pair.accent,radius:0});e.color=pair.accentInk||pair.ink;}
-  if(look==='question'&&supporting&&!closing){shape('rect',{x:m-18,y:supporting.y-9,w:inner+36,h:supporting.h+18,fill:pair.accent,radius:28});}
+  if(look==='question'&&supporting&&!closing){supporting.color=pair.accentInk||pair.ink;shape('rect',{x:m-18,y:supporting.y-9,w:inner+36,h:supporting.h+18,fill:pair.accent,radius:28});}
   if(look==='editorial'&&supporting)shape('rect',{x:m,y:supporting.y-14,w:inner,h:2,fill:pair.ink,radius:0});
   if(look==='playful'&&!closing){for(const [dx,dy] of [[-38,-38],[38,-38],[-38,38],[38,38]])shape('circle',{x:W-210+dx,y:H-280+dy,w:82,h:82,fill:'#849879'});}
   c.elements=[...decor,...blocks];
@@ -156,6 +156,12 @@ function floralEndpointSlide(kind,heading,body,label,s,brand,W,H,pair,markedHead
     c.elements.push(...branding);
   }else{
     if(s.logo)c.elements.push(...brandBackgroundElements('hook',c,brand));
+    if(s.footerLine){
+      const footer=newElement('text',{text:s.footerLine,x:m,y:H-280,w:inner,fontFamily:'Montserrat',fontWeight:600,fontSize:38,lineHeight:1.2,align:'center',color:look==='editorial'?'#2A1F2A':pair.ink,__role:'body',textStyle:'body'});
+      footer.h=textLayout(footer).height;
+      if(footer.h>110)throw new Error('The footer is too long. Shorten it so it fits above your branding.');
+      c.elements.push(footer);
+    }
     c.elements.push(newElement('text',{text:brand.name||'Wonder Pads Reusables',x:m,y:H-150,w:inner,h:48,fontFamily:'Montserrat',fontWeight:600,fontSize:27,letterSpacing:3,align:'center',color:look==='editorial'?'#2A1F2A':pair.ink,__role:'brandName',fromBrand:true}));
     if(s.swipe)c.elements.push(newElement('text',{text:'Swipe →',x:W-280,y:H-94,w:194,h:40,fontFamily:'Montserrat',fontWeight:500,fontSize:27,color:look==='editorial'?'#2A1F2A':pair.ink,__role:'swipe',textStyle:'label'}));
   }
