@@ -9,7 +9,7 @@ function FinalProjectWorkspace({isMobile}){
   const regenerateSource=async()=>{
     setBusy(true);setSourceNotice('');
     try{
-      await Promise.all([document.fonts.load('600 76px "Cormorant Garamond"'),document.fonts.load('italic 600 76px "Cormorant Garamond"'),document.fonts.load('400 46px "Montserrat"')]);
+      await loadCarouselFonts(); await Promise.all([document.fonts.load('600 76px "Cormorant Garamond"'),document.fonts.load('italic 600 76px "Cormorant Garamond"'),document.fonts.load('400 46px "Montserrat"')]);
       const canvases=createSimpleCanvases(sourceDraft,project.carouselSettings,state.brand);
       const copy={...project,id:uid(),name:project.name+' — revised',createdAt:now(),updatedAt:now(),sourceText:sourceDraft,generatedSourceText:sourceDraft,sourceDraft,canvases,activeCanvasId:canvases[0].id,thumbnail:null,finished:false,finishedAt:null,contentEntryId:null,aiError:''};
       dispatch({type:'create-project',project:copy});setStep('design');
