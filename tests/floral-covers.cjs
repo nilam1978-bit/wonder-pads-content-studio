@@ -42,3 +42,22 @@ for(const pair of ctx.pairs.filter(p=>p.kit))for(const size of ['portrait','post
   if(pair.id==='popup')assert.equal(slides[0].elements.find(e=>e.__role==='body').color,'#2A1F2A');
 }
 console.log('PASS: all three bold occasion kits retain cover, details and CTA in both ratios.');
+
+// Ready-to-post quotes are single editable images; captions never become slide text.
+ctx.window={};
+vm.runInContext(fs.readFileSync(path.join(root,'ready-content-data.js'),'utf8'),ctx);
+const ready=fs.readFileSync(path.join(root,'ready-content.jsx'),'utf8');
+vm.runInContext(ready.slice(0,ready.indexOf('const READY_CONTENT_SECTIONS')),ctx);
+const quotes=ctx.window.WONDER_READY_POSTS.filter(p=>p.layout==='floral-quote');
+assert.equal(quotes.length,18);
+assert.equal(new Set(ctx.window.WONDER_READY_POSTS.map(p=>p.id)).size,ctx.window.WONDER_READY_POSTS.length);
+for(const post of quotes)for(const size of ['portrait','post']){
+  const pages=ctx.readyPostCanvases(post,size,post.stylePair,brand);assert.equal(pages.length,1);
+  const image=pages[0];assert.equal(image.h,size==='portrait'?1350:1080);
+  const words=image.elements.filter(e=>e.type==='text').map(e=>e.text).join('\n');
+  assert(!words.includes(post.caption));assert(!image.elements.some(e=>e.__role==='swipe'));
+  assert.equal(image.elements.filter(e=>e.__role==='heading').map(e=>e.text).join(' '),post.slides[0].title);
+  if(post.footerLine)assert(words.includes(post.footerLine));
+  for(const el of image.elements.filter(e=>e.type==='text'))assert(el.y+ctx.textLayout(el).height<=image.h);
+}
+console.log('PASS: 18 unique single-image quotes, preserved copy, separate captions and both ratios.');
