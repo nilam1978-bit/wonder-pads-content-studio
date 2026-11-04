@@ -80,6 +80,11 @@ function posterCanvas(post,size,brand){
   return c;
 }
 function readyPostCanvases(post, size, pair, brand) {
+  if(post.layout==='floral-quote'){
+    const slide=post.slides?.[0]||{title:post.imageText||post.title,body:''};
+    const c=endpointSlide('hook',slide.title,slide.body,'',{size,pair,logo:true,swipe:false,footerLine:post.footerLine||''},brand,1080,size==='portrait'?1350:1080);
+    c.name='Quote post';return [c];
+  }
   if(post.layout==='uploaded-single')return [fullSinglePostCanvas(post,size,pair,brand)];
   if(!post.slides?.length&&post.layout==='poster')return [posterCanvas(post,size,brand)];
   if(!post.slides?.length&&post.layout==='bigtext')return [bigTextCanvas(post,size,pair,brand)];
@@ -144,7 +149,7 @@ function canvasSlideText(canvases){
     .slice().sort((a,b)=>a.y-b.y||a.x-b.x).map(e=>e.text).filter(Boolean).join('\n\n')).join('\n\n---\n\n');
 }
 const READY_CONTENT_SECTIONS=[
-  {id:'uploads',name:'My uploads'},{id:'priority',name:'New & priority'},{id:'all',name:'All content'},
+  {id:'quotes',name:'Ready-to-post quotes'},{id:'uploads',name:'My uploads'},{id:'priority',name:'New & priority'},{id:'all',name:'All content'},
   {id:'orders',name:'Custom orders & new homes'},{id:'posters',name:'Question posters'},{id:'events',name:'Events & pop-ups'},
   {id:'start',name:'Start here'},{id:'fit',name:'Find your fit'},
   {id:'care',name:'Care & troubleshooting'},{id:'brand',name:'About Wonder Pads'},
@@ -162,6 +167,13 @@ function filterReadyLibrary(posts,{section='all',format='',status='',search=''}=
     (!query||[p.title,p.caption,...(p.slides||[]).flatMap(s=>[s.title,s.body])].join(' ').toLowerCase().includes(query)));
 }
 function readySectionName(post){return READY_CONTENT_SECTIONS.find(s=>s.id===post.librarySection)?.name||'About Wonder Pads';}
+function QuotePostPreview({post,size,pair,brand}){
+  const [ready,setReady]=React.useState(false);
+  React.useEffect(()=>{let live=true;loadCarouselFonts().then(()=>{if(live)setReady(true);});return()=>{live=false;};},[]);
+  if(!ready)return <p>Loading your post preview…</p>;
+  try{return <div style={{margin:'16px 0'}}><MiniPreview canvas={readyPostCanvases(post,size,pair,brand)[0]} maxW={240} maxH={300}/><p className="simple-muted">One editable image. Caption stays separate.</p></div>;}
+  catch(e){return <p role="status">{e.message}</p>;}
+}
 function ReadyContentPlan(){
   const [uploadOpen,setUploadOpen]=React.useState(false),[lastBatch,setLastBatch]=React.useState(null);
   const {state,dispatch}=useStore();
@@ -182,7 +194,7 @@ function ReadyContentPlan(){
   const visible=filterReadyLibrary(posts,{section,format,status,search});
   const openEntry=p=>{setSelected(p.id);setPair(p.stylePair||'clear');setSize(p.defaultSize||'portrait');setNotice('');};
   React.useEffect(()=>{setCopyFallback('');},[selected]);
-  const copyWords=async()=>{const words=readySlideText(post);try{await navigator.clipboard.writeText(words);setCopyFallback('');setNotice('All slide text copied.');}catch{setCopyFallback(words);setNotice('Select and copy the slide text below.');}};
+  const copyWords=async()=>{const words=[readySlideText(post),post.layout==='floral-quote'?post.footerLine:''].filter(Boolean).join('\n\n');try{await navigator.clipboard.writeText(words);setCopyFallback('');setNotice('All slide text copied.');}catch{setCopyFallback(words);setNotice('Select and copy the slide text below.');}};
   const project=post&&state.projects.find(p=>p.contentEntryId===post.id);
   const home=()=>{sessionStorage.setItem('wpr-simple-section','create');dispatch({type:'set-view',view:'home'});};
   const create=async(rebuild=false)=>{
@@ -221,6 +233,7 @@ function ReadyContentPlan(){
       </button>)}</div>
     </>:<div className="simple-card ready-fields">
       <p className="simple-muted">{readySectionName(post)} · {post.format==='Static post'?'Single post':post.format}{post.archived?' · Archived':''}</p><h1 className="simple-title">{post.title}</h1>
+      {post.layout==='floral-quote'&&<QuotePostPreview post={post} size={size} pair={pair} brand={state.brand}/>}
       {post.week&&<p className="simple-muted">Original plan: week {post.week} · {post.date}. Use it whenever you like.</p>}
       {post.stylePair&&<p className="simple-muted">Suggested style: {CAROUSEL_STYLE_PAIRS.find(s=>s.id===post.stylePair)?.name}. You can choose another below.</p>}
       {post.format!=='Reel'&&<div className="ready-actions"><button className="simple-action" disabled={busy} onClick={()=>create()}>{busy?'Creating…':project?'Open saved design':post.format==='Carousel'?`Create my ${readyPostSlides(post).length} slides`:'Create single post'}</button>{project&&<button className="simple-action simple-secondary" disabled={busy} onClick={()=>create(true)}>Create updated copy</button>}</div>}
@@ -228,12 +241,12 @@ function ReadyContentPlan(){
       {notice&&<p role="status">{notice}</p>}
       {post.format!=='Reel'&&<div className="ready-actions"><button className="simple-action simple-secondary" onClick={copyWords}>Copy all slide text</button></div>}
       {copyFallback&&<textarea aria-label="Slide text to copy" readOnly value={copyFallback} onFocus={e=>e.target.select()}/>}
-      {post.format==='Reel'?<><h2>Filming script</h2><pre style={{whiteSpace:'pre-wrap',font:'inherit',lineHeight:1.7}}>{post.script}</pre><p className="simple-muted">This app does not produce video. Film these scenes separately.</p></>:<p className="simple-muted">{post.format==='Carousel'?'Exact slide order, with no extra CTA page. Fonts, text and elements remain editable on the canvas.':post.layout==='uploaded-single'?'Your headline and body go on the image. Caption and hashtags stay separate.':'Full written content wraps onto one page by default. Hashtags stay in the caption, not on the slide.'}</p>}
+      {post.format==='Reel'?<><h2>Filming script</h2><pre style={{whiteSpace:'pre-wrap',font:'inherit',lineHeight:1.7}}>{post.script}</pre><p className="simple-muted">This app does not produce video. Film these scenes separately.</p></>:<p className="simple-muted">{post.format==='Carousel'?'Exact slide order, with no extra CTA page. Fonts, text and elements remain editable on the canvas.':(post.layout==='uploaded-single'||post.layout==='floral-quote')?'Your headline and body go on the image. Caption and hashtags stay separate.':'Full written content wraps onto one page by default. Hashtags stay in the caption, not on the slide.'}</p>}
       {post.confirmation&&<div role="status"><p>{post.confirmation}</p>{unresolved?<p>Unfilled prices/quantities remain. Replace them in Edit words below.</p>:<label><input type="checkbox" checked={!!post.confirmed} onChange={e=>patch({confirmed:e.target.checked})}/> I checked this against my actual products and care instructions</label>}</div>}
-      {post.format==='Static post'&&<label><input type="checkbox" checked={post.includeFullText!==false} onChange={e=>patch({includeFullText:e.target.checked})}/> Put the full written content on this one-page slide (uncheck for headline/photo only)</label>}
+      {post.format==='Static post'&&post.layout!=='floral-quote'&&<label><input type="checkbox" checked={post.includeFullText!==false} onChange={e=>patch({includeFullText:e.target.checked})}/> Put the full written content on this one-page slide (uncheck for headline/photo only)</label>}
       {post.format==='Static post'&&!post.slides?.length&&<label>One-page layout <select aria-label="One-page layout" value={post.layout||''} onChange={e=>patch({layout:e.target.value})}><option value="">Standard (headline and writing)</option><option value="bigtext">Big text (quotation mark and big lead line)</option><option value="poster">Question poster (big Kalam question, logo and WhatsApp)</option></select></label>}
       {post.format==='Static post'&&post.layout==='poster'&&<label>Poster background <select aria-label="Poster background" value={post.posterBg||'pink'} onChange={e=>patch({posterBg:e.target.value})}><option value="pink">Soft pink</option><option value="photo">Soft panel, for a fabric photo behind</option></select></label>}
-      <h2>Caption & hashtags</h2><textarea aria-label="Post caption" value={post.caption} onChange={e=>patch({caption:e.target.value})}/><label>Hashtags <input aria-label="Post hashtags" value={post.hashtags} onChange={e=>patch({hashtags:e.target.value})}/></label>
+      {post.layout==='floral-quote'&&post.footerLine!==undefined&&<label>Small footer line<input aria-label="Small footer line" value={post.footerLine} onChange={e=>patch({footerLine:e.target.value})}/></label>}<h2>Caption & hashtags</h2><textarea aria-label="Post caption" value={post.caption} onChange={e=>patch({caption:e.target.value})}/><label>Hashtags <input aria-label="Post hashtags" value={post.hashtags} onChange={e=>patch({hashtags:e.target.value})}/></label>
       <div className="ready-actions"><button className="simple-action simple-secondary" onClick={async()=>{try{await navigator.clipboard.writeText(caption);setNotice('Caption and hashtags copied.');}catch{setNotice('Copy is unavailable here. Select the caption and hashtags manually.');}}}>Copy caption & hashtags</button><button className="simple-action simple-secondary" onClick={()=>patch({status:post.status==='posted'?'queued':'posted'})}>{post.status==='posted'?'Mark not posted':'Mark posted'}</button><button className="simple-action simple-secondary" onClick={()=>{patch({archived:!post.archived});setNotice(post.archived?'Returned to the library.':'Moved to Archive. Your words and design are kept.');}}>{post.archived?'Return to library':'Move to Archive'}</button></div>
       <details><summary>Preparation notes</summary><p className="ready-notes simple-muted">{post.notes||'No additional preparation notes.'}</p><p className="simple-muted">Contacts: @ecoclothpad · wonder-pads.com. No WhatsApp number has been invented.</p></details>
       {post.format!=='Reel'&&<details><summary>Edit words before creating slides</summary>{post.kitId&&CAROUSEL_STYLE_PAIRS.some(p=>p.id===post.kitId&&p.kit)&&<p className="simple-muted">The cover and closing slides come from the “{CAROUSEL_STYLE_PAIRS.find(p=>p.id===post.kitId).name}” style above, so only the detail slides are listed here. You can still edit the cover and closing words on the canvas.</p>}{project&&<p>These edits change the saved script. Your existing design is kept. Use Create updated copy to transfer the current text and settings without overwriting it.</p>}{post.slides?.length?post.slides.map((s,i)=>{
