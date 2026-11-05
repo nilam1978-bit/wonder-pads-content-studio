@@ -1,6 +1,6 @@
 // Lightweight inline SVG icon set — stroke-based, minimal.
-const Icon = ({ name, size = 20, stroke = 1.5, style, className }) => {
-  const paths = ICONS[name];
+const Icon = ({ name, size = 20, stroke = 1.5, accent = 'none', style, className }) => {
+  const paths = iconMarkup(name,accent);
   if (!paths) return null;
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
@@ -135,4 +135,38 @@ const ICONS = {
   send: '<path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/>',
 };
 
-Object.assign(window, { Icon, ICONS });
+// Original 24-unit vector artwork. Accent areas share one editable flat fill.
+const CARE_ICON_LIBRARY = [
+  ['pad_open','Winged pad','cloth reusable wings snaps', '<path fill="__ACCENT__" d="M9 7C7 2 17 2 15 7l-1 3 5 1v3l-5 1 1 3c2 5-8 5-6 0l1-3-5-1v-3l5-1z"/><path d="M11 7v10m2-10v10"/><circle cx="7" cy="12.5" r=".6"/><circle cx="17" cy="12.5" r=".6"/>'],
+  ['pad_snapped','Snapped pad','cloth closed wings button', '<path fill="__ACCENT__" d="M8 5c0-3 8-3 8 0l-1 6 1 8c0 3-8 3-8 0l1-8z"/><path d="M8.5 10h7v5h-7"/><circle cx="12" cy="12.5" r="1"/>'],
+  ['pad_folded','Folded pad','cloth portable folded snap', '<rect fill="__ACCENT__" x="5" y="5" width="14" height="15" rx="4"/><path d="M6 9l6 5 6-5M7 17h10"/><circle cx="12" cy="13" r="1"/>'],
+  ['pad_liner','Liner','cloth light slim pantyliner', '<path fill="__ACCENT__" d="M8 5c0-4 8-4 8 0l-1 7 1 7c0 4-8 4-8 0l1-7z"/><path d="M11 6v12m2-12v12"/>'],
+  ['pad_long','Long pad','cloth night overnight length', '<path fill="__ACCENT__" d="M8 4c0-3 8-3 8 0l-1 6 4 1v3l-4 1 2 4c1 4-11 4-10 0l2-4-4-1v-3l4-1z"/><path d="M11 5v14m2-14v14"/>'],
+  ['wet_bag','Wet bag','travel waterproof pouch zipper', '<rect fill="__ACCENT__" x="5" y="6" width="14" height="15" rx="2"/><path d="M5 10h14M7 6V4a2 2 0 014 0v2M16 10v3"/><circle cx="16" cy="14" r="1"/>'],
+  ['washer','Washing machine','laundry wash machine appliance', '<rect fill="__ACCENT__" x="4" y="3" width="16" height="18" rx="2"/><path d="M4 8h16M7 5.5h3"/><circle cx="17" cy="5.5" r=".6"/><circle fill="none" cx="12" cy="14" r="4.5"/><path d="M8 14c3-2 5 2 8 0"/>'],
+  ['bucket','Bucket','soak pail water laundry', '<path fill="__ACCENT__" d="M4 8h16l-2 12H6z"/><path d="M6 8V6a6 6 0 0112 0v2M8 13h8"/>'],
+  ['basin','Rinse basin','water bowl rinse handwash', '<path fill="__ACCENT__" d="M3 13h18l-3 7H6z"/><path d="M5 16h14M9 4v5m6-5v5m-7-2 1 2 1-2m4 0 1 2 1-2"/>'],
+  ['cold_rinse','Cold rinse','tap faucet water wash cold', '<path fill="__ACCENT__" d="M3 7h10a5 5 0 015 5v1h-5v-1H3z"/><path d="M8 7V3M5 3h6"/><path fill="__ACCENT__" d="M15.5 15s-2.5 3-2.5 4a2.5 2.5 0 005 0c0-1-2.5-4-2.5-4z"/>'],
+  ['laundry_basket','Laundry basket','washing clothes hamper', '<path fill="__ACCENT__" d="M3 9h18l-2 11H5z"/><path d="M7 9l2-5h6l2 5M7 12l1 5m4-5v5m5-5-1 5"/>'],
+  ['drying_rack','Drying rack','air dry stand laundry', '<path d="M4 4l16 17M20 4L4 21M3 7h18M7 4h10"/><path fill="__ACCENT__" d="M8 7h8v8H8z"/><path d="M10 12h4"/>'],
+  ['clothesline','Clothesline','air dry hanging pegs laundry', '<path d="M2 5h20M6 3v4m12-4v4"/><path fill="__ACCENT__" d="M5 7h14v12H5z"/><path d="M8 16h8"/>'],
+  ['detergent','Detergent bottle','soap laundry wash liquid', '<path fill="__ACCENT__" d="M8 6h8l3 5v10H5V11z"/><path d="M9 6V3h6v3M14 9l2 3h-2z"/><rect x="8" y="14" width="8" height="4" rx="1"/>'],
+  ['cotton','Cotton flower','fabric fibre material plant', '<path fill="__ACCENT__" d="M7 15a4 4 0 01-3-4 4 4 0 014-4 4 4 0 018 0 4 4 0 014 4 4 4 0 01-3 4z"/><path d="M12 15v6m-5-6 5 3 5-3"/>'],
+  ['fabric_layers','Fabric layers','core topper backing absorbency layers', '<path fill="__ACCENT__" d="M3 8l9-5 9 5-9 5z"/><path d="M3 12l9 5 9-5M3 16l9 5 9-5"/>'],
+  ['fabric_swatch','Fabric swatch','print textile material square', '<path fill="__ACCENT__" d="M4 3l2 2 2-2 2 2 2-2 2 2 2-2 2 2 2-2v18l-2-2-2 2-2-2-2 2-2-2-2 2-2-2-2 2z"/><path d="M8 8h8M8 12h8M8 16h8"/>'],
+  ['needle_thread','Needle & thread','handmade sewing stitch', '<path d="M6 20L16 4c2-3 5-1 3 2L6 20zm9-12 2-3M16 7c-8-6-14 1-9 5s9 0 11 4-3 6-6 4"/>'],
+  ['snap_button','Snap button','fastener press stud popper', '<circle fill="__ACCENT__" cx="8" cy="12" r="5"/><circle cx="8" cy="12" r="2"/><path fill="__ACCENT__" d="M17 7a5 5 0 010 10"/><path d="M17 10a2 2 0 010 4"/>'],
+  ['folded_fabric','Folded fabric','stack cloth stash towel', '<path fill="__ACCENT__" d="M5 5h14v7H5a3.5 3.5 0 010-7z"/><path d="M5 9h11M19 12H5a4 4 0 000 8h14v-8M5 16h11"/>'],
+  ['flow_light','Light flow','droplet period absorbency light', '<path fill="__ACCENT__" d="M12 4s6 7 6 11a6 6 0 01-12 0c0-4 6-11 6-11z"/><path d="M9 16h6"/>'],
+  ['flow_heavy','Heavy flow','droplet period absorbency heavy', '<path fill="__ACCENT__" d="M12 4s6 7 6 11a6 6 0 01-12 0c0-4 6-11 6-11z"/><path d="M9 12h6m-6 3h6m-6 3h6"/>'],
+  ['reuse_cycle','Reuse arrows','repeat reusable circular wash use again', '<path d="M4 10a8 8 0 0114-4l2 2M20 3v5h-5M20 14a8 8 0 01-14 4l-2-2M4 21v-5h5"/>'],
+  ['recycle_triangle','Recycling','recycle recycling triangle waste sorting', '<path d="M8 7l3-5h2l4 7M13 8l4 1 1-4M19 11l3 5-1 2h-8M16 15l-3 3 3 3M10 18H4l-2-2 4-7M3 10l3-1 2 4"/>']
+].map(([id,label,keywords,svg])=>({id,label,keywords,svg}));
+for(const item of CARE_ICON_LIBRARY)ICONS[item.id]=item.svg;
+function iconMarkup(name,accent='none'){
+  const fill=/^#[0-9a-f]{6}$/i.test(accent||'')?accent:'none';
+  return (ICONS[name]||'').replaceAll('__ACCENT__',fill);
+}
+
+
+Object.assign(window, { Icon, ICONS, CARE_ICON_LIBRARY, iconMarkup });

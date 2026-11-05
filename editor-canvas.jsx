@@ -190,7 +190,7 @@ function ElementView({ el, selected, dispatch, scale, editing, setEditing }) {
     return (
       <div {...commonProps}>
         <div style={{ width: '100%', height: '100%', color: el.color }}>
-          <Icon name={el.name} size="100%" stroke={el.strokeWidth} />
+          <Icon name={el.name} size="100%" stroke={el.strokeWidth} accent={el.iconAccent} />
         </div>
       </div>
     );
