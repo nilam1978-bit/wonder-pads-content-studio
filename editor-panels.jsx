@@ -754,38 +754,25 @@ function ImagesPanel() {
 }
 
 // ------- Icons panel -------
-function IconsPanel() {
-  const { state, dispatch } = useStore();
-  const canvas = activeCanvas(state);
-  const addIcon = (name) => {
-    dispatch({
-      type: 'add-element',
-      element: newElement('icon', {
-        name, w: 200, h: 200,
-        x: canvas.w / 2 - 100, y: canvas.h / 2 - 100,
-      })
-    });
-  };
-  return (
-    <>
-      <PanelHeader title="Icons & stickers" subtitle="Click to add" />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-        {ICON_LIBRARY.map(name => (
-          <button key={name} onClick={() => addIcon(name)}
-            style={{
-              aspectRatio: '1', background: 'var(--pink-50)', borderRadius: 12,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--pink-500)', transition: 'background .12s, transform .12s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--pink-100)'; e.currentTarget.style.transform = 'scale(1.05)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'var(--pink-50)'; e.currentTarget.style.transform = 'scale(1)'; }}
-          >
-            <Icon name={name} size={40} stroke={1.5} />
-          </button>
-        ))}
-      </div>
-    </>
-  );
+function IconLibraryGrid({onChoose,accent='none',selected}){
+  const [category,setCategory]=React.useState('care'),[query,setQuery]=React.useState('');
+  const items=category==='care'?CARE_ICON_LIBRARY:ICON_LIBRARY.map(id=>({id,label:id.replaceAll('_',' '),keywords:''}));
+  const matches=items.filter(item=>(item.label+' '+item.keywords).toLowerCase().includes(query.trim().toLowerCase()));
+  return <><div style={{display:'flex',gap:6,marginBottom:12}}>{[['care','Cloth pads & care'],['general','General']].map(([id,label])=><button key={id} className="btn btn-tonal" aria-pressed={category===id} onClick={()=>setCategory(id)}>{label}</button>)}</div>
+    <input className="text-input" aria-label="Search icons" placeholder="Search wash, pad, bucket…" value={query} onChange={e=>setQuery(e.target.value)} style={{marginBottom:12}}/>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:8}}>{matches.map(item=><button key={item.id} aria-label={item.label} aria-pressed={selected===item.id} onClick={()=>onChoose(item.id)} style={{minHeight:88,padding:8,background:selected===item.id?'var(--pink-200)':'var(--pink-50)',borderRadius:10,color:'#78265F',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:7}}>
+      <Icon name={item.id} size={40} stroke={1.4} accent={accent}/><span style={{fontSize:11,lineHeight:1.25}}>{item.label}</span>
+    </button>)}</div>{!matches.length&&<p>No matching icons. Try “wash”, “pad” or “fabric”.</p>}
+    {category==='care'&&<p style={{fontSize:11,color:'var(--ink-3)',lineHeight:1.5}}>Reuse and recycling have separate symbols. Flow icons are relative labels, not measured capacities.</p>}
+  </>;
+}
+function IconsPanel(){
+  const {state,dispatch}=useStore(),canvas=activeCanvas(state);
+  const [filled,setFilled]=React.useState(true);
+  return <><PanelHeader title="Icons & stickers" subtitle="Choose an editable vector icon"/>
+    <div style={{display:'flex',gap:8,marginBottom:12}}><button className="btn btn-tonal" aria-pressed={!filled} onClick={()=>setFilled(false)}>Outline</button><button className="btn btn-tonal" aria-pressed={filled} onClick={()=>setFilled(true)}>Soft colour</button></div>
+    <IconLibraryGrid accent={filled?'#F0CEE7':'none'} onChoose={name=>{if(!canvas)return;dispatch({type:'add-element',element:newElement('icon',{name,w:200,h:200,x:canvas.w/2-100,y:canvas.h/2-100,color:'#78265F',strokeWidth:1.4,iconAccent:filled?'#F0CEE7':'none'})});}}/>
+  </>;
 }
 
 // ------- Frames panel -------
@@ -1725,29 +1712,13 @@ function ImageProps({ el, update }) {
   );
 }
 
-function IconProps({ el, update }) {
-  return (
-    <>
-      <SectionLabel>Icon</SectionLabel>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
-        {ICON_LIBRARY.map(name => (
-          <button key={name} onClick={() => update({ name })}
-            style={{
-              aspectRatio: '1', background: el.name === name ? 'var(--pink-200)' : 'var(--pink-50)',
-              borderRadius: 8, color: el.name === name ? 'var(--pink-600)' : 'var(--ink-2)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-            <Icon name={name} size={20} />
-          </button>
-        ))}
-      </div>
-      <SectionLabel>Color</SectionLabel>
-      <ColorPicker value={el.color} onChange={v => update({ color: v })} />
-      <SectionLabel>Stroke width</SectionLabel>
-      <input type="range" min="0.5" max="3" step="0.1" value={el.strokeWidth}
-        onChange={e => update({ strokeWidth: +e.target.value })} />
-    </>
-  );
+function IconProps({el,update}){
+  const care=CARE_ICON_LIBRARY.some(item=>item.id===el.name);
+  return <><SectionLabel>Outline colour</SectionLabel><ColorPicker value={el.color} onChange={color=>update({color})}/>
+    {care&&<><SectionLabel>Soft fill</SectionLabel><button className="btn btn-tonal" aria-pressed={el.iconAccent!=='none'&&!!el.iconAccent} onClick={()=>update({iconAccent:el.iconAccent&&el.iconAccent!=='none'?'none':'#F0CEE7'})}>{el.iconAccent&&el.iconAccent!=='none'?'Remove fill':'Add soft fill'}</button>{el.iconAccent&&el.iconAccent!=='none'&&<ColorPicker value={el.iconAccent} onChange={iconAccent=>update({iconAccent})}/>}</>}
+    <SectionLabel>Stroke width</SectionLabel><input aria-label="Icon stroke width" type="range" min="0.5" max="3" step="0.1" value={el.strokeWidth} onChange={e=>update({strokeWidth:+e.target.value})}/>
+    <details style={{marginTop:16}}><summary>Change icon</summary><IconLibraryGrid selected={el.name} accent={el.iconAccent||'none'} onChoose={name=>update({name})}/></details>
+  </>;
 }
 
 function FrameProps({ el, update }) {
