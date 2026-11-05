@@ -224,7 +224,7 @@ function elementToSVG(el, embedImages) {
     return `<g transform="${t}"${op}>${filter}${clip}<image width="${el.w}" height="${el.h}" preserveAspectRatio="xMidYMid slice" href="${escapeAttr(el.src)}"${filterAttr}${clipAttr}/></g>`;
   }
   if (el.type === 'icon') {
-    const paths = ICONS[el.name] || '';
+    const paths = iconMarkup(el.name,el.iconAccent);
     // scale from 24x24
     const s = `scale(${el.w / 24}, ${el.h / 24})`;
     // Icons are stroke-based currentColor
