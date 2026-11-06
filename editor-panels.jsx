@@ -761,7 +761,7 @@ function IconLibraryGrid({onChoose,accent='none',selected}){
   return <><div style={{display:'flex',gap:6,marginBottom:12}}>{[['care','Cloth pads & care'],['general','General']].map(([id,label])=><button key={id} className="btn btn-tonal" aria-pressed={category===id} onClick={()=>setCategory(id)}>{label}</button>)}</div>
     <input className="text-input" aria-label="Search icons" placeholder="Search wash, pad, bucket…" value={query} onChange={e=>setQuery(e.target.value)} style={{marginBottom:12}}/>
     <div style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:8}}>{matches.map(item=><button key={item.id} aria-label={item.label} aria-pressed={selected===item.id} onClick={()=>onChoose(item.id)} style={{minHeight:88,padding:8,background:selected===item.id?'var(--pink-200)':'var(--pink-50)',borderRadius:10,color:'#78265F',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:7}}>
-      <Icon name={item.id} size={40} stroke={1.4} accent={accent}/><span style={{fontSize:11,lineHeight:1.25}}>{item.label}</span>
+      <Icon name={item.id} size={40} stroke={1.4} accent={accent}/><span style={{fontSize:11,lineHeight:1.25}}>{item.label}</span>{item.opaque&&<small style={{fontSize:10,color:'var(--ink-3)'}}>White background</small>}
     </button>)}</div>{!matches.length&&<p>No matching icons. Try “wash”, “pad” or “fabric”.</p>}
     {category==='care'&&<p style={{fontSize:11,color:'var(--ink-3)',lineHeight:1.5}}>Reuse and recycling have separate symbols. Flow icons are relative labels, not measured capacities.</p>}
   </>;
@@ -775,17 +775,22 @@ function IconsPanel(){
     if(!canvas)return;setError('');
     try{
       const img=new Image();img.src=item.src;await img.decode();
+      let src=item.src;
+      if(item.crop){
+        const cut=document.createElement('canvas'),{x,y,w,h}=item.crop;cut.width=w;cut.height=h;
+        cut.getContext('2d').drawImage(img,x,y,w,h,0,0,w,h);src=cut.toDataURL('image/png');
+      }
       const w=Math.min(360,canvas.w*.65),h=w*item.height/item.width;
-      dispatch({type:'add-element',element:newElement('image',{src:item.src,w,h,x:(canvas.w-w)/2,y:(canvas.h-h)/2,stickerId:item.id,stickerLabel:item.label,radius:0})});
+      dispatch({type:'add-element',element:newElement('image',{src,w,h,x:(canvas.w-w)/2,y:(canvas.h-h)/2,stickerId:item.id,stickerLabel:item.label,radius:0})});
     }catch{setError('This illustration could not load. Check your connection and try again.');}
   };
   return <><PanelHeader title="Wonder Pads illustrations" subtitle="Your floral collection · tap to add"/>
     <label style={{display:'block',marginBottom:10}}>Collection<select className="pk-select" aria-label="Illustration collection" value={category} onChange={e=>setCategory(e.target.value)} style={{width:'100%',marginTop:6,minHeight:44}}>{groups.map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>
     <input className="text-input" aria-label="Search illustrations" placeholder="Search pad, wash, flower…" value={query} onChange={e=>setQuery(e.target.value)} style={{marginBottom:12,minHeight:44}}/>
-    <p style={{fontSize:12,color:'var(--ink-3)'}}>Transparent backgrounds. Resize and rotate freely; colours are part of the artwork.</p>
+    <p style={{fontSize:12,color:'var(--ink-3)'}}>Resize and rotate freely; colours are part of the artwork. White-backed designs are labelled.</p>
     {error&&<p role="alert">{error}</p>}
     <div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}}>{matches.map(item=><button key={item.id} aria-label={'Add '+item.label} onClick={()=>add(item)} style={{padding:8,background:'var(--pink-50)',borderRadius:12,minWidth:0}}>
-      <img src={item.src} alt="" loading="lazy" decoding="async" style={{width:'100%',height:110,objectFit:'contain'}}/>
+      {item.crop?<svg aria-hidden="true" viewBox={item.crop.x+' '+item.crop.y+' '+item.crop.w+' '+item.crop.h} style={{width:'100%',height:110}}><image href={item.src} width={item.sheetWidth} height={item.sheetHeight}/></svg>:<img src={item.src} alt="" loading="lazy" decoding="async" style={{width:'100%',height:110,objectFit:'contain'}}/>}
       <span style={{display:'block',fontSize:11,lineHeight:1.4,marginTop:6}}>{item.label}</span>
     </button>)}</div>{!matches.length&&<p>No illustrations found. Try another search or collection.</p>}
   </>;

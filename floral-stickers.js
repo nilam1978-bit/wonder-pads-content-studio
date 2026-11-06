@@ -608,5 +608,15 @@ const FLORAL_STICKERS = [
     "width": 1254,
     "height": 1254
   }
+,{"id":"faq-watercolor-sheet","label":"FAQ · Watercolour","category":"social","src":"assets/stickers/watercolor-navigation-sheet.webp","width":880,"height":570,"crop":{"x":340,"y":145,"w":880,"h":570},"sheetWidth":1536,"sheetHeight":2752,"opaque":true},
+{"id":"tap-reveal-watercolor-sheet","label":"Tap to Reveal · Watercolour","category":"social","src":"assets/stickers/watercolor-navigation-sheet.webp","width":880,"height":600,"crop":{"x":340,"y":760,"w":880,"h":600},"sheetWidth":1536,"sheetHeight":2752,"opaque":true},
+{"id":"new-arrivals-watercolor-sheet","label":"New Arrivals · Watercolour","category":"social","src":"assets/stickers/watercolor-navigation-sheet.webp","width":920,"height":620,"crop":{"x":320,"y":1430,"w":920,"h":620},"sheetWidth":1536,"sheetHeight":2752,"opaque":true},
+{"id":"customer-love-watercolor-sheet","label":"Customer Love · Watercolour","category":"social","src":"assets/stickers/watercolor-navigation-sheet.webp","width":860,"height":540,"crop":{"x":350,"y":2115,"w":860,"h":540},"sheetWidth":1536,"sheetHeight":2752,"opaque":true},
+{"id":"shop-now-watercolor","label":"Shop Now · Watercolour","category":"orders","src":"assets/stickers/watercolor-cta-sheet.webp","width":880,"height":540,"crop":{"x":55,"y":470,"w":880,"h":540},"sheetWidth":2752,"sheetHeight":1536,"opaque":true},
+{"id":"design-pad-watercolor","label":"Design Your Pad · Watercolour","category":"orders","src":"assets/stickers/watercolor-cta-sheet.webp","width":900,"height":540,"crop":{"x":940,"y":470,"w":900,"h":540},"sheetWidth":2752,"sheetHeight":1536,"opaque":true},
+{"id":"custom-order-watercolor","label":"Custom Order · Watercolour","category":"orders","src":"assets/stickers/watercolor-cta-sheet.webp","width":860,"height":540,"crop":{"x":1845,"y":470,"w":860,"h":540},"sheetWidth":2752,"sheetHeight":1536,"opaque":true},
+{"id":"share-watercolor-circle","label":"Share · Watercolour Circle","category":"social","src":"assets/stickers/watercolor-social-sheet.webp","width":850,"height":1040,"crop":{"x":55,"y":265,"w":850,"h":1040},"sheetWidth":2752,"sheetHeight":1536,"opaque":true},
+{"id":"comment-watercolor-circle","label":"Comment · Watercolour Circle","category":"social","src":"assets/stickers/watercolor-social-sheet.webp","width":850,"height":1040,"crop":{"x":950,"y":265,"w":850,"h":1040},"sheetWidth":2752,"sheetHeight":1536,"opaque":true},
+{"id":"follow-watercolor-circle","label":"Follow Me · Watercolour Circle","category":"social","src":"assets/stickers/watercolor-social-sheet.webp","width":850,"height":1040,"crop":{"x":1840,"y":265,"w":850,"h":1040},"sheetWidth":2752,"sheetHeight":1536,"opaque":true}
 ];
 Object.assign(window,{FLORAL_STICKERS});
