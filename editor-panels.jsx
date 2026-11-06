@@ -768,10 +768,26 @@ function IconLibraryGrid({onChoose,accent='none',selected}){
 }
 function IconsPanel(){
   const {state,dispatch}=useStore(),canvas=activeCanvas(state);
-  const [filled,setFilled]=React.useState(true);
-  return <><PanelHeader title="Icons & stickers" subtitle="Choose an editable vector icon"/>
-    <div style={{display:'flex',gap:8,marginBottom:12}}><button className="btn btn-tonal" aria-pressed={!filled} onClick={()=>setFilled(false)}>Outline</button><button className="btn btn-tonal" aria-pressed={filled} onClick={()=>setFilled(true)}>Soft colour</button></div>
-    <IconLibraryGrid accent={filled?'#F0CEE7':'none'} onChoose={name=>{if(!canvas)return;dispatch({type:'add-element',element:newElement('icon',{name,w:200,h:200,x:canvas.w/2-100,y:canvas.h/2-100,color:'#78265F',strokeWidth:1.4,iconAccent:filled?'#F0CEE7':'none'})});}}/>
+  const [category,setCategory]=React.useState('all'),[query,setQuery]=React.useState(''),[error,setError]=React.useState('');
+  const groups=[['all','All illustrations'],['care','Pads & care'],['nature','Flowers & nature'],['makers','Makers'],['shops','Shops & markets'],['orders','Orders & parcels'],['social','Social & labels']];
+  const matches=FLORAL_STICKERS.filter(item=>(category==='all'||item.category===category)&&(item.label+' '+groups.find(g=>g[0]===item.category)?.[1]).toLowerCase().includes(query.trim().toLowerCase()));
+  const add=async item=>{
+    if(!canvas)return;setError('');
+    try{
+      const img=new Image();img.src=item.src;await img.decode();
+      const w=Math.min(360,canvas.w*.65),h=w*item.height/item.width;
+      dispatch({type:'add-element',element:newElement('image',{src:item.src,w,h,x:(canvas.w-w)/2,y:(canvas.h-h)/2,stickerId:item.id,stickerLabel:item.label,radius:0})});
+    }catch{setError('This illustration could not load. Check your connection and try again.');}
+  };
+  return <><PanelHeader title="Wonder Pads illustrations" subtitle="Your floral collection · tap to add"/>
+    <label style={{display:'block',marginBottom:10}}>Collection<select className="pk-select" aria-label="Illustration collection" value={category} onChange={e=>setCategory(e.target.value)} style={{width:'100%',marginTop:6,minHeight:44}}>{groups.map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>
+    <input className="text-input" aria-label="Search illustrations" placeholder="Search pad, wash, flower…" value={query} onChange={e=>setQuery(e.target.value)} style={{marginBottom:12,minHeight:44}}/>
+    <p style={{fontSize:12,color:'var(--ink-3)'}}>Transparent backgrounds. Resize and rotate freely; colours are part of the artwork.</p>
+    {error&&<p role="alert">{error}</p>}
+    <div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}}>{matches.map(item=><button key={item.id} aria-label={'Add '+item.label} onClick={()=>add(item)} style={{padding:8,background:'var(--pink-50)',borderRadius:12,minWidth:0}}>
+      <img src={item.src} alt="" loading="lazy" decoding="async" style={{width:'100%',height:110,objectFit:'contain'}}/>
+      <span style={{display:'block',fontSize:11,lineHeight:1.4,marginTop:6}}>{item.label}</span>
+    </button>)}</div>{!matches.length&&<p>No illustrations found. Try another search or collection.</p>}
   </>;
 }
 
