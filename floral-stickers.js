@@ -662,6 +662,7 @@ const FLORAL_STICKERS = [
 {"id":"shared-comment-below-speech-bubbles","label":"Comment Below Speech Bubbles","category":"social","src":"assets/stickers/shared-comment-below-speech-bubbles.webp","width":1241,"height":1268},
 {"id":"shared-pastel-shop-now-bag","label":"Pastel Shop Now Bag","category":"orders","src":"assets/stickers/shared-pastel-shop-now-bag.webp","width":1107,"height":1421},
 {"id":"shared-click-here-visit-our-website","label":"Click Here Visit Our Website","category":"social","src":"assets/stickers/shared-click-here-visit-our-website.webp","width":1108,"height":1419},
-{"id":"shared-pastel-social-cta-banner","label":"Pastel Social CTA Banner","category":"social","src":"assets/stickers/shared-pastel-social-cta-banner.webp","width":2172,"height":724}
+{"id":"shared-pastel-social-cta-banner","label":"Pastel Social CTA Banner","category":"social","src":"assets/stickers/shared-pastel-social-cta-banner.webp","width":2172,"height":724},
+{"id":"shared-wonder-pads-mascot-flower-hair","label":"Wonder Pads Mascot Banner · Flower in Hair","category":"social","src":"assets/stickers/shared-wonder-pads-mascot-flower-hair.webp","width":1774,"height":887}
 ];
 Object.assign(window,{FLORAL_STICKERS});
