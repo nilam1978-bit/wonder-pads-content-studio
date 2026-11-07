@@ -245,6 +245,12 @@ function MobileEditor({ progressNav, onPreview, onSource, slideActions }) {
       {/* Slide thumbnails belong beneath the canvas in the simple workflow.
           They step aside while a tool tray is open so the slide stays big. */}
 
+      {/* Page actions stay available for both canvas and element selection. */}
+      {!openSheet && !editingId && <div role="toolbar" aria-label="Page actions" style={{display:'flex',alignItems:'center',background:'white',borderTop:'1px solid var(--line)',flexShrink:0}}>
+        <button style={{minHeight:44,padding:'0 12px',background:'transparent',color:'var(--ink)',fontSize:12}} onClick={()=>{setTray(null);dispatch({type:'set-selection',ids:[]});dispatch({type:'duplicate-canvas',id:canvas.id});}}>Duplicate page</button>
+        <button style={{minHeight:44,padding:'0 12px',background:'transparent',color:'var(--ink)',fontSize:12}} onClick={()=>setOpenSheet('pages')}>Pages</button>
+        {primaryEl && <button style={{minHeight:44,marginLeft:'auto',padding:'0 12px',background:'transparent',color:'var(--pink-600)',fontSize:12}} onClick={()=>{setTray(null);dispatch({type:'set-selection',ids:[]});}}>Done</button>}
+      </div>}
       {/* Live tool tray */}
       {primaryEl && tray && (
         <MobileToolTray el={primaryEl} tool={tray} setTool={setTray} onClose={() => setTray(null)} />
@@ -279,7 +285,7 @@ function MobileEditor({ progressNav, onPreview, onSource, slideActions }) {
       {/* Bottom tool bar */}
       {!primaryEl && !openSheet && (
         <MobileEditorBottomBar activeTool={state.tool} onOpen={openTool}
-          onMore={() => setOpenSheet('more')} />
+          onSource={onSource} />
       )}
 
       {/* Sheets */}
@@ -454,6 +460,7 @@ function MobileEditorTopBar({ proj, canvas, compact, onDone, onBack, onMenu, onL
         <Icon name="undo" size={18} />
       </button>
 
+      <button className="icon-btn" aria-label="Redo" disabled={!canRedo} onClick={onRedo}><Icon name="redo" size={18} /></button>
       <button className="icon-btn" aria-label="Preview and download" onClick={onDownload}
         style={{ background: 'var(--ink)', color: 'var(--cream)' }}>
         <Icon name="upload" size={16} style={{ transform: 'rotate(180deg)' }} />
@@ -969,24 +976,31 @@ function MobileSelectionOverlay({ el, scale, onResize, onRotate, onMove }) {
   );
 }
 
-function MobileEditorBottomBar({ activeTool, onOpen, onMore }) {
+function MobileEditorBottomBar({ activeTool, onOpen, onSource }) {
   const tools = [
     { id: 'text', icon: 'text', label: 'Text' },
     { id: 'images', icon: 'images', label: 'Image' },
     { id: 'bg', icon: 'bg', label: 'Background' },
+    { id: 'icons', icon: 'images', label: 'Illustrations' },
+    { id: 'shapes', icon: 'shapes', label: 'Shapes' },
+    { id: 'frames', icon: 'frames', label: 'Frames' },
     { id: 'brand', icon: 'brand_kit', label: 'Brand' },
+    { id: 'templates', icon: 'templates', label: 'Templates' },
+    ...(onSource ? [{ id: 'source', icon: 'text', label: 'Source text' }] : []),
+    { id: 'pages', icon: 'copy', label: 'Pages' },
+    { id: 'layers', icon: 'layers', label: 'Layers' },
   ];
   return (
     <div className="safe-bottom" style={{
-      display: 'flex', background: 'white',
+      display: 'flex', background: 'white', overflowX: 'auto', overscrollBehaviorX: 'contain',
       borderTop: '1px solid var(--line)',
       flexShrink: 0, padding: '4px 4px calc(4px + env(safe-area-inset-bottom, 0px))',
       zIndex: 15,
     }}>
       {tools.map(t => (
-        <button key={t.id} onClick={() => onOpen(t.id)}
+        <button key={t.id} onClick={() => t.id === 'source' ? onSource() : onOpen(t.id)}
           style={{
-            flex: 1, padding: '10px 4px', borderRadius: 8,
+            flex: '0 0 auto', minWidth: 68, minHeight: 52, padding: '8px 10px', borderRadius: 0,
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
             color: activeTool === t.id ? 'var(--pink-600)' : 'var(--ink-2)',
             background: 'transparent',
@@ -995,22 +1009,14 @@ function MobileEditorBottomBar({ activeTool, onOpen, onMore }) {
           <span style={{ fontSize: 9, fontWeight: 500 }}>{t.label}</span>
         </button>
       ))}
-      <button onClick={onMore}
-        style={{
-          flex: 1, padding: '10px 4px', borderRadius: 8,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-          color: 'var(--ink-2)', background: 'transparent',
-        }}>
-        <Icon name="more" size={20} />
-        <span style={{ fontSize: 9, fontWeight: 500 }}>More ☰</span>
-      </button>
+
     </div>
   );
 }
 
 // ======================================================================
 // SELECTION TOOLBAR + LIVE TOOL TRAY (phone)
-// The toolbar is always one tidy row (no sideways scrolling). Every button shows its
+// The toolbar is one flat, horizontally scrollable row. Every button shows its
 // current value (font name, size, colour) so you can read the state at a glance.
 // ======================================================================
 const SHAPE_TYPES = ['rect', 'circle', 'triangle', 'star', 'heart', 'diamond', 'polygon'];
@@ -1072,25 +1078,27 @@ function MobileTextEditBar({ el, dispatch, onDone, onTool }) {
 function MobileSelectionBar({ el, activeTool, onAdd, onTool, onAdjust, onAction, locked }) {
   const {dispatch}=useStore();
   const change=patch=>{if(!locked&&patch)dispatch({type:'update-element',id:el.id,patch});};
-  const chip={flex:'0 0 auto',minHeight:44,minWidth:44,padding:'0 10px',borderRadius:9,border:'1px solid var(--line)',background:'white',color:'var(--ink)',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,fontSize:12};
-  const tool=(label,key,content=label)=><button key={key} style={chip} aria-label={label} aria-pressed={activeTool===key} onClick={()=>onTool(key)}>{content}</button>;
-  return <div role="toolbar" aria-label="Selected element tools" style={{display:'flex',gap:6,padding:'6px 8px calc(6px + env(safe-area-inset-bottom,0px))',background:'var(--pink-50)',borderTop:'1px solid var(--line)',flexShrink:0,overflowX:'auto',overscrollBehaviorX:'contain'}}>
+  const chip={flex:'0 0 auto',minHeight:44,minWidth:44,padding:'0 10px',borderRadius:0,border:0,background:'white',color:'var(--ink)',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,fontSize:12};
+  const tool=(label,key,content=label)=><button key={key} style={{...chip,background:activeTool===key?'var(--pink-100)':'transparent'}} aria-label={label} aria-pressed={activeTool===key} onClick={()=>onTool(key)}>{content}</button>;
+  return <div role="toolbar" aria-label="Selected element tools" style={{display:'flex',gap:6,padding:'6px 8px calc(6px + env(safe-area-inset-bottom,0px))',background:'white',borderTop:'1px solid var(--line)',flexShrink:0,overflowX:'auto',overscrollBehaviorX:'contain'}}>
     {el.type==='text'?<>
       {tool('Edit words','words')}
       {tool('Font: '+el.fontFamily,'font',<span style={{fontFamily:el.fontFamily,maxWidth:140,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{el.fontFamily}</span>)}
       {tool('Font size','size',Math.round(el.fontSize)+' px')}
       {tool('Text colour','colour',<><span style={{width:18,height:18,borderRadius:'50%',background:el.color,border:'1px solid var(--line)'}}/>Colour</>)}
-      <button style={chip} aria-label="Bold" aria-pressed={isBoldText(el)} disabled={locked||!boldWeightFor(el.fontFamily)} onClick={()=>change(toggleBoldPatch(el))}><b>B</b></button>
-      <button style={chip} aria-label="Italic" aria-pressed={!!el.italic} disabled={locked} onClick={()=>change({italic:!el.italic})}><i>I</i></button>
+      <button style={{...chip,background:isBoldText(el)?'var(--pink-100)':'transparent'}} aria-label="Bold" aria-pressed={isBoldText(el)} disabled={locked||!boldWeightFor(el.fontFamily)} onClick={()=>change(toggleBoldPatch(el))}><b>B</b></button>
+      <button style={{...chip,background:el.italic?'var(--pink-100)':'transparent'}} aria-label="Italic" aria-pressed={!!el.italic} disabled={locked} onClick={()=>change({italic:!el.italic})}><i>I</i></button>
       <button style={chip} aria-label={'Alignment: '+el.align} disabled={locked} onClick={()=>change({align:el.align==='left'?'center':el.align==='center'?'right':'left'})}><Icon name={el.align==='center'?'align_c':el.align==='right'?'align_r':'align_l'} size={16}/></button>
       {tool('Text styles','styles')}
       {tool('Weight and spacing','format','Spacing')}
     </>:<>
       {tool('Size','size')}
       {trayToolsFor(el).includes('colour')?tool('Colour','colour'):<button style={chip} onClick={onAdjust}>Adjust</button>}
-      {tool('Opacity','opacity')}{tool('Move','position')}
+      {tool('Opacity','opacity')}
     </>}
-    <button style={chip} aria-label="More actions" onClick={()=>onAction('more')}>More</button>
+    {tool('Position','position')}
+    <button style={chip} onClick={onAdd}>Add element</button>
+    {[['duplicate','Duplicate element'],['front','Bring to front'],['back','Send to back'],['lock',locked?'Unlock':'Lock'],['hide','Hide'],['settings','All settings'],['delete','Delete']].map(([action,label])=><button key={action} style={{...chip,color:action==='delete'?'var(--pink-600)':'var(--ink)'}} onClick={()=>onAction(action)}>{label}</button>) }
   </div>;
 }
 
@@ -1452,3 +1460,5 @@ function MobileWordsDialog({draft,onChange,onCancel,onDone}) {
       style={{flex:1,minHeight:0,width:'100%',boxSizing:'border-box',resize:'none',border:0,padding:20,font:'18px/1.6 Montserrat, sans-serif',color:'var(--ink)',background:'transparent',outlineOffset:-3}} />
   </div>;
 }
+
+
