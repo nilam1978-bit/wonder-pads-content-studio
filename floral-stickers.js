@@ -654,6 +654,15 @@ const FLORAL_STICKERS = [
 {"id":"floral-ready-stock","label":"Ready Stock","category":"orders","src":"assets/stickers/floral-ready-stock.webp","width":1254,"height":1254},
 {"id":"floral-special-offer","label":"Special Offer","category":"orders","src":"assets/stickers/floral-special-offer.webp","width":1254,"height":1254},
 {"id":"floral-plush-stitched-return-coin-icon","label":"Plush Stitched Return Coin","category":"orders","src":"assets/stickers/floral-plush-stitched-return-coin-icon.webp","width":1254,"height":1254},
-{"id":"floral-like-share-follow-ecoclothpad-banner","label":"Like Share Follow Ecoclothpad Banner","category":"social","src":"assets/stickers/floral-like-share-follow-ecoclothpad-banner.webp","width":1774,"height":887}
+{"id":"floral-like-share-follow-ecoclothpad-banner","label":"Like Share Follow Ecoclothpad Banner","category":"social","src":"assets/stickers/floral-like-share-follow-ecoclothpad-banner.webp","width":1774,"height":887},
+{"id":"shared-like-share-follow-floral-banner","label":"Like Share Follow Floral Banner","category":"social","src":"assets/stickers/shared-like-share-follow-floral-banner.webp","width":2172,"height":724},
+{"id":"shared-floral-drawstring-pouch-with-heart-charm","label":"Floral Drawstring Pouch with Heart Charm","category":"care","src":"assets/stickers/shared-floral-drawstring-pouch-with-heart-charm.webp","width":1254,"height":1254},
+{"id":"shared-wonder-pads-floral-mascot-banner","label":"Wonder Pads Floral Mascot Banner","category":"social","src":"assets/stickers/shared-wonder-pads-floral-mascot-banner.webp","width":1774,"height":887},
+{"id":"shared-save-this-post-ribbon","label":"Save This Post Ribbon","category":"social","src":"assets/stickers/shared-save-this-post-ribbon.webp","width":1278,"height":1230},
+{"id":"shared-comment-below-speech-bubbles","label":"Comment Below Speech Bubbles","category":"social","src":"assets/stickers/shared-comment-below-speech-bubbles.webp","width":1241,"height":1268},
+{"id":"shared-pastel-shop-now-bag","label":"Pastel Shop Now Bag","category":"orders","src":"assets/stickers/shared-pastel-shop-now-bag.webp","width":1107,"height":1421},
+{"id":"shared-click-here-visit-our-website","label":"Click Here Visit Our Website","category":"social","src":"assets/stickers/shared-click-here-visit-our-website.webp","width":1108,"height":1419},
+{"id":"shared-pastel-social-cta-banner","label":"Pastel Social CTA Banner","category":"social","src":"assets/stickers/shared-pastel-social-cta-banner.webp","width":2172,"height":724},
+{"id":"shared-wonder-pads-mascot-flower-hair","label":"Wonder Pads Mascot Banner · Flower in Hair","category":"social","src":"assets/stickers/shared-wonder-pads-mascot-flower-hair.webp","width":1774,"height":887}
 ];
 Object.assign(window,{FLORAL_STICKERS});
