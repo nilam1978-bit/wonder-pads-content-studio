@@ -201,14 +201,6 @@ const FLORAL_STICKERS = [
     "height": 1254
   },
   {
-    "id": "follow-floral",
-    "label": "Follow Floral",
-    "category": "social",
-    "src": "assets/stickers/wonder-pads-follow-floral.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
     "id": "freshly-washed-stack",
     "label": "Freshly Washed Stack",
     "category": "care",
@@ -253,14 +245,6 @@ const FLORAL_STICKERS = [
     "label": "Leafy Globe",
     "category": "nature",
     "src": "assets/stickers/wonder-pads-leafy-globe.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "like-floral",
-    "label": "Like Floral",
-    "category": "social",
-    "src": "assets/stickers/wonder-pads-like-floral.webp",
     "width": 1254,
     "height": 1254
   },
@@ -389,14 +373,6 @@ const FLORAL_STICKERS = [
     "label": "Sage Leafy Pad",
     "category": "care",
     "src": "assets/stickers/wonder-pads-sage-leafy-pad.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "share-floral",
-    "label": "Share Floral",
-    "category": "social",
-    "src": "assets/stickers/wonder-pads-share-floral.webp",
     "width": 1254,
     "height": 1254
   },
@@ -615,9 +591,10 @@ const FLORAL_STICKERS = [
 {"id":"shop-now-watercolor","label":"Shop Now · Watercolour","category":"orders","src":"assets/stickers/watercolor-cta-sheet.webp","width":880,"height":540,"crop":{"x":55,"y":470,"w":880,"h":540},"sheetWidth":2752,"sheetHeight":1536,"opaque":true},
 {"id":"design-pad-watercolor","label":"Design Your Pad · Watercolour","category":"orders","src":"assets/stickers/watercolor-cta-sheet.webp","width":900,"height":540,"crop":{"x":940,"y":470,"w":900,"h":540},"sheetWidth":2752,"sheetHeight":1536,"opaque":true},
 {"id":"custom-order-watercolor","label":"Custom Order · Watercolour","category":"orders","src":"assets/stickers/watercolor-cta-sheet.webp","width":860,"height":540,"crop":{"x":1845,"y":470,"w":860,"h":540},"sheetWidth":2752,"sheetHeight":1536,"opaque":true},
-{"id":"share-watercolor-circle","label":"Share · Watercolour Circle","category":"social","src":"assets/stickers/watercolor-social-sheet.webp","width":850,"height":1040,"crop":{"x":55,"y":265,"w":850,"h":1040},"sheetWidth":2752,"sheetHeight":1536,"opaque":true},
-{"id":"comment-watercolor-circle","label":"Comment · Watercolour Circle","category":"social","src":"assets/stickers/watercolor-social-sheet.webp","width":850,"height":1040,"crop":{"x":950,"y":265,"w":850,"h":1040},"sheetWidth":2752,"sheetHeight":1536,"opaque":true},
-{"id":"follow-watercolor-circle","label":"Follow Me · Watercolour Circle","category":"social","src":"assets/stickers/watercolor-social-sheet.webp","width":850,"height":1040,"crop":{"x":1840,"y":265,"w":850,"h":1040},"sheetWidth":2752,"sheetHeight":1536,"opaque":true},
+{"id":"watercolor-like","label":"Like · Watercolour","category":"social","src":"assets/stickers/wonder-pads-watercolor-like.webp","width":1254,"height":1254},
+{"id":"watercolor-share","label":"Share · Watercolour","category":"social","src":"assets/stickers/wonder-pads-watercolor-share.webp","width":1254,"height":1254},
+{"id":"watercolor-comment","label":"Comment · Watercolour","category":"social","src":"assets/stickers/wonder-pads-watercolor-comment.webp","width":1254,"height":1254},
+{"id":"watercolor-follow-me","label":"Follow Me · Watercolour","category":"social","src":"assets/stickers/wonder-pads-watercolor-follow-me.webp","width":1254,"height":1254},
 {"id":"floral-pink-floral-reusable-cloth-pad-icon","label":"Pink Floral Reusable Cloth Pad","category":"care","src":"assets/stickers/floral-pink-floral-reusable-cloth-pad-icon.webp","width":1254,"height":1254},
 {"id":"floral-cute-floral-cloth-pad-drying-rack","label":"Cute Floral Cloth Pad Drying Rack","category":"care","src":"assets/stickers/floral-cute-floral-cloth-pad-drying-rack.webp","width":1254,"height":1254},
 {"id":"floral-floral-pad-rinsed-under-faucet","label":"Floral Pad Rinsed Under Faucet","category":"care","src":"assets/stickers/floral-floral-pad-rinsed-under-faucet.webp","width":1254,"height":1254},
