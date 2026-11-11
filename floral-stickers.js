@@ -583,525 +583,63 @@ const FLORAL_STICKERS = [
     "src": "assets/stickers/wonder-pads-wooden-pad-display-rack.webp",
     "width": 1254,
     "height": 1254
-  },
-  {
-    "id": "faq-watercolor-sheet",
-    "label": "FAQ · Watercolour",
-    "category": "social",
-    "src": "assets/stickers/watercolor-navigation-sheet.webp",
-    "width": 880,
-    "height": 570,
-    "crop": {
-      "x": 340,
-      "y": 145,
-      "w": 880,
-      "h": 570
-    },
-    "sheetWidth": 1536,
-    "sheetHeight": 2752,
-    "opaque": true
-  },
-  {
-    "id": "tap-reveal-watercolor-sheet",
-    "label": "Tap to Reveal · Watercolour",
-    "category": "social",
-    "src": "assets/stickers/watercolor-navigation-sheet.webp",
-    "width": 880,
-    "height": 600,
-    "crop": {
-      "x": 340,
-      "y": 760,
-      "w": 880,
-      "h": 600
-    },
-    "sheetWidth": 1536,
-    "sheetHeight": 2752,
-    "opaque": true
-  },
-  {
-    "id": "new-arrivals-watercolor-sheet",
-    "label": "New Arrivals · Watercolour",
-    "category": "social",
-    "src": "assets/stickers/watercolor-navigation-sheet.webp",
-    "width": 920,
-    "height": 620,
-    "crop": {
-      "x": 320,
-      "y": 1430,
-      "w": 920,
-      "h": 620
-    },
-    "sheetWidth": 1536,
-    "sheetHeight": 2752,
-    "opaque": true
-  },
-  {
-    "id": "customer-love-watercolor-sheet",
-    "label": "Customer Love · Watercolour",
-    "category": "social",
-    "src": "assets/stickers/watercolor-navigation-sheet.webp",
-    "width": 860,
-    "height": 540,
-    "crop": {
-      "x": 350,
-      "y": 2115,
-      "w": 860,
-      "h": 540
-    },
-    "sheetWidth": 1536,
-    "sheetHeight": 2752,
-    "opaque": true
-  },
-  {
-    "id": "shop-now-watercolor",
-    "label": "Shop Now · Watercolour",
-    "category": "orders",
-    "src": "assets/stickers/watercolor-cta-sheet.webp",
-    "width": 880,
-    "height": 540,
-    "crop": {
-      "x": 55,
-      "y": 470,
-      "w": 880,
-      "h": 540
-    },
-    "sheetWidth": 2752,
-    "sheetHeight": 1536,
-    "opaque": true
-  },
-  {
-    "id": "design-pad-watercolor",
-    "label": "Design Your Pad · Watercolour",
-    "category": "orders",
-    "src": "assets/stickers/watercolor-cta-sheet.webp",
-    "width": 900,
-    "height": 540,
-    "crop": {
-      "x": 940,
-      "y": 470,
-      "w": 900,
-      "h": 540
-    },
-    "sheetWidth": 2752,
-    "sheetHeight": 1536,
-    "opaque": true
-  },
-  {
-    "id": "custom-order-watercolor",
-    "label": "Custom Order · Watercolour",
-    "category": "orders",
-    "src": "assets/stickers/watercolor-cta-sheet.webp",
-    "width": 860,
-    "height": 540,
-    "crop": {
-      "x": 1845,
-      "y": 470,
-      "w": 860,
-      "h": 540
-    },
-    "sheetWidth": 2752,
-    "sheetHeight": 1536,
-    "opaque": true
-  },
-  {
-    "id": "watercolor-like",
-    "label": "Like · Watercolour",
-    "category": "social",
-    "src": "assets/stickers/wonder-pads-watercolor-like.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "watercolor-share",
-    "label": "Share · Watercolour",
-    "category": "social",
-    "src": "assets/stickers/wonder-pads-watercolor-share.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "watercolor-comment",
-    "label": "Comment · Watercolour",
-    "category": "social",
-    "src": "assets/stickers/wonder-pads-watercolor-comment.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "watercolor-follow-me",
-    "label": "Follow Me · Watercolour",
-    "category": "social",
-    "src": "assets/stickers/wonder-pads-watercolor-follow-me.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-pink-floral-reusable-cloth-pad-icon",
-    "label": "Pink Floral Reusable Cloth Pad",
-    "category": "care",
-    "src": "assets/stickers/floral-pink-floral-reusable-cloth-pad-icon.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-cute-floral-cloth-pad-drying-rack",
-    "label": "Cute Floral Cloth Pad Drying Rack",
-    "category": "care",
-    "src": "assets/stickers/floral-cute-floral-cloth-pad-drying-rack.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-floral-pad-rinsed-under-faucet",
-    "label": "Floral Pad Rinsed Under Faucet",
-    "category": "care",
-    "src": "assets/stickers/floral-floral-pad-rinsed-under-faucet.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-stack-of-cloth-pads-corrected-shapes",
-    "label": "Stack Of Cloth Pads",
-    "category": "care",
-    "src": "assets/stickers/floral-stack-of-cloth-pads-corrected-shapes.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-floral-reusable-cloth-pad-illustration",
-    "label": "Floral Reusable Cloth Pad Illustration",
-    "category": "care",
-    "src": "assets/stickers/floral-floral-reusable-cloth-pad-illustration.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-layered-absorbency-pad-icon",
-    "label": "Layered Absorbency Pad",
-    "category": "care",
-    "src": "assets/stickers/floral-layered-absorbency-pad-icon.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-plush-floral-cloth-pad-washer-icon",
-    "label": "Plush Floral Cloth Pad Washer",
-    "category": "care",
-    "src": "assets/stickers/floral-plush-floral-cloth-pad-washer-icon.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-plush-pastel-water-shield-badge",
-    "label": "Plush Pastel Water Shield Badge",
-    "category": "care",
-    "src": "assets/stickers/floral-plush-pastel-water-shield-badge.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-pastel-floral-cloth-pads-basket",
-    "label": "Pastel Floral Cloth Pads Basket",
-    "category": "care",
-    "src": "assets/stickers/floral-pastel-floral-cloth-pads-basket.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-cute-cotton-boll-icon-with-sage-leaves",
-    "label": "Cute Cotton Boll With Sage Leaves",
-    "category": "nature",
-    "src": "assets/stickers/floral-cute-cotton-boll-icon-with-sage-leaves.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-plush-sage-leaves-and-flower-icon",
-    "label": "Plush Sage Leaves And Flower",
-    "category": "nature",
-    "src": "assets/stickers/floral-plush-sage-leaves-and-flower-icon.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-cotton-and-bamboo-botanical-icon",
-    "label": "Cotton And Bamboo Botanical",
-    "category": "nature",
-    "src": "assets/stickers/floral-cotton-and-bamboo-botanical-icon.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-reusable-cloth-pad-and-fabric-swatches",
-    "label": "Reusable Cloth Pad And Fabric Swatches",
-    "category": "makers",
-    "src": "assets/stickers/floral-reusable-cloth-pad-and-fabric-swatches.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-floral-fabric-bundle-with-ribbon-bow",
-    "label": "Floral Fabric Bundle With Ribbon Bow",
-    "category": "makers",
-    "src": "assets/stickers/floral-floral-fabric-bundle-with-ribbon-bow.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-pastel-floral-fabric-swatch-fan",
-    "label": "Pastel Floral Fabric Swatch Fan",
-    "category": "makers",
-    "src": "assets/stickers/floral-pastel-floral-fabric-swatch-fan.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-blush-yarn-ball-with-floral-accents",
-    "label": "Blush Yarn Ball With Floral Accents",
-    "category": "makers",
-    "src": "assets/stickers/floral-blush-yarn-ball-with-floral-accents.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-embroidered-heart-hoop-with-florals",
-    "label": "Embroidered Heart Hoop With Florals",
-    "category": "makers",
-    "src": "assets/stickers/floral-embroidered-heart-hoop-with-florals.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-pastel-button-jar-with-bow-and-tag",
-    "label": "Pastel Button Jar With Bow And Tag",
-    "category": "makers",
-    "src": "assets/stickers/floral-pastel-button-jar-with-bow-and-tag.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-pastel-pink-floral-sewing-machine",
-    "label": "Pastel Pink Floral Sewing Machine",
-    "category": "makers",
-    "src": "assets/stickers/floral-pastel-pink-floral-sewing-machine.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-pastel-pumpkin-pincushion-craft-set",
-    "label": "Pastel Pumpkin Pincushion Craft Set",
-    "category": "makers",
-    "src": "assets/stickers/floral-pastel-pumpkin-pincushion-craft-set.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-pastel-scissors-with-sage-leaves",
-    "label": "Pastel Scissors With Sage Leaves",
-    "category": "makers",
-    "src": "assets/stickers/floral-pastel-scissors-with-sage-leaves.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-pastel-thread-spools-trio",
-    "label": "Pastel Thread Spools Trio",
-    "category": "makers",
-    "src": "assets/stickers/floral-pastel-thread-spools-trio.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-whimsical-floral-measuring-tape-icon",
-    "label": "Whimsical Floral Measuring Tape",
-    "category": "makers",
-    "src": "assets/stickers/floral-whimsical-floral-measuring-tape-icon.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-cotton-print-fabric-swatch-fan",
-    "label": "Cotton Print Fabric Swatch Fan",
-    "category": "makers",
-    "src": "assets/stickers/floral-cotton-print-fabric-swatch-fan.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-folded-fabrics-with-cotton-flower",
-    "label": "Folded Fabrics With Cotton Flower",
-    "category": "makers",
-    "src": "assets/stickers/floral-folded-fabrics-with-cotton-flower.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-pastel-fabric-basket-with-floral-bow",
-    "label": "Pastel Fabric Basket With Floral Bow",
-    "category": "makers",
-    "src": "assets/stickers/floral-pastel-fabric-basket-with-floral-bow.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-three-upright-floral-fabric-rolls",
-    "label": "Three Upright Floral Fabric Rolls",
-    "category": "makers",
-    "src": "assets/stickers/floral-three-upright-floral-fabric-rolls.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-adorable-reusable-pad-cart",
-    "label": "Adorable Reusable Pad Cart",
-    "category": "shops",
-    "src": "assets/stickers/floral-adorable-reusable-pad-cart.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-charming-reusable-pad-market-stall",
-    "label": "Charming Reusable Pad Market Stall",
-    "category": "shops",
-    "src": "assets/stickers/floral-charming-reusable-pad-market-stall.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-cozy-cloth-pad-shophouse-storefront",
-    "label": "Cozy Cloth Pad Shophouse Storefront",
-    "category": "shops",
-    "src": "assets/stickers/floral-cozy-cloth-pad-shophouse-storefront.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-reusable-cloth-pad-market-stall",
-    "label": "Reusable Cloth Pad Market Stall",
-    "category": "shops",
-    "src": "assets/stickers/floral-reusable-cloth-pad-market-stall.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-design-your-pad",
-    "label": "Design Your Pad",
-    "category": "orders",
-    "src": "assets/stickers/floral-design-your-pad.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-new-arrivals",
-    "label": "New Arrivals",
-    "category": "orders",
-    "src": "assets/stickers/floral-new-arrivals.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-ready-stock",
-    "label": "Ready Stock",
-    "category": "orders",
-    "src": "assets/stickers/floral-ready-stock.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-special-offer",
-    "label": "Special Offer",
-    "category": "orders",
-    "src": "assets/stickers/floral-special-offer.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-plush-stitched-return-coin-icon",
-    "label": "Plush Stitched Return Coin",
-    "category": "orders",
-    "src": "assets/stickers/floral-plush-stitched-return-coin-icon.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "floral-like-share-follow-ecoclothpad-banner",
-    "label": "Like Share Follow Ecoclothpad Banner",
-    "category": "social",
-    "src": "assets/stickers/floral-like-share-follow-ecoclothpad-banner.webp",
-    "width": 1774,
-    "height": 887
-  },
-  {
-    "id": "shared-like-share-follow-floral-banner",
-    "label": "Like Share Follow Floral Banner",
-    "category": "social",
-    "src": "assets/stickers/shared-like-share-follow-floral-banner.webp",
-    "width": 2172,
-    "height": 724
-  },
-  {
-    "id": "shared-floral-drawstring-pouch-with-heart-charm",
-    "label": "Floral Drawstring Pouch with Heart Charm",
-    "category": "care",
-    "src": "assets/stickers/shared-floral-drawstring-pouch-with-heart-charm.webp",
-    "width": 1254,
-    "height": 1254
-  },
-  {
-    "id": "shared-wonder-pads-floral-mascot-banner",
-    "label": "Wonder Pads Floral Mascot Banner",
-    "category": "social",
-    "src": "assets/stickers/shared-wonder-pads-floral-mascot-banner.webp",
-    "width": 1774,
-    "height": 887
-  },
-  {
-    "id": "shared-save-this-post-ribbon",
-    "label": "Save This Post Ribbon",
-    "category": "social",
-    "src": "assets/stickers/shared-save-this-post-ribbon.webp",
-    "width": 1278,
-    "height": 1230
-  },
-  {
-    "id": "shared-comment-below-speech-bubbles",
-    "label": "Comment Below Speech Bubbles",
-    "category": "social",
-    "src": "assets/stickers/shared-comment-below-speech-bubbles.webp",
-    "width": 1241,
-    "height": 1268
-  },
-  {
-    "id": "shared-pastel-shop-now-bag",
-    "label": "Pastel Shop Now Bag",
-    "category": "orders",
-    "src": "assets/stickers/shared-pastel-shop-now-bag.webp",
-    "width": 1107,
-    "height": 1421
-  },
-  {
-    "id": "shared-click-here-visit-our-website",
-    "label": "Click Here Visit Our Website",
-    "category": "social",
-    "src": "assets/stickers/shared-click-here-visit-our-website.webp",
-    "width": 1108,
-    "height": 1419
-  },
-  {
-    "id": "shared-pastel-social-cta-banner",
-    "label": "Pastel Social CTA Banner",
-    "category": "social",
-    "src": "assets/stickers/shared-pastel-social-cta-banner.webp",
-    "width": 2172,
-    "height": 724
-  },
-  {
-    "id": "shared-wonder-pads-mascot-flower-hair",
-    "label": "Wonder Pads Mascot Banner · Flower in Hair",
-    "category": "social",
-    "src": "assets/stickers/shared-wonder-pads-mascot-flower-hair.webp",
-    "width": 1774,
-    "height": 887
   }
+,{"id":"faq-watercolor-sheet","label":"FAQ · Watercolour","category":"social","src":"assets/stickers/watercolor-navigation-sheet.webp","width":880,"height":570,"crop":{"x":340,"y":145,"w":880,"h":570},"sheetWidth":1536,"sheetHeight":2752,"opaque":true},
+{"id":"tap-reveal-watercolor-sheet","label":"Tap to Reveal · Watercolour","category":"social","src":"assets/stickers/watercolor-navigation-sheet.webp","width":880,"height":600,"crop":{"x":340,"y":760,"w":880,"h":600},"sheetWidth":1536,"sheetHeight":2752,"opaque":true},
+{"id":"new-arrivals-watercolor-sheet","label":"New Arrivals · Watercolour","category":"social","src":"assets/stickers/watercolor-navigation-sheet.webp","width":920,"height":620,"crop":{"x":320,"y":1430,"w":920,"h":620},"sheetWidth":1536,"sheetHeight":2752,"opaque":true},
+{"id":"customer-love-watercolor-sheet","label":"Customer Love · Watercolour","category":"social","src":"assets/stickers/watercolor-navigation-sheet.webp","width":860,"height":540,"crop":{"x":350,"y":2115,"w":860,"h":540},"sheetWidth":1536,"sheetHeight":2752,"opaque":true},
+{"id":"shop-now-watercolor","label":"Shop Now · Watercolour","category":"orders","src":"assets/stickers/watercolor-cta-sheet.webp","width":880,"height":540,"crop":{"x":55,"y":470,"w":880,"h":540},"sheetWidth":2752,"sheetHeight":1536,"opaque":true},
+{"id":"design-pad-watercolor","label":"Design Your Pad · Watercolour","category":"orders","src":"assets/stickers/watercolor-cta-sheet.webp","width":900,"height":540,"crop":{"x":940,"y":470,"w":900,"h":540},"sheetWidth":2752,"sheetHeight":1536,"opaque":true},
+{"id":"custom-order-watercolor","label":"Custom Order · Watercolour","category":"orders","src":"assets/stickers/watercolor-cta-sheet.webp","width":860,"height":540,"crop":{"x":1845,"y":470,"w":860,"h":540},"sheetWidth":2752,"sheetHeight":1536,"opaque":true},
+{"id":"watercolor-like","label":"Like · Watercolour","category":"social","src":"assets/stickers/wonder-pads-watercolor-like.webp","width":1254,"height":1254},
+{"id":"watercolor-share","label":"Share · Watercolour","category":"social","src":"assets/stickers/wonder-pads-watercolor-share.webp","width":1254,"height":1254},
+{"id":"watercolor-comment","label":"Comment · Watercolour","category":"social","src":"assets/stickers/wonder-pads-watercolor-comment.webp","width":1254,"height":1254},
+{"id":"watercolor-follow-me","label":"Follow Me · Watercolour","category":"social","src":"assets/stickers/wonder-pads-watercolor-follow-me.webp","width":1254,"height":1254},
+{"id":"floral-pink-floral-reusable-cloth-pad-icon","label":"Pink Floral Reusable Cloth Pad","category":"care","src":"assets/stickers/floral-pink-floral-reusable-cloth-pad-icon.webp","width":1254,"height":1254},
+{"id":"floral-cute-floral-cloth-pad-drying-rack","label":"Cute Floral Cloth Pad Drying Rack","category":"care","src":"assets/stickers/floral-cute-floral-cloth-pad-drying-rack.webp","width":1254,"height":1254},
+{"id":"floral-floral-pad-rinsed-under-faucet","label":"Floral Pad Rinsed Under Faucet","category":"care","src":"assets/stickers/floral-floral-pad-rinsed-under-faucet.webp","width":1254,"height":1254},
+{"id":"floral-stack-of-cloth-pads-corrected-shapes","label":"Stack Of Cloth Pads","category":"care","src":"assets/stickers/floral-stack-of-cloth-pads-corrected-shapes.webp","width":1254,"height":1254},
+{"id":"floral-floral-reusable-cloth-pad-illustration","label":"Floral Reusable Cloth Pad Illustration","category":"care","src":"assets/stickers/floral-floral-reusable-cloth-pad-illustration.webp","width":1254,"height":1254},
+{"id":"floral-layered-absorbency-pad-icon","label":"Layered Absorbency Pad","category":"care","src":"assets/stickers/floral-layered-absorbency-pad-icon.webp","width":1254,"height":1254},
+{"id":"floral-plush-floral-cloth-pad-washer-icon","label":"Plush Floral Cloth Pad Washer","category":"care","src":"assets/stickers/floral-plush-floral-cloth-pad-washer-icon.webp","width":1254,"height":1254},
+{"id":"floral-plush-pastel-water-shield-badge","label":"Plush Pastel Water Shield Badge","category":"care","src":"assets/stickers/floral-plush-pastel-water-shield-badge.webp","width":1254,"height":1254},
+{"id":"floral-pastel-floral-cloth-pads-basket","label":"Pastel Floral Cloth Pads Basket","category":"care","src":"assets/stickers/floral-pastel-floral-cloth-pads-basket.webp","width":1254,"height":1254},
+{"id":"floral-cute-cotton-boll-icon-with-sage-leaves","label":"Cute Cotton Boll With Sage Leaves","category":"nature","src":"assets/stickers/floral-cute-cotton-boll-icon-with-sage-leaves.webp","width":1254,"height":1254},
+{"id":"floral-plush-sage-leaves-and-flower-icon","label":"Plush Sage Leaves And Flower","category":"nature","src":"assets/stickers/floral-plush-sage-leaves-and-flower-icon.webp","width":1254,"height":1254},
+{"id":"floral-cotton-and-bamboo-botanical-icon","label":"Cotton And Bamboo Botanical","category":"nature","src":"assets/stickers/floral-cotton-and-bamboo-botanical-icon.webp","width":1254,"height":1254},
+{"id":"floral-reusable-cloth-pad-and-fabric-swatches","label":"Reusable Cloth Pad And Fabric Swatches","category":"makers","src":"assets/stickers/floral-reusable-cloth-pad-and-fabric-swatches.webp","width":1254,"height":1254},
+{"id":"floral-floral-fabric-bundle-with-ribbon-bow","label":"Floral Fabric Bundle With Ribbon Bow","category":"makers","src":"assets/stickers/floral-floral-fabric-bundle-with-ribbon-bow.webp","width":1254,"height":1254},
+{"id":"floral-pastel-floral-fabric-swatch-fan","label":"Pastel Floral Fabric Swatch Fan","category":"makers","src":"assets/stickers/floral-pastel-floral-fabric-swatch-fan.webp","width":1254,"height":1254},
+{"id":"floral-blush-yarn-ball-with-floral-accents","label":"Blush Yarn Ball With Floral Accents","category":"makers","src":"assets/stickers/floral-blush-yarn-ball-with-floral-accents.webp","width":1254,"height":1254},
+{"id":"floral-embroidered-heart-hoop-with-florals","label":"Embroidered Heart Hoop With Florals","category":"makers","src":"assets/stickers/floral-embroidered-heart-hoop-with-florals.webp","width":1254,"height":1254},
+{"id":"floral-pastel-button-jar-with-bow-and-tag","label":"Pastel Button Jar With Bow And Tag","category":"makers","src":"assets/stickers/floral-pastel-button-jar-with-bow-and-tag.webp","width":1254,"height":1254},
+{"id":"floral-pastel-pink-floral-sewing-machine","label":"Pastel Pink Floral Sewing Machine","category":"makers","src":"assets/stickers/floral-pastel-pink-floral-sewing-machine.webp","width":1254,"height":1254},
+{"id":"floral-pastel-pumpkin-pincushion-craft-set","label":"Pastel Pumpkin Pincushion Craft Set","category":"makers","src":"assets/stickers/floral-pastel-pumpkin-pincushion-craft-set.webp","width":1254,"height":1254},
+{"id":"floral-pastel-scissors-with-sage-leaves","label":"Pastel Scissors With Sage Leaves","category":"makers","src":"assets/stickers/floral-pastel-scissors-with-sage-leaves.webp","width":1254,"height":1254},
+{"id":"floral-pastel-thread-spools-trio","label":"Pastel Thread Spools Trio","category":"makers","src":"assets/stickers/floral-pastel-thread-spools-trio.webp","width":1254,"height":1254},
+{"id":"floral-whimsical-floral-measuring-tape-icon","label":"Whimsical Floral Measuring Tape","category":"makers","src":"assets/stickers/floral-whimsical-floral-measuring-tape-icon.webp","width":1254,"height":1254},
+{"id":"floral-cotton-print-fabric-swatch-fan","label":"Cotton Print Fabric Swatch Fan","category":"makers","src":"assets/stickers/floral-cotton-print-fabric-swatch-fan.webp","width":1254,"height":1254},
+{"id":"floral-folded-fabrics-with-cotton-flower","label":"Folded Fabrics With Cotton Flower","category":"makers","src":"assets/stickers/floral-folded-fabrics-with-cotton-flower.webp","width":1254,"height":1254},
+{"id":"floral-pastel-fabric-basket-with-floral-bow","label":"Pastel Fabric Basket With Floral Bow","category":"makers","src":"assets/stickers/floral-pastel-fabric-basket-with-floral-bow.webp","width":1254,"height":1254},
+{"id":"floral-three-upright-floral-fabric-rolls","label":"Three Upright Floral Fabric Rolls","category":"makers","src":"assets/stickers/floral-three-upright-floral-fabric-rolls.webp","width":1254,"height":1254},
+{"id":"floral-adorable-reusable-pad-cart","label":"Adorable Reusable Pad Cart","category":"shops","src":"assets/stickers/floral-adorable-reusable-pad-cart.webp","width":1254,"height":1254},
+{"id":"floral-charming-reusable-pad-market-stall","label":"Charming Reusable Pad Market Stall","category":"shops","src":"assets/stickers/floral-charming-reusable-pad-market-stall.webp","width":1254,"height":1254},
+{"id":"floral-cozy-cloth-pad-shophouse-storefront","label":"Cozy Cloth Pad Shophouse Storefront","category":"shops","src":"assets/stickers/floral-cozy-cloth-pad-shophouse-storefront.webp","width":1254,"height":1254},
+{"id":"floral-reusable-cloth-pad-market-stall","label":"Reusable Cloth Pad Market Stall","category":"shops","src":"assets/stickers/floral-reusable-cloth-pad-market-stall.webp","width":1254,"height":1254},
+{"id":"floral-design-your-pad","label":"Design Your Pad","category":"orders","src":"assets/stickers/floral-design-your-pad.webp","width":1254,"height":1254},
+{"id":"floral-new-arrivals","label":"New Arrivals","category":"orders","src":"assets/stickers/floral-new-arrivals.webp","width":1254,"height":1254},
+{"id":"floral-ready-stock","label":"Ready Stock","category":"orders","src":"assets/stickers/floral-ready-stock.webp","width":1254,"height":1254},
+{"id":"floral-special-offer","label":"Special Offer","category":"orders","src":"assets/stickers/floral-special-offer.webp","width":1254,"height":1254},
+{"id":"floral-plush-stitched-return-coin-icon","label":"Plush Stitched Return Coin","category":"orders","src":"assets/stickers/floral-plush-stitched-return-coin-icon.webp","width":1254,"height":1254},
+{"id":"floral-like-share-follow-ecoclothpad-banner","label":"Like Share Follow Ecoclothpad Banner","category":"social","src":"assets/stickers/floral-like-share-follow-ecoclothpad-banner.webp","width":1774,"height":887},
+{"id":"shared-like-share-follow-floral-banner","label":"Like Share Follow Floral Banner","category":"social","src":"assets/stickers/shared-like-share-follow-floral-banner.webp","width":2172,"height":724},
+{"id":"shared-floral-drawstring-pouch-with-heart-charm","label":"Floral Drawstring Pouch with Heart Charm","category":"care","src":"assets/stickers/shared-floral-drawstring-pouch-with-heart-charm.webp","width":1254,"height":1254},
+{"id":"shared-wonder-pads-floral-mascot-banner","label":"Wonder Pads Floral Mascot Banner","category":"social","src":"assets/stickers/shared-wonder-pads-floral-mascot-banner.webp","width":1774,"height":887},
+{"id":"shared-save-this-post-ribbon","label":"Save This Post Ribbon","category":"social","src":"assets/stickers/shared-save-this-post-ribbon.webp","width":1278,"height":1230},
+{"id":"shared-comment-below-speech-bubbles","label":"Comment Below Speech Bubbles","category":"social","src":"assets/stickers/shared-comment-below-speech-bubbles.webp","width":1241,"height":1268},
+{"id":"shared-pastel-shop-now-bag","label":"Pastel Shop Now Bag","category":"orders","src":"assets/stickers/shared-pastel-shop-now-bag.webp","width":1107,"height":1421},
+{"id":"shared-click-here-visit-our-website","label":"Click Here Visit Our Website","category":"social","src":"assets/stickers/shared-click-here-visit-our-website.webp","width":1108,"height":1419},
+{"id":"shared-pastel-social-cta-banner","label":"Pastel Social CTA Banner","category":"social","src":"assets/stickers/shared-pastel-social-cta-banner.webp","width":2172,"height":724},
+{"id":"shared-wonder-pads-mascot-flower-hair","label":"Wonder Pads Mascot Banner · Flower in Hair","category":"social","src":"assets/stickers/shared-wonder-pads-mascot-flower-hair.webp","width":1774,"height":887}
 ];
 Object.assign(window,{FLORAL_STICKERS});
