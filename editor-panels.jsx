@@ -1369,7 +1369,7 @@ function LabeledInput({ label, value, onChange, suffix }) {
   return (
     <div style={{ position: 'relative' }}>
       <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 4 }}>{label}</div>
-      <input type="number" className="num-input" value={value} onChange={e => onChange(e.target.value)} />
+      <input type="number" className="num-input" aria-label={label} value={value} onChange={e => onChange(e.target.value)} />
       {suffix && <span style={{
         position: 'absolute', right: 8, top: 24,
         fontSize: 11, color: 'var(--ink-3)', pointerEvents: 'none',
@@ -1696,11 +1696,11 @@ function LineProps({ el, update }) {
   );
 }
 
-function ImageProps({ el, update }) {
+function ImageProps({ el, update, showFlip = true }) {
   const f = el.filter || {};
   return (
     <>
-      {el.stickerId && <IllustrationFlipControls el={el} update={update} />}
+      {showFlip && el.stickerId && <IllustrationFlipControls el={el} update={update} />}
       <SectionLabel>Adjustments</SectionLabel>
       <div style={{ display: 'grid', gap: 8 }}>
         {[
@@ -1734,12 +1734,12 @@ function IllustrationFlipControls({ el, update }) {
   </div>;
 }
 
-function IconProps({el,update}){
+function IconProps({el,update,showFlip=true,showLibrary=true}){
   const care=CARE_ICON_LIBRARY.some(item=>item.id===el.name);
-  return <><IllustrationFlipControls el={el} update={update} /><SectionLabel>Outline colour</SectionLabel><ColorPicker value={el.color} onChange={color=>update({color})}/>
+  return <>{showFlip&&<IllustrationFlipControls el={el} update={update} />}<SectionLabel>Outline colour</SectionLabel><ColorPicker value={el.color} onChange={color=>update({color})}/>
     {care&&<><SectionLabel>Soft fill</SectionLabel><button className="btn btn-tonal" aria-pressed={el.iconAccent!=='none'&&!!el.iconAccent} onClick={()=>update({iconAccent:el.iconAccent&&el.iconAccent!=='none'?'none':'#F0CEE7'})}>{el.iconAccent&&el.iconAccent!=='none'?'Remove fill':'Add soft fill'}</button>{el.iconAccent&&el.iconAccent!=='none'&&<ColorPicker value={el.iconAccent} onChange={iconAccent=>update({iconAccent})}/>}</>}
     <SectionLabel>Stroke width</SectionLabel><input aria-label="Icon stroke width" type="range" min="0.5" max="3" step="0.1" value={el.strokeWidth} onChange={e=>update({strokeWidth:+e.target.value})}/>
-    <details style={{marginTop:16}}><summary>Change icon</summary><IconLibraryGrid selected={el.name} accent={el.iconAccent||'none'} onChoose={name=>update({name})}/></details>
+    {showLibrary&&<details style={{marginTop:16}}><summary>Change icon</summary><IconLibraryGrid selected={el.name} accent={el.iconAccent||'none'} onChoose={name=>update({name})}/></details>}
   </>;
 }
 
