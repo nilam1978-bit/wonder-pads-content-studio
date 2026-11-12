@@ -113,7 +113,7 @@ function SaveErrorBanner() {
 }
 
 // ---------- Top bar ----------
-function TopBar({ onResize }) {
+function TopBar({ onResize, onBulkCreate }) {
   const { state, dispatch } = useStore();
   const proj = activeProject(state);
   const canvas = activeCanvas(state);
@@ -230,6 +230,7 @@ function TopBar({ onResize }) {
       <div style={{ display: 'flex', gap: 2 }}>
         <Menu label="File">
           {onResize && <MenuItem icon="duplicate" label="Resize as a copy" onClick={onResize} />}
+          {onBulkCreate && <MenuItem icon="duplicate" label="Bulk create" onClick={onBulkCreate} />}
           <MenuItem icon="templates" label="Back to home" onClick={() => dispatch({ type: 'close-project' })} />
           <MenuItem icon="plus" label="New design" onClick={() => { dispatch({ type: 'close-project' }); }} />
           <MenuItem icon="duplicate" label="Duplicate design" onClick={() => dispatch({ type: 'duplicate-project', id: proj.id })} />
@@ -431,7 +432,7 @@ function ExportOption({ title, desc, icon, onClick, recommended }) {
 }
 
 // ---------- Editor screen ----------
-function EditorScreen({ progressNav, onResize }) {
+function EditorScreen({ progressNav, onResize, onBulkCreate }) {
   const { state, dispatch } = useStore();
   const proj = activeProject(state);
 
@@ -505,7 +506,7 @@ function EditorScreen({ progressNav, onResize }) {
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <TopBar onResize={onResize} />
+      <TopBar onResize={onResize} onBulkCreate={onBulkCreate} />
       {progressNav}
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         <LeftRail />
@@ -527,7 +528,8 @@ function sigForThumb(canvas) {
     return canvas.w + 'x' + canvas.h + '|' + JSON.stringify(canvas.bg) + '|' +
       canvas.elements.map(e => e.id + ':' + Math.round(e.x) + ',' + Math.round(e.y) + ',' +
         Math.round(e.w) + ',' + Math.round(e.h) + ',' + Math.round(e.rot||0) + ',' +
-        (e.text||'') + ',' + (e.fill||'') + ',' + (e.color||'') + ',' + !!e.flipX + ',' + !!e.flipY).join('|');
+        (e.text||'') + ',' + (e.fill||'') + ',' + (e.color||'') + ',' + !!e.flipX + ',' + !!e.flipY + ',' +
+        (e.type==='icon' ? e.name : '') + ',' + (e.artworkRevision||'')).join('|');
   } catch { return ''; }
 }
 

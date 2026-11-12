@@ -427,6 +427,11 @@
   .studio-resize-preview { display: grid; justify-items: center; padding: 8px; background: var(--pink-50); border-radius: 10px; }
   .studio-resize-actions { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
   .studio-resize-actions button { min-height: 44px; }
+  .studio-bulk-dialog { width: min(520px, calc(100vw - 28px)); }
+  .studio-bulk-dialog textarea { width: 100%; box-sizing: border-box; font-size: 16px; }
+  .studio-bulk-dialog > label { margin-bottom: 12px; }
+  .studio-bulk-fields { display: grid; gap: 8px; margin: 10px 0; }
+  .studio-bulk-fields label { overflow-wrap: anywhere; }
 </style>
 </head>
 <body>
@@ -440,7 +445,7 @@
     // ONE version number for every app file. Change it each time you upload new files,
     // so phones and browsers fetch the fresh copies instead of reusing old ones.
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
-      const APP_VERSION = '2026-11-12-desktop-properties';
+      const APP_VERSION = '2026-11-12-bulk-artwork';
     // Files load in this order. The data file is plain JavaScript; the rest are React (.jsx).
     const APP_FILES = [
       'editor-icons.jsx',
@@ -464,6 +469,7 @@
       'ready-content.jsx',
       'simple-studio.jsx',
       'final-workspace.jsx',
+      'bulk-create.jsx',
       'editor.jsx',
     ];
     for (const file of APP_FILES) {

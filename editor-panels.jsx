@@ -759,33 +759,115 @@ function IconLibraryGrid({onChoose,accent='none',selected}){
     {category==='care'&&<p style={{fontSize:11,color:'var(--ink-3)',lineHeight:1.5}}>Reuse and recycling have separate symbols. Flow icons are relative labels, not measured capacities.</p>}
   </>;
 }
-function IconsPanel(){
-  const {state,dispatch}=useStore(),canvas=activeCanvas(state);
-  const [category,setCategory]=React.useState('all'),[query,setQuery]=React.useState(''),[error,setError]=React.useState('');
-  const groups=[['all','All illustrations'],['care','Pads & care'],['nature','Flowers & nature'],['makers','Makers'],['shops','Shops & markets'],['orders','Orders & parcels'],['social','Social & labels']];
-  const matches=FLORAL_STICKERS.filter(item=>(category==='all'||item.category===category)&&(item.label+' '+groups.find(g=>g[0]===item.category)?.[1]).toLowerCase().includes(query.trim().toLowerCase()));
-  const add=async item=>{
-    if(!canvas)return;setError('');
-    try{
-      const img=new Image();img.src=item.src;await img.decode();
-      let src=item.src;
-      if(item.crop){
-        const cut=document.createElement('canvas'),{x,y,w,h}=item.crop;cut.width=w;cut.height=h;
-        cut.getContext('2d').drawImage(img,x,y,w,h,0,0,w,h);src=cut.toDataURL('image/png');
+function IconsPanel({ replacement = null, onReplaced } = {}) {
+  const { state, dispatch } = useStore();
+  const canvas = activeCanvas(state);
+  const [category, setCategory] = React.useState('all');
+  const [query, setQuery] = React.useState('');
+  const [error, setError] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const latest = React.useRef(null);
+  latest.current = { canvas, replacement };
+  React.useEffect(() => () => { latest.current = null; }, []);
+  const groups = [['all','All illustrations'],['care','Pads & care'],['nature','Flowers & nature'],['makers','Makers'],['shops','Shops & markets'],['orders','Orders & parcels'],['social','Social & labels']];
+  const matches = FLORAL_STICKERS.filter(item => (category === 'all' || item.category === category) &&
+    (item.label + ' ' + groups.find(g => g[0] === item.category)?.[1]).toLowerCase().includes(query.trim().toLowerCase()));
+
+  async function loadArtwork(load) {
+    if (!canvas || busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      const { item, src } = await load();
+      const current = latest.current;
+      if (current?.canvas?.id !== canvas.id || current?.replacement?.id !== replacement?.id) return;
+      const el = replacement && current.canvas.elements.find(candidate => candidate.id === replacement.id);
+      if (replacement && (!el || el.locked)) return;
+      const ratio = item.width / item.height;
+      const w = el ? Math.min(el.w, el.h * ratio) : Math.min(360, canvas.w * .65, canvas.h * .65 * ratio);
+      const h = w / ratio;
+      const x = el ? el.x + (el.w - w) / 2 : (canvas.w - w) / 2;
+      const y = el ? el.y + (el.h - h) / 2 : (canvas.h - h) / 2;
+      const patch = illustrationPatch(item, x, y, w, src);
+      if (el) {
+        dispatch({ type: 'update-element', id: el.id, patch: { ...patch, radius: el.radius, artworkRevision: uid() } });
+        onReplaced?.();
+      } else dispatch({ type: 'add-element', element: newElement('image', patch) });
+    } catch {
+      setError('This artwork could not load. Try another image.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function add(item) {
+    loadArtwork(async () => {
+      const img = new Image();
+      img.src = item.src;
+      await img.decode();
+      if (!item.crop) return { item, src: item.src };
+      const { x, y, w, h } = item.crop;
+      const cut = document.createElement('canvas');
+      cut.width = w;
+      cut.height = h;
+      cut.getContext('2d').drawImage(img, x, y, w, h, 0, 0, w, h);
+      return { item, src: cut.toDataURL('image/png') };
+    });
+  }
+
+  function upload(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!['image/png','image/jpeg','image/webp','image/svg+xml'].includes(file.type) || file.size > 8 * 1024 * 1024) {
+      setError('Choose a PNG, JPG, WebP, or SVG image up to 8 MB.');
+      return;
+    }
+    loadArtwork(async () => {
+      let src = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+      const img = new Image();
+      img.src = src;
+      await img.decode();
+      if (!img.naturalWidth || !img.naturalHeight) throw new Error('Invalid image');
+      if (file.type === 'image/svg+xml') {
+        const bitmap = document.createElement('canvas');
+        const scale = 2048 / Math.max(img.naturalWidth, img.naturalHeight);
+        bitmap.width = Math.max(1, Math.round(img.naturalWidth * scale));
+        bitmap.height = Math.max(1, Math.round(img.naturalHeight * scale));
+        bitmap.getContext('2d').drawImage(img, 0, 0, bitmap.width, bitmap.height);
+        src = bitmap.toDataURL('image/png');
       }
-      const w=Math.min(360,canvas.w*.65),h=w*item.height/item.width;
-      dispatch({type:'add-element',element:newElement('image',illustrationPatch(item,(canvas.w-w)/2,(canvas.h-h)/2,w,src))});
-    }catch{setError('This illustration could not load. Check your connection and try again.');}
-  };
-  return <><PanelHeader title="Wonder Pads illustrations" subtitle="Your floral collection · tap to add"/>
-    <label style={{display:'block',marginBottom:10}}>Collection<select className="pk-select" aria-label="Illustration collection" value={category} onChange={e=>setCategory(e.target.value)} style={{width:'100%',marginTop:6,minHeight:44}}>{groups.map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>
-    <input className="text-input" aria-label="Search illustrations" placeholder="Search pad, wash, flower…" value={query} onChange={e=>setQuery(e.target.value)} style={{marginBottom:12,minHeight:44}}/>
-    <p style={{fontSize:12,color:'var(--ink-3)'}}>Resize and rotate freely; colours are part of the artwork. White-backed designs are labelled.</p>
-    {error&&<p role="alert">{error}</p>}
-    <div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}}>{matches.map(item=><button key={item.id} aria-label={'Add '+item.label} onClick={()=>add(item)} style={{padding:8,background:'var(--pink-50)',borderRadius:12,minWidth:0}}>
-      {item.crop?<svg aria-hidden="true" viewBox={item.crop.x+' '+item.crop.y+' '+item.crop.w+' '+item.crop.h} style={{width:'100%',height:110}}><image href={item.src} width={item.sheetWidth} height={item.sheetHeight}/></svg>:<img src={item.src} alt="" loading="lazy" decoding="async" style={{width:'100%',height:110,objectFit:'contain'}}/>}
-      <span style={{display:'block',fontSize:11,lineHeight:1.4,marginTop:6}}>{item.label}</span>
-    </button>)}</div>{!matches.length&&<p>No illustrations found. Try another search or collection.</p>}
+      return { item: { id:'uploaded-artwork', label:file.name, width:img.naturalWidth, height:img.naturalHeight }, src };
+    });
+  }
+
+  return <>
+    <PanelHeader title={replacement ? 'Replace artwork' : 'Wonder Pads illustrations'} />
+    <label style={{display:'grid',gap:5,marginBottom:12}}>Upload your artwork
+      <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={upload} disabled={busy}/>
+    </label>
+    <label style={{display:'block',marginBottom:10}}>Collection
+      <select className="pk-select" aria-label="Illustration collection" value={category} onChange={e=>setCategory(e.target.value)}
+        style={{width:'100%',marginTop:6,minHeight:44}}>{groups.map(([id,label])=><option key={id} value={id}>{label}</option>)}</select>
+    </label>
+    <input className="text-input" aria-label="Search illustrations" placeholder="Search pad, wash, flower"
+      value={query} onChange={e=>setQuery(e.target.value)} style={{marginBottom:12,minHeight:44}}/>
+    {error && <p role="alert">{error}</p>}
+    <div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}}>
+      {matches.map(item=><button key={item.id} aria-label={(replacement ? 'Replace with ' : 'Add ') + item.label}
+        disabled={busy} onClick={()=>add(item)} style={{padding:8,background:'var(--pink-50)',borderRadius:12,minWidth:0}}>
+        {item.crop
+          ? <svg aria-hidden="true" viewBox={item.crop.x+' '+item.crop.y+' '+item.crop.w+' '+item.crop.h} style={{width:'100%',height:110}}><image href={item.src} width={item.sheetWidth} height={item.sheetHeight}/></svg>
+          : <img src={item.src} alt="" loading="lazy" decoding="async" style={{width:'100%',height:110,objectFit:'contain'}}/>}
+        <span style={{display:'block',fontSize:11,lineHeight:1.4,marginTop:6}}>{item.label}</span>
+      </button>)}
+    </div>
+    {!matches.length && <p>No illustrations found. Try another search or collection.</p>}
   </>;
 }
 
@@ -1695,10 +1777,15 @@ function LineProps({ el, update }) {
 }
 
 function ImageProps({ el, update, showFlip = true }) {
+  const [replaceOpen, setReplaceOpen] = React.useState(false);
   const f = el.filter || {};
   return (
     <>
       {showFlip && el.stickerId && <IllustrationFlipControls el={el} update={update} />}
+      {showFlip && !el.locked && <details onToggle={e=>setReplaceOpen(e.currentTarget.open)}>
+        <summary>Replace artwork</summary>
+        {replaceOpen && <IconsPanel key={el.id} replacement={el} />}
+      </details>}
       <SectionLabel>Adjustments</SectionLabel>
       <div style={{ display: 'grid', gap: 8 }}>
         {[

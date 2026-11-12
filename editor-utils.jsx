@@ -312,12 +312,14 @@ function reducer(state, action) {
       return { ...state, activeProjectId: null, past: [], future: [], selection: [] };
 
     // ---------- Project CRUD ----------
-    case 'create-project': {
-      const proj = action.project || newProject(action.name, action.preset, action.seedElements);
+    case 'create-project':
+    case 'create-projects': {
+      const projects = action.projects || [action.project || newProject(action.name, action.preset, action.seedElements)];
+      if (!projects.length) return state;
       return {
         ...state,
-        projects: [proj, ...state.projects],
-        activeProjectId: proj.id, tool: null,
+        projects: [...projects, ...state.projects],
+        activeProjectId: projects[0].id, tool: null,
         past: [], future: [], selection: [],
       };
     }
