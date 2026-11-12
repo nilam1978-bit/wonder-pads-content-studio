@@ -188,8 +188,9 @@ function ElementView({ el, selected, dispatch, scale, editing, setEditing }) {
       <div {...commonProps}>
         <img src={el.src} draggable={false}
           style={{
-            width: '100%', height: '100%', objectFit: 'cover',
-            display: 'block', borderRadius: el.radius,
+            width: '100%', height: '100%', objectFit: isBrandLogo(el) ? 'contain' : 'cover',
+            display: 'block', borderRadius: isBrandLogo(el) ? undefined : el.radius,
+            clipPath: hasBrandLogoMask(el) ? 'circle(closest-side)' : undefined,
             transform: `scale(${el.flipX ? -1 : 1}, ${el.flipY ? -1 : 1})`,
             filter: `brightness(${f.brightness}%) contrast(${f.contrast}%) saturate(${f.saturate}%) blur(${f.blur}px)`,
             pointerEvents: 'none',
@@ -471,9 +472,9 @@ function CanvasArea() {
       if (handle.includes('s')) nh = Math.max(10, orig.h + dy);
       if (handle.includes('n')) { nh = Math.max(10, orig.h - dy); ny = orig.y + (orig.h - nh); }
 
-      if (isIllustration(orig) && handle.length === 2) {
+      if (keepsAspectOnResize(orig) && handle.length === 2) {
         dispatch({ type: 'update-element', id: orig.id, transient: true,
-          patch: proportionalIllustrationResize(orig, handle, nw, nh, 10) });
+          patch: proportionalElementResize(orig, handle, nw, nh, 10) });
         return;
       }
       // Shift = maintain ratio (corners only)
@@ -579,7 +580,7 @@ function CanvasArea() {
             >
               <ElementView el={el} selected={state.selection.includes(el.id)}
                 dispatch={dispatch} scale={state.zoom} editing={editing === el.id} setEditing={setEditing} />
-              {el.type==='image'&&(el.role==='logo'||el.brandSlot==='logo')&& !el.hidden&&<button
+              {isBrandLogo(el) && !el.hidden&&<button
                 aria-label="Select brand logo" aria-pressed={state.selection.includes(el.id)}
                 title="Select logo to resize, move or replace it" style={logoHitTarget(el,state.zoom)}
                 onPointerDown={e=>{if(space)return;if(el.locked){e.stopPropagation();dispatch({type:'set-selection',ids:[el.id]});}else startInteract(e,'drag',el.id);}}
@@ -666,7 +667,7 @@ function CanvasSelectionOverlay({ el, scale, viewportScale = 1, onHandle, onRota
   return (
     <div style={style}>
       <div className="sel-ring" />
-      {handles.filter(h => !isIllustration(el) || h.key.length === 2).map(h => (
+      {handles.filter(h => !keepsAspectOnResize(el) || h.key.length === 2).map(h => (
         <button key={h.key} type="button"
           data-resize-handle={h.key}
           style={{

@@ -790,7 +790,8 @@ function IconsPanel({ replacement = null, onReplaced } = {}) {
       const y = el ? el.y + (el.h - h) / 2 : (canvas.h - h) / 2;
       const patch = illustrationPatch(item, x, y, w, src);
       if (el) {
-        dispatch({ type: 'update-element', id: el.id, patch: { ...patch, radius: el.radius, artworkRevision: uid() } });
+        const logoSize = isBrandLogo(el) ? brandLogoSizePatch(el) : {};
+        dispatch({ type: 'update-element', id: el.id, patch: { ...patch, ...logoSize, radius: el.radius, artworkRevision: uid() } });
         onReplaced?.();
       } else dispatch({ type: 'add-element', element: newElement('image', patch) });
     } catch {
@@ -1361,8 +1362,10 @@ function ElementProperties({ el }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <LabeledInput label="X" value={Math.round(el.x)} onChange={v => update({ x: +v })} />
           <LabeledInput label="Y" value={Math.round(el.y)} onChange={v => update({ y: +v })} />
-          <LabeledInput label="W" value={Math.round(el.w)} onChange={v => update({ w: Math.max(10, +v) })} />
-          <LabeledInput label="H" value={Math.round(el.h)} onChange={v => update({ h: Math.max(10, +v) })} />
+          {!isBrandLogo(el) && <>
+            <LabeledInput label="W" value={Math.round(el.w)} onChange={v => update({ w: Math.max(10, +v) })} />
+            <LabeledInput label="H" value={Math.round(el.h)} onChange={v => update({ h: Math.max(10, +v) })} />
+          </>}
         </div>
         <div style={{ marginTop: 10 }}>
           <LabeledInput label="Rotation" value={Math.round(el.rot)} suffix="°" onChange={v => update({ rot: +v })} />
@@ -1445,11 +1448,11 @@ function typeLabel(t) {
     line: 'Line', arrow: 'Arrow', image: 'Image', icon: 'Icon', frame: 'Frame' }[t] || t;
 }
 
-function LabeledInput({ label, value, onChange, suffix }) {
+function LabeledInput({ label, value, onChange, suffix, disabled }) {
   return (
     <div style={{ position: 'relative' }}>
       <div style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 4 }}>{label}</div>
-      <input type="number" className="num-input" aria-label={label} value={value} onChange={e => onChange(e.target.value)} />
+      <input type="number" className="num-input" aria-label={label} value={value} disabled={disabled} onChange={e => onChange(e.target.value)} />
       {suffix && <span style={{
         position: 'absolute', right: 8, top: 24,
         fontSize: 11, color: 'var(--ink-3)', pointerEvents: 'none',
@@ -1776,11 +1779,26 @@ function LineProps({ el, update }) {
   );
 }
 
+function BrandLogoSizeControl({ el, update }) {
+  const setSize = value => {
+    if (value === '' || !Number.isFinite(Number(value))) return;
+    update(brandLogoSizePatch(el, Math.max(10, Number(value))));
+  };
+
+  return <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+    <LabeledInput label="Logo size" value={Math.round(brandLogoSize(el))} suffix="px"
+      disabled={el.locked} onChange={setSize} />
+    {el.w !== el.h && <button className="btn btn-tonal" disabled={el.locked}
+      onClick={() => update(brandLogoSizePatch(el))}>Reset proportions</button>}
+  </div>;
+}
+
 function ImageProps({ el, update, showFlip = true }) {
   const [replaceOpen, setReplaceOpen] = React.useState(false);
   const f = el.filter || {};
   return (
     <>
+      {showFlip && isBrandLogo(el) && <BrandLogoSizeControl el={el} update={update} />}
       {showFlip && el.stickerId && <IllustrationFlipControls el={el} update={update} />}
       {showFlip && !el.locked && <details onToggle={e=>setReplaceOpen(e.currentTarget.open)}>
         <summary>Replace artwork</summary>
@@ -1805,9 +1823,11 @@ function ImageProps({ el, update, showFlip = true }) {
         ))}
       </div>
 
-      <SectionLabel>Corner radius</SectionLabel>
-      <input type="range" min="0" max="200" value={el.radius || 0}
-        onChange={e => update({ radius: +e.target.value })} />
+      {!isBrandLogo(el) && <>
+        <SectionLabel>Corner radius</SectionLabel>
+        <input type="range" min="0" max="200" value={el.radius || 0}
+          onChange={e => update({ radius: +e.target.value })} />
+      </>}
     </>
   );
 }

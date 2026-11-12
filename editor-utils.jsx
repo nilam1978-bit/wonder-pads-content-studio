@@ -44,7 +44,26 @@ function resizeSlideToFit(canvas, { w, h }) {
 
 const isIllustration = el => el.type === 'icon' || !!el.stickerId;
 
-function proportionalIllustrationResize(el, handle, width, height, min) {
+const isBrandLogo = el => el.type === 'image' && (el.role === 'logo' || el.brandSlot === 'logo');
+const hasBrandLogoMask = el => isBrandLogo(el) && el.src === 'assets/wpr-logo.png';
+const keepsAspectOnResize = el => isIllustration(el) || isBrandLogo(el);
+const brandLogoSize = el => Math.min(el.w, el.h);
+
+function brandLogoSizePatch(el, size = brandLogoSize(el)) {
+  return { w: size, h: size, x: el.x + (el.w - size) / 2, y: el.y + (el.h - size) / 2 };
+}
+
+function proportionalElementResize(el, handle, width, height, min) {
+  if (isBrandLogo(el)) {
+    const dx = width - el.w;
+    const dy = height - el.h;
+    const delta = Math.abs(dx) >= Math.abs(dy) ? dx : dy;
+    const size = Math.max(min, brandLogoSize(el) + delta);
+    const x = handle.includes('w') ? el.x + el.w - size : el.x;
+    const y = handle.includes('n') ? el.y + el.h - size : el.y;
+    return { w: size, h: size, x, y };
+  }
+
   const sx = width / el.w;
   const sy = height / el.h;
   const scale = Math.max(min / Math.min(el.w, el.h), Math.abs(sx - 1) >= Math.abs(sy - 1) ? sx : sy);

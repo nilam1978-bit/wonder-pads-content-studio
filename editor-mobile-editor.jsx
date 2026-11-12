@@ -569,8 +569,8 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
       if (h.includes('n')) { nh = Math.max(20, startData.orig.h - dy); ny = startData.orig.y + (startData.orig.h - nh); }
       const isCorner = h === 'nw' || h === 'ne' || h === 'sw' || h === 'se';
       const patch = { x: nx, y: ny, w: nw, h: nh };
-      if (isIllustration(startData.orig) && isCorner) {
-        Object.assign(patch, proportionalIllustrationResize(startData.orig, h, nw, nh, 20));
+      if (keepsAspectOnResize(startData.orig) && isCorner) {
+        Object.assign(patch, proportionalElementResize(startData.orig, h, nw, nh, 20));
       }
       if (startData.orig.type === 'text' && isCorner) {
         const sx = nw / startData.orig.w;
@@ -732,7 +732,7 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
                   width: el.w + 2 * padX, height: el.h + 2 * padY, transform: `rotate(${el.rot || 0}deg)`,
                   background: 'transparent' }} />;
               })()}
-              {el.type==='image'&&(el.role==='logo'||el.brandSlot==='logo')&&!el.hidden&&<button
+              {isBrandLogo(el) && !el.hidden&&<button
                 aria-label="Select brand logo" aria-pressed={state.selection.includes(el.id)}
                 title="Tap to edit logo" style={logoHitTarget(el,state.zoom)}
                 onTouchStart={e=>{e.stopPropagation();if(el.locked)dispatch({type:'set-selection',ids:[el.id]});else startElementDrag(e,el.id);}}
@@ -814,7 +814,7 @@ function MobileSelectionOverlay({ el, scale, onResize, onRotate, onMove }) {
           onTouchStart={(e) => { onMove(e); }}
           onPointerDown={(e) => { if (e.pointerType !== 'touch') onMove(e); }} />
       )}
-      {handles.filter(h => !isIllustration(el) || h.key.length === 2).map(h => (
+      {handles.filter(h => !keepsAspectOnResize(el) || h.key.length === 2).map(h => (
         <button key={h.key} type="button" aria-label={`Resize ${h.key}`}
           style={{
             position: 'absolute', left: `calc(${h.x} + ${h.dx}px)`, top: `calc(${h.y} + ${h.dy}px)`,
@@ -1089,6 +1089,10 @@ function SizeTool({ el }) {
         })}>Fit to box</button>
       </div>
     );
+  }
+  if (isBrandLogo(el)) {
+    const update = patch => dispatch({ type: 'update-element', id: el.id, patch });
+    return <BrandLogoSizeControl el={el} update={update} />;
   }
   // Scale about the centre, keeping the shape's proportions.
   const ratio = el.h / Math.max(1, el.w);
