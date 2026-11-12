@@ -27,6 +27,32 @@ const defaultCanvas = (name = 'Page 1', preset = SIZE_PRESETS[0]) => ({
   elements: [],
 });
 
+function resizeSlideToFit(canvas, { w, h }) {
+  const scale = Math.min(w / canvas.w, h / canvas.h);
+  const offsetX = (w - canvas.w * scale) / 2;
+  const offsetY = (h - canvas.h * scale) / 2;
+  const elements = canvas.elements.map(el => {
+    const next = { ...el, x: offsetX + el.x * scale, y: offsetY + el.y * scale, w: el.w * scale, h: el.h * scale };
+    for (const key of ['fontSize', 'letterSpacing', 'radius', 'strokeWidth']) {
+      if (Number.isFinite(el[key]) && !(key === 'strokeWidth' && el.type === 'icon')) next[key] = el[key] * scale;
+    }
+    if (el.filter?.blur) next.filter = { ...el.filter, blur: el.filter.blur * scale };
+    return next;
+  });
+  return { ...canvas, w, h, elements };
+}
+
+const isIllustration = el => el.type === 'icon' || !!el.stickerId;
+
+function proportionalIllustrationResize(el, handle, width, height, min) {
+  const sx = width / el.w;
+  const sy = height / el.h;
+  const scale = Math.max(min / Math.min(el.w, el.h), Math.abs(sx - 1) >= Math.abs(sy - 1) ? sx : sy);
+  const w = el.w * scale;
+  const h = el.h * scale;
+  return { w, h, x: handle.includes('w') ? el.x + el.w - w : el.x, y: handle.includes('n') ? el.y + el.h - h : el.y };
+}
+
 const newElement = (type, patch = {}) => {
   const base = {
     id: uid(), type,

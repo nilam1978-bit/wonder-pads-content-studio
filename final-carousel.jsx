@@ -133,7 +133,8 @@ function floralEndpointSlide(kind,heading,body,label,s,brand,W,H,pair,markedHead
   });
   const supporting=text('body',body,closing?34:40,{align:look==='soft'?'center':'left'});
   // Reserve space for branding, swipe hint and closing actions. Never silently clip words.
-  const bottom=H-(closing?360:s.footerLine?350:look==='playful'?310:210);
+  const popupCover = pair.id === 'popup' && !closing;
+  const bottom=H-(closing?360:popupCover?365:s.footerLine?350:look==='playful'?310:210);
   let fits=false;
   for(let pass=0;pass<60;pass++){
     let y=start;
@@ -149,6 +150,11 @@ function floralEndpointSlide(kind,heading,body,label,s,brand,W,H,pair,markedHead
   if(look==='editorial'&&supporting)shape('rect',{x:m,y:supporting.y-14,w:inner,h:2,fill:pair.ink,radius:0});
   if(look==='playful'&&!closing){for(const [dx,dy] of [[-38,-38],[38,-38],[-38,38],[38,38]])shape('circle',{x:W-210+dx,y:H-280+dy,w:82,h:82,fill:'#849879'});}
   c.elements=[...decor,...blocks];
+  if (popupCover) {
+    const art = templateIllustration('floral-charming-reusable-pad-market-stall', W - 305, H - 355, s.footerLine ? 125 : 225);
+    if (s.footerLine) { art.patch.x = W - 200; art.patch.y = H - 220; }
+    c.elements.push(newElement(art.type, art.patch));
+  }
   if(closing){
     c.elements.push(...ctaEngagementElements(c,pair.ink));
     const branding=brandBackgroundElements('signature',c,{...brand,logo:s.logo?brand.logo:''});

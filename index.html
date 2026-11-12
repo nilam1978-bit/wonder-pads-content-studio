@@ -392,6 +392,25 @@
     overscroll-behavior: contain;
     padding: 8px 12px 10px;
   }
+  .studio-resize-dialog {
+    width: min(440px, calc(100vw - 28px));
+    max-height: calc(100dvh - 28px);
+    box-sizing: border-box;
+    padding: 18px;
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: #fff;
+    color: var(--ink);
+  }
+  .studio-resize-dialog::backdrop { background: #2a1f2a60; }
+  .studio-resize-dialog h2 { margin: 0 0 12px; }
+  .studio-resize-dialog p { font-size: 13px; margin: 10px 0; }
+  .studio-resize-dialog label { display: grid; gap: 5px; font-size: 13px; }
+  .studio-resize-dialog select { width: 100%; min-height: 44px; font-size: 16px; }
+  .studio-resize-preview { display: grid; justify-items: center; padding: 8px; background: var(--pink-50); border-radius: 10px; }
+  .studio-resize-actions { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .studio-resize-actions button { min-height: 44px; }
 </style>
 </head>
 <body>
@@ -405,7 +424,7 @@
     // ONE version number for every app file. Change it each time you upload new files,
     // so phones and browsers fetch the fresh copies instead of reusing old ones.
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
-      const APP_VERSION = '2026-11-12-mobile-ribbon';
+      const APP_VERSION = '2026-11-12-resize-illustrations';
     // Files load in this order. The data file is plain JavaScript; the rest are React (.jsx).
     const APP_FILES = [
       'editor-icons.jsx',

@@ -642,4 +642,13 @@ const FLORAL_STICKERS = [
 {"id":"shared-pastel-social-cta-banner","label":"Pastel Social CTA Banner","category":"social","src":"assets/stickers/shared-pastel-social-cta-banner.webp","width":2172,"height":724},
 {"id":"shared-wonder-pads-mascot-flower-hair","label":"Wonder Pads Mascot Banner · Flower in Hair","category":"social","src":"assets/stickers/shared-wonder-pads-mascot-flower-hair.webp","width":1774,"height":887}
 ];
+function illustrationPatch(item, x, y, w, src = item.src) {
+  return { src, x, y, w, h: w * item.height / item.width, stickerId: item.id, stickerLabel: item.label, radius: 0 };
+}
+
+function templateIllustration(id, x, y, w) {
+  const item = FLORAL_STICKERS.find(sticker => sticker.id === id);
+  return { type: 'image', patch: illustrationPatch(item, x, y, w) };
+}
+
 Object.assign(window,{FLORAL_STICKERS});

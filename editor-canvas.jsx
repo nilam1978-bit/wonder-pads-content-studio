@@ -190,6 +190,7 @@ function ElementView({ el, selected, dispatch, scale, editing, setEditing }) {
           style={{
             width: '100%', height: '100%', objectFit: 'cover',
             display: 'block', borderRadius: el.radius,
+            transform: `scale(${el.flipX ? -1 : 1}, ${el.flipY ? -1 : 1})`,
             filter: `brightness(${f.brightness}%) contrast(${f.contrast}%) saturate(${f.saturate}%) blur(${f.blur}px)`,
             pointerEvents: 'none',
           }}
@@ -201,7 +202,7 @@ function ElementView({ el, selected, dispatch, scale, editing, setEditing }) {
   if (el.type === 'icon') {
     return (
       <div {...commonProps}>
-        <div style={{ width: '100%', height: '100%', color: el.color }}>
+        <div style={{ width: '100%', height: '100%', color: el.color, transform: `scale(${el.flipX ? -1 : 1}, ${el.flipY ? -1 : 1})` }}>
           <Icon name={el.name} size="100%" stroke={el.strokeWidth} accent={el.iconAccent} />
         </div>
       </div>
@@ -470,6 +471,11 @@ function CanvasArea() {
       if (handle.includes('s')) nh = Math.max(10, orig.h + dy);
       if (handle.includes('n')) { nh = Math.max(10, orig.h - dy); ny = orig.y + (orig.h - nh); }
 
+      if (isIllustration(orig) && handle.length === 2) {
+        dispatch({ type: 'update-element', id: orig.id, transient: true,
+          patch: proportionalIllustrationResize(orig, handle, nw, nh, 10) });
+        return;
+      }
       // Shift = maintain ratio (corners only)
       if (e.shiftKey && (handle === 'nw' || handle === 'ne' || handle === 'sw' || handle === 'se')) {
         const ratio = orig.w / orig.h;
@@ -497,10 +503,7 @@ function CanvasArea() {
 
   // Canvas click (deselect)
   const onCanvasClick = (e) => {
-    if (e.target.dataset.canvasBg) {
-      dispatch({ type: 'set-selection', ids: [] });
-      setEditing(null);
-    }
+    if (e.target.dataset.canvasBg) setEditing(null);
   };
 
   // Panning
@@ -663,7 +666,7 @@ function CanvasSelectionOverlay({ el, scale, viewportScale = 1, onHandle, onRota
   return (
     <div style={style}>
       <div className="sel-ring" />
-      {handles.map(h => (
+      {handles.filter(h => !isIllustration(el) || h.key.length === 2).map(h => (
         <button key={h.key} type="button"
           data-resize-handle={h.key}
           style={{

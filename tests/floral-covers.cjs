@@ -7,6 +7,8 @@ const renderer=fs.readFileSync(path.join(root,'editor-export.jsx'),'utf8');
 let nextId=0;
 const ctx={uid:()=>String(++nextId),document:{createElement:()=>({getContext:()=>({font:'',measureText(value){return {width:Array.from(value).length*Number(this.font.match(/([\d.]+)px/)[1])*.58};}})})},brandBackgroundElements:()=>[],ctaEngagementElements:()=>[],cleanSlideSwipe:els=>els};
 vm.createContext(ctx);
+ctx.window={};
+vm.runInContext(fs.readFileSync(path.join(root,'floral-stickers.js'),'utf8'),ctx);
 vm.runInContext(utils.slice(utils.indexOf('const newElement ='),utils.indexOf('// Branded backgrounds')),ctx);
 vm.runInContext(utils.slice(utils.indexOf('const SLIDE_TEXT_STYLES'),utils.indexOf('function ctaEngagementElements')),ctx);
 vm.runInContext(renderer.slice(renderer.indexOf('let textMeasureContext'),renderer.indexOf('function fitTextSize')),ctx);
@@ -39,7 +41,10 @@ for(const pair of ctx.pairs.filter(p=>p.kit))for(const size of ['portrait','post
   assert.equal(slides[2].elements.find(e=>e.__role==='heading').text,'Second detail');
   assert.equal(slides[3].elements.find(e=>e.__role==='heading').text,'A little more comfort, your way.');
   for(const slide of slides){assert.equal(slide.h,size==='portrait'?1350:1080);for(const el of slide.elements.filter(e=>e.type==='text'))assert(el.y+ctx.textLayout(el).height<=slide.h);}
-  if(pair.id==='popup')assert.equal(slides[0].elements.find(e=>e.__role==='body').color,'#2A1F2A');
+  if(pair.id==='popup'){
+    assert.equal(slides[0].elements.find(e=>e.__role==='body').color,'#2A1F2A');
+    assert(slides[0].elements.some(e=>e.type==='image'&&e.stickerId==='floral-charming-reusable-pad-market-stall'));
+  }
 }
 console.log('PASS: all three bold occasion kits retain cover, details and CTA in both ratios.');
 
