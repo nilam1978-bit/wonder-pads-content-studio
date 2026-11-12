@@ -186,7 +186,7 @@ function MobileEditor({ progressNav, onPreview, onSource, onResize }) {
     clearSelection();
     dispatch({ type: 'duplicate-canvas', id: canvas.id });
   };
-  const activeTray = primaryEl && !primaryEl.locked && trayToolsFor(primaryEl).includes(tray) ? tray : null;
+  const activeTray = primaryEl && (!primaryEl.locked || tray === 'position') && trayToolsFor(primaryEl).includes(tray) ? tray : null;
 
   return (
     <div style={{
@@ -978,17 +978,20 @@ function ToolBtn({ label, onClick, active, children, keepFocus }) {
   );
 }
 
+function MobileIconAction({ label, icon, onClick, disabled, pressed, iconStyle }) {
+  return <button type="button" className="mobile-ribbon-tool mobile-ribbon-icon"
+    aria-label={label} title={label} aria-pressed={pressed} disabled={disabled} onClick={onClick}>
+    <Icon name={icon} size={19} style={iconStyle} />
+  </button>;
+}
+
 function MobileSelectionTools({ el, activeTool, onTool }) {
-  const {state,dispatch}=useStore();
-  const canvas = activeCanvas(state);
-  const index = canvas.elements.findIndex(item => item.id === el.id);
-  const last = canvas.elements.length - 1;
+  const {dispatch}=useStore();
   const locked = !!el.locked;
   const change=patch=>{if(!locked&&patch)dispatch({type:'update-element',id:el.id,patch});};
   const chip = 'mobile-ribbon-tool';
-  const tool=(label,key,content=label)=><button className={chip} aria-label={label} aria-expanded={key === 'words' ? undefined : activeTool===key} disabled={locked} onClick={()=>onTool(key)}>{content}</button>;
-  const action = (label, onClick, disabled = false) => <button className={chip} disabled={disabled} onClick={onClick}>{label}</button>;
-  const move = to => dispatch({ type: 'reorder-element', id: el.id, to });
+  const tool=(label,key,content=label)=><button className={chip} aria-label={label} aria-expanded={key === 'words' ? undefined : activeTool===key} disabled={locked&&key!=='position'} onClick={()=>onTool(key)}>{content}</button>;
+  const update = patch => dispatch({ type: 'update-element', id: el.id, patch });
   return <>
     {el.type==='text'?<>
       {tool('Edit words','words')}
@@ -1011,14 +1014,10 @@ function MobileSelectionTools({ el, activeTool, onTool }) {
     </>}
     {tool('Position','position')}
     {tool('Opacity','opacity')}
-    {action('Duplicate element', () => dispatch({ type: 'duplicate-elements', ids: [el.id] }))}
-    {action('Bring to front', () => move(last), index === last)}
-    {action('Move forward', () => move(index + 1), index === last)}
-    {action('Move backward', () => move(index - 1), index === 0)}
-    {action('Send to back', () => move(0), index === 0)}
-    {action(el.locked ? 'Unlock' : 'Lock', () => dispatch({ type: 'update-element', id: el.id, patch: { locked: !el.locked } }))}
-    {action(el.hidden ? 'Show' : 'Hide', () => dispatch({ type: 'update-element', id: el.id, patch: { hidden: !el.hidden } }))}
-    {action('Delete element', () => dispatch({ type: 'delete-elements', ids: [el.id] }))}
+    <MobileIconAction label="Duplicate element" icon="duplicate" onClick={() => dispatch({ type: 'duplicate-elements', ids: [el.id] })} />
+    <MobileIconAction label={el.locked ? 'Unlock' : 'Lock'} icon={el.locked ? 'unlock' : 'lock'} onClick={() => update({ locked: !el.locked })} />
+    <MobileIconAction label={el.hidden ? 'Show' : 'Hide'} icon={el.hidden ? 'eye' : 'eye_off'} onClick={() => update({ hidden: !el.hidden })} />
+    <MobileIconAction label="Delete element" icon="trash" onClick={() => dispatch({ type: 'delete-elements', ids: [el.id] })} />
   </>;
 }
 
@@ -1045,7 +1044,10 @@ function MobileToolTray({ el, tool, onClose }) {
         {tool === 'format' && <FormatTool el={el} />}
         {tool === 'opacity' && <OpacityTool el={el} />}
         {tool === 'position' && <PositionTool el={el} />}
-        {tool === 'flip' && <IllustrationFlipControls el={el} update={update} />}
+        {tool === 'flip' && <div className="mobile-ribbon-icon-group" role="group" aria-label="Flip illustration">
+          <MobileIconAction label="Flip horizontal" icon="flip_horizontal" pressed={!!el.flipX} onClick={() => update({ flipX: !el.flipX })} />
+          <MobileIconAction label="Flip vertical" icon="flip_vertical" pressed={!!el.flipY} onClick={() => update({ flipY: !el.flipY })} />
+        </div>}
         {tool === 'adjust' && <ImageProps el={el} update={update} showFlip={false} />}
         {tool === 'frame' && <FrameProps el={el} update={update} />}
         {tool === 'replace-icon' && <IconLibraryGrid selected={el.name} accent={el.iconAccent||'none'} onChoose={name=>update({name})} />}
@@ -1142,55 +1144,67 @@ function FormatTool({ el }) {
   </div>;
 }
 
-// Nudge, align to the slide, or enter exact coordinates.
 function PositionTool({ el }) {
   const { state, dispatch } = useStore();
   const [step, setStep] = meS(10);
+  const canvas = activeCanvas(state);
+  const index = canvas.elements.findIndex(item => item.id === el.id);
+  const last = canvas.elements.length - 1;
+  const move = to => dispatch({ type: 'reorder-element', id: el.id, to });
+  const update = patch => dispatch({ type: 'update-element', id: el.id, patch });
   const setCoordinate = (key, value) => {
-    if (value !== '' && Number.isFinite(Number(value))) {
-      dispatch({ type: 'update-element', id: el.id, patch: { [key]: Number(value) } });
-    }
+    if (value !== '' && Number.isFinite(Number(value))) update({ [key]: Number(value) });
   };
-  const nudge = (dx, dy) => dispatch({ type: 'update-element', id: el.id, patch: { x: el.x + dx, y: el.y + dy } });
-  const arrow = { width: 52, height: 48, borderRadius: 12, background: 'var(--pink-100)', color: 'var(--ink)', fontSize: 20, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' };
-  const aligns = [['left', 'Left'], ['hcenter', 'Centre'], ['right', 'Right'], ['top', 'Top'], ['vmiddle', 'Middle'], ['bottom', 'Bottom']];
-  return (
-    <div style={{ display: 'flex', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-      <div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 52px)', gap: 6 }}>
-          <span />
-          <button style={arrow} aria-label="Nudge up" onClick={() => nudge(0, -step)}>↑</button>
-          <span />
-          <button style={arrow} aria-label="Nudge left" onClick={() => nudge(-step, 0)}>←</button>
-          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--ink-3)' }}>{step}px</span>
-          <button style={arrow} aria-label="Nudge right" onClick={() => nudge(step, 0)}>→</button>
-          <span />
-          <button style={arrow} aria-label="Nudge down" onClick={() => nudge(0, step)}>↓</button>
-          <span />
-        </div>
-        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-          {[[2, 'Fine'], [10, 'Normal'], [40, 'Big']].map(([v, l]) => (
-            <button key={v} onClick={() => setStep(v)} style={{ flex: 1, padding: '8px 4px', borderRadius: 8, fontSize: 11, fontWeight: 600,
-              background: step === v ? 'var(--pink-200)' : 'var(--pink-50)', color: step === v ? 'var(--pink-600)' : 'var(--ink-2)' }}>{l}</button>
-          ))}
-        </div>
+  const layerActions = [
+    ['Move forward one layer', 'layer_forward', index + 1, index === last],
+    ['Move backward one layer', 'layer_backward', index - 1, index === 0],
+    ['Bring to front', 'layer_front', last, index === last],
+    ['Send to back', 'layer_back', 0, index === 0],
+  ];
+  const aligns = [
+    ['left', 'Align left to slide', 'align_l'],
+    ['hcenter', 'Centre horizontally on slide', 'align_c'],
+    ['right', 'Align right to slide', 'align_r'],
+    ['top', 'Align top to slide', 'align_top'],
+    ['vmiddle', 'Centre vertically on slide', 'align_middle'],
+    ['bottom', 'Align bottom to slide', 'align_bottom'],
+  ];
+  const nudges = [
+    ['Nudge left', 'arrow', -step, 0, { transform: 'rotate(180deg)' }],
+    ['Nudge right', 'arrow', step, 0],
+    ['Nudge up', 'arrow_up', 0, -step],
+    ['Nudge down', 'arrow_down', 0, step],
+  ];
+  return <>
+    <MobileRibbon label="Position actions">
+      <div className="mobile-ribbon-icon-group" role="group" aria-label="Layer order">
+        {layerActions.map(([label, icon, to, disabled]) =>
+          <MobileIconAction key={icon} label={label} icon={icon} disabled={disabled} onClick={() => move(to)} />)}
       </div>
-      <div style={{ flex: 1, minWidth: 150 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 6 }}>Snap to the slide</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
-          {aligns.map(([pos, label]) => (
-            <button key={pos} onClick={() => alignElementsToPage(state, dispatch, pos)}
-              style={{ padding: '12px 4px', borderRadius: 10, background: 'var(--pink-50)', fontSize: 12, fontWeight: 600, color: 'var(--ink)' }}>{label}</button>
-          ))}
-        </div>
+      <span className="mobile-ribbon-divider" aria-hidden="true" />
+      <div className="mobile-ribbon-icon-group" role="group" aria-label="Align to slide">
+        {aligns.map(([pos, label, icon]) =>
+          <MobileIconAction key={pos} label={label} icon={icon} disabled={el.locked}
+            onClick={() => alignElementsToPage(state, dispatch, pos)} />)}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, width: '100%' }}>
-        <LabeledInput label="X" value={Math.round(el.x)} onChange={v => setCoordinate('x', v)} />
-        <LabeledInput label="Y" value={Math.round(el.y)} onChange={v => setCoordinate('y', v)} />
-        <LabeledInput label="Rotation" value={Math.round(el.rot || 0)} suffix="°" onChange={v => setCoordinate('rot', v)} />
+      <span className="mobile-ribbon-divider" aria-hidden="true" />
+      <div className="mobile-ribbon-icon-group" role="group" aria-label="Nudge">
+        {nudges.map(([label, icon, dx, dy, iconStyle]) =>
+          <MobileIconAction key={label} label={label} icon={icon} iconStyle={iconStyle} disabled={el.locked}
+            onClick={() => update({ x: el.x + dx, y: el.y + dy })} />)}
       </div>
-    </div>
-  );
+    </MobileRibbon>
+    {!el.locked && <div className="mobile-position-values">
+      <LabeledInput label="X" value={Math.round(el.x)} onChange={v => setCoordinate('x', v)} />
+      <LabeledInput label="Y" value={Math.round(el.y)} onChange={v => setCoordinate('y', v)} />
+      <LabeledInput label="Rotation" value={Math.round(el.rot || 0)} suffix="°" onChange={v => setCoordinate('rot', v)} />
+      <label>Nudge step
+        <select className="pk-select" value={step} onChange={e => setStep(Number(e.target.value))}>
+          {[2, 10, 40].map(pixels => <option key={pixels} value={pixels}>{pixels} px</option>)}
+        </select>
+      </label>
+    </div>}
+  </>;
 }
 
 function MobilePagesList({ onSwitch }) {

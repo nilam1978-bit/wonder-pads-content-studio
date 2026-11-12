@@ -49,6 +49,11 @@ const ICONS = {
   align_l: '<path d="M4 4v16M8 8h11M8 14h7"/>',
   align_c: '<path d="M12 4v16M6 8h12M8 14h8"/>',
   align_r: '<path d="M20 4v16M5 8h11M9 14h7"/>',
+  align_top: '<path d="M4 4h16M8 8v11M14 8v7"/>',
+  align_middle: '<path d="M4 12h16M8 6v12M14 8v8"/>',
+  align_bottom: '<path d="M4 20h16M8 5v11M14 9v7"/>',
+  flip_horizontal: '<path d="M12 3v18M4 7l5 5-5 5V7zM20 7l-5 5 5 5V7z"/>',
+  flip_vertical: '<path d="M3 12h18M7 4l5 5 5-5H7zM7 20l5-5 5 5H7z"/>',
   bold: '<path d="M7 5h6a3.5 3.5 0 010 7H7zM7 12h7a3.5 3.5 0 010 7H7z"/>',
   italic: '<path d="M19 4h-9M14 20H5M15 4L9 20"/>',
   underline: '<path d="M6 4v8a6 6 0 0012 0V4M4 20h16"/>',
@@ -67,6 +72,10 @@ const ICONS = {
 
   // layers
   layer: '<path d="M12 2l10 6-10 6-10-6z"/><path d="M2 14l10 6 10-6"/>',
+  layer_forward: '<path d="M3 13l6-3.5 6 3.5-6 3.5L3 13zm0 4l6 3.5 6-3.5M19 15V4m-3 3 3-3 3 3"/>',
+  layer_backward: '<path d="M3 13l6-3.5 6 3.5-6 3.5L3 13zm0 4l6 3.5 6-3.5M19 4v11m-3-3 3 3 3-3"/>',
+  layer_front: '<path d="M5 3h14M12 14V6m-4 4 4-4 4 4M4 17l8 4 8-4"/>',
+  layer_back: '<path d="M5 21h14M12 10v8m-4-4 4 4 4-4M4 7l8-4 8 4"/>',
 
   // menus
   chevron_d: '<path d="M6 9l6 6 6-6"/>',
