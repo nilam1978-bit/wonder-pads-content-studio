@@ -247,18 +247,19 @@ function MobileEditor({ progressNav, onPreview, onSource, onResize, onBulkCreate
       </div>
 
       <div className="mobile-ribbon-dock">
-        {activeTray && !openSheet && !wordDraft && (
-          <MobileToolTray key={primaryEl.id + activeTray} el={primaryEl} tool={activeTray} onClose={() => setTray(null)} />
+        {primaryEl && (
+          <div className="mobile-ribbon-context">
+            {activeTray && !openSheet && !wordDraft && (
+              <MobileToolTray key={primaryEl.id + activeTray} el={primaryEl} tool={activeTray} onClose={() => setTray(null)} />
+            )}
+            <MobileRibbon key={primaryEl.type} label="Selected element tools"
+              end={<button className="mobile-ribbon-pin mobile-ribbon-done" onClick={clearSelection}>Done</button>}>
+              <MobileSelectionTools el={primaryEl} activeTool={activeTray}
+                onTool={tool => tool === 'words' ? beginEdit(primaryEl.id) : pickTool(tool)} />
+            </MobileRibbon>
+          </div>
         )}
-        <MobileRibbon key={primaryEl?.type || 'page'} label={primaryEl ? 'Selected element tools' : 'Page tools'}
-          end={primaryEl &&
-            <button className="mobile-ribbon-pin mobile-ribbon-done" onClick={clearSelection}>Done</button>
-          }>
-          {primaryEl && <>
-            <MobileSelectionTools el={primaryEl} activeTool={activeTray}
-              onTool={tool => tool === 'words' ? beginEdit(primaryEl.id) : pickTool(tool)} />
-            <span className="mobile-ribbon-divider" aria-hidden="true" />
-          </>}
+        <MobileRibbon label="Page tools">
           <MobilePageTools activeTool={openSheet} onOpen={openTool} onSource={onSource}
             onResize={onResize} onBulkCreate={onBulkCreate} onDuplicate={duplicatePage} />
         </MobileRibbon>

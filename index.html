@@ -310,6 +310,14 @@
     border-top: 1px solid var(--line);
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
+  .mobile-ribbon-context {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 100%;
+    background: #fff;
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -4px 12px rgba(42, 31, 42, .08);
+  }
   .mobile-ribbon {
     display: flex;
     align-items: center;
@@ -445,7 +453,7 @@
     // ONE version number for every app file. Change it each time you upload new files,
     // so phones and browsers fetch the fresh copies instead of reusing old ones.
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
-      const APP_VERSION = '2026-11-12-bulk-artwork';
+      const APP_VERSION = '2026-11-12-split-mobile-ribbons';
     // Files load in this order. The data file is plain JavaScript; the rest are React (.jsx).
     const APP_FILES = [
       'editor-icons.jsx',
