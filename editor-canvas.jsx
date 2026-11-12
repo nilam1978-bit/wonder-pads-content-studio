@@ -3,6 +3,13 @@ const { useEffect: uE, useLayoutEffect: uLE, useRef: uR, useState: uS, useCallba
 
 // ---------------- ELEMENT RENDERER ----------------
 function ElementView({ el, selected, dispatch, scale, editing, setEditing }) {
+  const editNode = uR(null);
+  const originalText = uR('');
+  uLE(() => {
+    if (!editing || !editNode.current) return;
+    originalText.current = el.text;
+    editNode.current.textContent = el.text;
+  }, [editing, el.id]);
   if (el.hidden) return null;
 
   const style = {
@@ -24,12 +31,17 @@ function ElementView({ el, selected, dispatch, scale, editing, setEditing }) {
     return (
       <div {...commonProps}>
         <div
+          ref={editNode}
           data-text-content-id={el.id}
           contentEditable={editing}
           suppressContentEditableWarning
+          onInput={e => dispatch({
+            type: 'update-element', id: el.id, patch: { text: e.currentTarget.innerText }, transient: true,
+          })}
           onBlur={(e) => {
+            if (!editing) return;
+            dispatch({ type: 'commit-text-edit', id: el.id, originalText: originalText.current, text: e.currentTarget.innerText });
             setEditing(null);
-            dispatch({ type: 'update-element', id: el.id, patch: { text: e.currentTarget.innerText } });
           }}
           onKeyDown={(e) => e.stopPropagation()}
           style={{
@@ -52,7 +64,7 @@ function ElementView({ el, selected, dispatch, scale, editing, setEditing }) {
             whiteSpace: 'pre-wrap',
           }}
         >
-          {editing ? el.text : textLayout(el).lines.join('\n')}
+          {editing ? null : textLayout(el).lines.join('\n')}
         </div>
       </div>
     );

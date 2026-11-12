@@ -449,6 +449,23 @@ function reducer(state, action) {
       return { ...state, past, future: [] };
     }
 
+    case 'commit-text-edit': {
+      const project = state.projects.find(p => p.id === state.activeProjectId);
+      const canvas = project?.canvases.find(c => c.id === project.activeCanvasId);
+      const element = canvas?.elements.find(e => e.id === action.id);
+      if (!element) return state;
+      const next = element.text === action.text ? state : reducer(state, {
+        type: 'update-element', id: action.id, patch: { text: action.text }, transient: true,
+      });
+      if (action.text === action.originalText) return next;
+      const original = { ...element, text: action.originalText };
+      original.h = textLayout(original).height;
+      const snapshot = patchCanvas(project, canvas.id, {
+        elements: canvas.elements.map(e => e.id === action.id ? original : e),
+      });
+      return reducer(next, { type: 'commit-transient', snapshot });
+    }
+
     case 'delete-elements':
       return {
         ...activeProjectMutate(proj => patchCanvas(proj, proj.activeCanvasId, {
@@ -656,7 +673,10 @@ function reducer(state, action) {
 
     // ---------- Persistence ----------
     case 'load-state': return { ...state, ...action.state };
-    case 'set-save-status': return { ...state, saveStatus: action.status, savedAt: action.savedAt ?? state.savedAt };
+    case 'set-save-status':
+      return { ...state, saveStatus: action.status, saveError: action.error || '', savedAt: action.savedAt ?? state.savedAt };
+    case 'add-upload':
+      return { ...state, uploads: [action.src, ...state.uploads.filter(src => src !== action.src)].slice(0, 24) };
 
     default:
       return state;
@@ -712,6 +732,7 @@ const useStore = () => useContext(StoreCtx);
 
 const STORAGE_KEY = 'wpr-simple-preview-v1';
 const LEGACY_KEY = 'wpr-simple-preview-legacy';
+const UPLOADS_KEY = 'simple-preview-uploads';
 
 function migrateLegacy() {
   // Convert the old single-workspace to a single project.
@@ -813,6 +834,7 @@ const initialState = () => ({
   savedLaunches: [],            // [{ id, productId, angle, outputs, ts }]
   calendar: [],                 // [{ id, ts, platform, text, status: 'queued'|'posted', productId?, note? }]
   savedBackgrounds: [],         // [{ id, name, kind: 'bg-only' | 'complete', bg, elements?, w?, h?, createdAt }] — frozen snapshots
+  uploads: [],
   activeProjectId: null,
   selection: [],
   tool: 'templates',
@@ -821,20 +843,54 @@ const initialState = () => ({
   past: [],
   future: [],
   saveStatus: 'idle',
+  saveError: '',
   savedAt: null,
 });
 
+function studioSnapshot(state) {
+  const { past, future, selection, saveStatus, saveError, savedAt, ...persist } = state;
+  return persist;
+}
+
 function StoreProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, null, initialState);
+  const [ready, setReady] = useState(false);
+  const revision = useRef(null);
+  const loaded = useRef(false);
+  const migrate = useRef(false);
+  const pending = useRef(null);
+  const writing = useRef(false);
+  const timer = useRef(null);
 
-  const loadedRef = useRef(false);
   useEffect(() => {
-    if (loadedRef.current) return;
-    loadedRef.current = true;
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const saved = JSON.parse(raw);
+    let active = true;
+    async function load() {
+      let record;
+      let storageError;
+      try {
+        record = await studioStorage.read();
+      } catch (error) {
+        storageError = error;
+      }
+      if (!active) return;
+      revision.current = record?.revision ?? null;
+      let saved = record?.state;
+      if (!saved) {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) saved = JSON.parse(raw);
+          if (!saved) {
+            const legacy = migrateLegacy();
+            if (legacy) saved = { projects: [legacy] };
+          }
+          const uploads = JSON.parse(localStorage.getItem(UPLOADS_KEY) || '[]');
+          if (Array.isArray(uploads) && uploads.length) saved = { ...saved, uploads };
+        } catch (error) {
+          storageError ||= error;
+        }
+        migrate.current = !!saved;
+      }
+      if (saved) {
         // Backfill brand + carousel if missing (older data)
         if (!saved.brand) saved.brand = defaultBrand();
         else saved.brand = { ...defaultBrand(), ...saved.brand };
@@ -858,43 +914,85 @@ function StoreProvider({ children }) {
         if(typeof refreshWonderBrandCopy==='function')refreshWonderBrandCopy(saved);
         refreshStockHookLogos(saved);
         // Always land on home when reloading
-        saved.view = 'home';
-        dispatch({ type: 'load-state', state: { ...saved, past: [], future: [], selection: [], saveStatus: 'idle' } });
-      } else {
-        // Try legacy migration
-        const legacy = migrateLegacy();
-        if (legacy) {
-          dispatch({ type: 'load-state', state: { projects: [legacy], activeProjectId: null } });
-        }
+        dispatch({ type: 'load-state', state: {
+          ...saved, view: 'home', activeProjectId: null, past: [], future: [], selection: [],
+          saveStatus: record ? 'saved' : 'idle',
+        } });
       }
-    } catch { /* ignore */ }
+      if (storageError) {
+        console.warn('Could not load studio storage', storageError);
+        dispatch({ type: 'set-save-status', status: 'error', error: 'The browser could not read saved work.' });
+      }
+      setReady(true);
+    }
+    load().catch(error => {
+      if (!active) return;
+      console.warn('Could not open studio workspace', error);
+      dispatch({ type: 'set-save-status', status: 'error', error: 'The browser could not open saved work.' });
+      setReady(true);
+    });
+    return () => { active = false; };
   }, []);
 
-  // Debounced save — includes every persisted slice so new Petal features persist reliably.
-  const saveTimerRef = useRef(null);
-  useEffect(() => {
-    if (!loadedRef.current) return;
+  const flush = useCallback(async () => {
+    clearTimeout(timer.current);
+    if (writing.current || !pending.current) return;
+    writing.current = true;
     dispatch({ type: 'set-save-status', status: 'saving' });
-    clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      try {
-        const { past, future, selection, saveStatus, savedAt, ...persist } = state;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(persist));
-        dispatch({ type: 'set-save-status', status: 'saved', savedAt: now() });
-      } catch (e) {
-        console.warn('Save failed', e);
+    try {
+      while (pending.current) {
+        const snapshot = pending.current;
+        revision.current = await studioStorage.write(snapshot, revision.current);
+        if (pending.current === snapshot) pending.current = null;
       }
-    }, 500);
-    return () => clearTimeout(saveTimerRef.current);
+      dispatch({ type: 'set-save-status', status: 'saved', savedAt: now() });
+    } catch (error) {
+      console.warn('Save failed', error);
+      dispatch({ type: 'set-save-status', status: 'error', error: studioSaveError(error) });
+    } finally {
+      writing.current = false;
+    }
+  }, []);
+
+  // Queue the latest committed edit before the next paint, including text input.
+  React.useLayoutEffect(() => {
+    if (!ready) return;
+    const shouldWrite = loaded.current || migrate.current;
+    loaded.current = true;
+    if (!shouldWrite) return;
+    pending.current = studioSnapshot(state);
+    dispatch({ type: 'set-save-status', status: 'saving' });
+    clearTimeout(timer.current);
+    timer.current = setTimeout(flush, 250);
   }, [
-    state.projects, state.templates, state.activeProjectId,
+    ready, flush, state.projects, state.templates,
     state.brand, state.vocab, state.copyBlocks, state.products, state.launchAngles,
     state.savedRepurpose, state.savedLaunches, state.calendar,
-    state.savedBackgrounds, state.carousel,
+    state.savedBackgrounds, state.carousel, state.uploads,
   ]);
 
+  useEffect(() => {
+    const onHidden = () => { if (document.visibilityState === 'hidden') flush(); };
+    const beforeUnload = event => {
+      if (!pending.current) return;
+      flush();
+      event.preventDefault();
+      event.returnValue = true;
+    };
+    document.addEventListener('visibilitychange', onHidden);
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => {
+      document.removeEventListener('visibilitychange', onHidden);
+      window.removeEventListener('pagehide', flush);
+      window.removeEventListener('beforeunload', beforeUnload);
+      clearTimeout(timer.current);
+    };
+  }, [flush]);
+
+  if (!ready) return <p role="status" style={{ padding: 24 }}>Opening saved work…</p>;
   return (
-    <StoreCtx.Provider value={{ state, dispatch }}>
+    <StoreCtx.Provider value={{ state, dispatch, retrySave: flush, hasPendingSave: !!pending.current }}>
       {children}
     </StoreCtx.Provider>
   );
@@ -965,17 +1063,14 @@ function alignElementsToPage(state, dispatch, position) {
 }
 
 // ------- Backup / Restore editable project -------
-// Exports the entire persisted store as a downloadable JSON file. This is a superset of what
-// localStorage holds — projects, canvases, brand, saved backgrounds, brand arrangements,
-// content-tool history, calendar, carousel state, all app data.
+// Export the current workspace, including changes that have not reached storage.
 function exportEditableProjectFile(state) {
   try { localStorage.setItem('wpr-last-backup', String(Date.now())); } catch {}
-  const { past, future, selection, saveStatus, savedAt, ...persist } = state;
   const payload = {
     app: 'Wonder Pads Content Studio',
     version: 2,
     exportedAt: new Date().toISOString(),
-    state: persist,
+    state: studioSnapshot(state),
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);

@@ -74,7 +74,7 @@ function BottomSheet({ open, onClose, title, height = '70vh', children, actionRi
             </div>
             <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
               {actionRight}
-              <button className="icon-btn" onClick={onClose}>
+              <button className="icon-btn" aria-label="Close" onClick={onClose}>
                 <Icon name="x" size={18} />
               </button>
             </div>
@@ -114,8 +114,7 @@ function MobileEditor({ progressNav, onPreview, onSource, slideActions }) {
   const canvas = activeCanvas(state);
 
   const [openSheet, setOpenSheet] = meS(null); // 'templates'|'brand'|'text'|'shapes'|'images'|'icons'|'frames'|'bg'|'more'|'pages'|'layers'|'properties'|'menu'|'download'|'rename'|'add'
-  // The "tool tray" is the live-editing strip that sits under the slide (words, font, size, colour, format, move...).
-  // Unlike a pop-up sheet it never covers or blurs the slide, so you see every change as you make it.
+  // The active tool opens above the ribbon without changing the canvas layout.
   const [tray, setTray] = meS(null);
   const [longPressMenu, setLongPressMenu] = meS(false);
   // Draft words separately; the canvas never becomes a keyboard input.
@@ -146,11 +145,10 @@ function MobileEditor({ progressNav, onPreview, onSource, slideActions }) {
   // Stop typing if the selection moves to something else.
   meE(() => { if (editingId && (!primaryEl || primaryEl.id !== editingId)) endEdit(); }, [primaryEl?.id, editingId]);
 
-  // Close the tray when nothing is selected, or when the chosen tool does not suit the newly selected item.
+  // A tool belongs to the item it was opened for.
   meE(() => {
-    if (!tray) return;
-    if (!primaryEl || !trayToolsFor(primaryEl).includes(tray)) setTray(null);
-  }, [primaryEl?.id, primaryEl?.type]);
+    setTray(null);
+  }, [canvas?.id, primaryEl?.id]);
 
   // Regenerate thumbnail
   const thumbSig = proj ? sigForThumb(proj.canvases[0]) : '';
@@ -180,6 +178,15 @@ function MobileEditor({ progressNav, onPreview, onSource, slideActions }) {
 
   const closeSheet = () => setOpenSheet(null);
   const pickTool = (tool) => setTray(t => (t === tool ? null : tool));
+  const clearSelection = () => {
+    setTray(null);
+    dispatch({ type: 'set-selection', ids: [] });
+  };
+  const duplicatePage = () => {
+    clearSelection();
+    dispatch({ type: 'duplicate-canvas', id: canvas.id });
+  };
+  const activeTray = primaryEl && !primaryEl.locked && trayToolsFor(primaryEl).includes(tray) ? tray : null;
 
   return (
     <div style={{
@@ -242,51 +249,29 @@ function MobileEditor({ progressNav, onPreview, onSource, slideActions }) {
         })()}
       </div>
 
-      {/* Slide thumbnails belong beneath the canvas in the simple workflow.
-          They step aside while a tool tray is open so the slide stays big. */}
-
-      {/* Page actions stay available for both canvas and element selection. */}
-      {!openSheet && !editingId && <div role="toolbar" aria-label="Page actions" style={{display:'flex',alignItems:'center',background:'white',borderTop:'1px solid var(--line)',flexShrink:0}}>
-        <button style={{minHeight:44,padding:'0 12px',background:'transparent',color:'var(--ink)',fontSize:12}} onClick={()=>{setTray(null);dispatch({type:'set-selection',ids:[]});dispatch({type:'duplicate-canvas',id:canvas.id});}}>Duplicate page</button>
-        <button style={{minHeight:44,padding:'0 12px',background:'transparent',color:'var(--ink)',fontSize:12}} onClick={()=>setOpenSheet('pages')}>Pages</button>
-        {primaryEl && <button style={{minHeight:44,marginLeft:'auto',padding:'0 12px',background:'transparent',color:'var(--pink-600)',fontSize:12}} onClick={()=>{setTray(null);dispatch({type:'set-selection',ids:[]});}}>Done</button>}
-      </div>}
-      {/* Live tool tray */}
-      {primaryEl && tray && (
-        <MobileToolTray el={primaryEl} tool={tray} setTool={setTray} onClose={() => setTray(null)} />
-      )}
-
-      {/* Selection toolbar */}
-      {primaryEl && primaryEl.type === 'text' && editingId === primaryEl.id && !openSheet && !tray && (
-        <MobileTextEditBar el={primaryEl} dispatch={dispatch}
-          onDone={endEdit}
-          onTool={(t) => { endEdit(); setTray(t); }} />
-      )}
-      {primaryEl && !openSheet && !tray && !editingId && (
-        <MobileSelectionBar el={primaryEl} activeTool={tray}
-          onAdd={() => setOpenSheet('add')}
-          onTool={(t) => (t === 'words' && primaryEl.type === 'text' ? beginEdit(primaryEl.id) : pickTool(t))}
-          onAdjust={() => setOpenSheet('properties')}
-          locked={!!primaryEl.locked}
-          onAction={(kind) => {
-            const id = primaryEl.id;
-            if (kind === 'duplicate') dispatch({ type: 'duplicate-elements', ids: [id] });
-            else if (kind === 'front') dispatch({ type: 'reorder-element', id, to: canvas.elements.length - 1 });
-            else if (kind === 'back') dispatch({ type: 'reorder-element', id, to: 0 });
-            else if (kind === 'lock') dispatch({ type: 'update-element', id, patch: { locked: !primaryEl.locked } });
-            else if (kind === 'hide') { dispatch({ type: 'update-element', id, patch: { hidden: true } }); dispatch({ type: 'set-selection', ids: [] }); }
-            else if (kind === 'delete') dispatch({ type: 'delete-elements', ids: [id] });
-            else if (kind === 'more') setLongPressMenu(true);
-            else if (kind === 'settings') setOpenSheet('properties');
-          }}
-        />
-      )}
-
-      {/* Bottom tool bar */}
-      {!primaryEl && !openSheet && (
-        <MobileEditorBottomBar activeTool={state.tool} onOpen={openTool}
-          onSource={onSource} />
-      )}
+      <div className="mobile-ribbon-dock">
+        {activeTray && !openSheet && !longPressMenu && !wordDraft && (
+          <MobileToolTray key={primaryEl.id + activeTray} el={primaryEl} tool={activeTray} onClose={() => setTray(null)} />
+        )}
+        {primaryEl ? (
+          <MobileRibbon key={primaryEl.type} label="Selected element tools" end={<>
+            <button className="mobile-ribbon-pin" aria-label="More element actions" onClick={() => setLongPressMenu(true)}>
+              <Icon name="more" size={18} />
+            </button>
+            <button className="mobile-ribbon-pin mobile-ribbon-done" onClick={clearSelection}>Done</button>
+          </>}>
+            <MobileSelectionTools el={primaryEl} activeTool={activeTray}
+              onTool={tool => tool === 'words' ? beginEdit(primaryEl.id) : pickTool(tool)}
+              onAdjust={() => setOpenSheet('properties')} />
+          </MobileRibbon>
+        ) : (
+          <MobileRibbon label="Page tools" end={
+            <button className="mobile-ribbon-pin" onClick={() => setOpenSheet('pages')}>Pages</button>
+          }>
+            <MobilePageTools activeTool={state.tool} onOpen={openTool} onSource={onSource} onDuplicate={duplicatePage} />
+          </MobileRibbon>
+        )}
+      </div>
 
       {/* Sheets */}
       <BottomSheet open={openSheet === 'templates'} onClose={closeSheet} title="Templates">
@@ -404,6 +389,7 @@ function MobileEditor({ progressNav, onPreview, onSource, slideActions }) {
           title={typeLabel(primaryEl.type)} height="auto">
           <div style={{ display: 'grid', gap: 4, paddingBottom: 8 }}>
             <SheetAction icon="plus" label="Add an element" onClick={()=>{setLongPressMenu(false);setOpenSheet('add');}} />
+            <SheetAction icon="copy" label="Duplicate page" onClick={() => { setLongPressMenu(false); duplicatePage(); }} />
             <SheetAction icon="duplicate" label="Duplicate"
               onClick={() => { dispatch({ type: 'duplicate-elements', ids: [primaryEl.id] }); setLongPressMenu(false); }} />
             <SheetAction icon="grid" label="Move & align"
@@ -976,41 +962,77 @@ function MobileSelectionOverlay({ el, scale, onResize, onRotate, onMove }) {
   );
 }
 
-function MobileEditorBottomBar({ activeTool, onOpen, onSource }) {
+function MobileRibbon({ label, children, end }) {
+  const scrollRef = meR(null);
+  const [edges, setEdges] = meS({ before: false, after: false });
+  meE(() => {
+    const scroll = scrollRef.current;
+    const measure = () => {
+      const before = scroll.scrollLeft > 2;
+      const after = scroll.scrollLeft + scroll.clientWidth < scroll.scrollWidth - 2;
+      setEdges(old => old.before === before && old.after === after ? old : { before, after });
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(scroll);
+    observer.observe(scroll.firstElementChild);
+    scroll.addEventListener('scroll', measure, { passive: true });
+    measure();
+    return () => {
+      observer.disconnect();
+      scroll.removeEventListener('scroll', measure);
+    };
+  }, []);
+  const forward = edges.after || !edges.before;
+  return (
+    <div className="mobile-ribbon" role="toolbar" aria-label={label}>
+      <div className="mobile-ribbon-scroll" data-ribbon-scroll ref={scrollRef}>
+        <div className="mobile-ribbon-items">{children}</div>
+      </div>
+      <button className="mobile-ribbon-pin mobile-ribbon-arrow"
+        aria-label={forward ? 'Scroll tools forward' : 'Scroll tools back'}
+        disabled={!edges.after && !edges.before}
+        onClick={() => {
+          const scroll = scrollRef.current;
+          scroll.scrollBy({ left: (forward ? 1 : -1) * scroll.clientWidth * 0.8 });
+        }}>
+        <span style={{ display: 'inline-flex', transform: forward ? undefined : 'scaleX(-1)' }}>
+          <Icon name="chevron_r" size={16} />
+        </span>
+      </button>
+      {end}
+    </div>
+  );
+}
+
+function MobilePageTools({ activeTool, onOpen, onSource, onDuplicate }) {
   const tools = [
     { id: 'text', icon: 'text', label: 'Text' },
     { id: 'images', icon: 'images', label: 'Image' },
     { id: 'bg', icon: 'bg', label: 'Background' },
+    { id: 'duplicate-page', icon: 'duplicate', label: 'Duplicate page' },
     { id: 'icons', icon: 'images', label: 'Illustrations' },
     { id: 'shapes', icon: 'shapes', label: 'Shapes' },
     { id: 'frames', icon: 'frames', label: 'Frames' },
     { id: 'brand', icon: 'brand_kit', label: 'Brand' },
     { id: 'templates', icon: 'templates', label: 'Templates' },
     ...(onSource ? [{ id: 'source', icon: 'text', label: 'Source text' }] : []),
-    { id: 'pages', icon: 'copy', label: 'Pages' },
     { id: 'layers', icon: 'layers', label: 'Layers' },
   ];
   return (
-    <div className="safe-bottom" style={{
-      display: 'flex', background: 'white', overflowX: 'auto', overscrollBehaviorX: 'contain',
-      borderTop: '1px solid var(--line)',
-      flexShrink: 0, padding: '4px 4px calc(4px + env(safe-area-inset-bottom, 0px))',
-      zIndex: 15,
-    }}>
+    <>
       {tools.map(t => (
-        <button key={t.id} onClick={() => t.id === 'source' ? onSource() : onOpen(t.id)}
-          style={{
-            flex: '0 0 auto', minWidth: 68, minHeight: 52, padding: '8px 10px', borderRadius: 0,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-            color: activeTool === t.id ? 'var(--pink-600)' : 'var(--ink-2)',
-            background: 'transparent',
+        <button key={t.id} className="mobile-ribbon-tool mobile-ribbon-page-tool"
+          aria-pressed={activeTool === t.id}
+          onClick={() => {
+            if (t.id === 'source') onSource();
+            else if (t.id === 'duplicate-page') onDuplicate();
+            else onOpen(t.id);
           }}>
-          <Icon name={t.icon} size={20} />
-          <span style={{ fontSize: 9, fontWeight: 500 }}>{t.label}</span>
+          <Icon name={t.icon} size={18} />
+          <span>{t.label}</span>
         </button>
       ))}
-
-    </div>
+    </>
   );
 }
 
@@ -1027,7 +1049,7 @@ function trayToolsFor(el) {
   if (SHAPE_TYPES.includes(el.type) || ['line', 'arrow', 'icon'].includes(el.type)) return ['colour', 'size', 'opacity', 'position'];
   return ['size', 'opacity', 'position']; // image, frame
 }
-const TRAY_LABELS = { styles: 'Styles', words: 'Edit', font: 'Font', size: 'Size', colour: 'Colour', format: 'Format', opacity: 'Fade', position: 'Move' };
+const TRAY_LABELS = { styles: 'Text styles', font: 'Font', size: 'Size', colour: 'Colour', format: 'Spacing', opacity: 'Opacity', position: 'Position' };
 // The property that holds this item's main colour.
 function colourKey(el) {
   if (el.type === 'text' || el.type === 'icon') return 'color';
@@ -1051,87 +1073,47 @@ function ToolBtn({ label, onClick, active, children, keepFocus }) {
   );
 }
 
-// Shown just above the keyboard while typing on the slide: one floating pill, like Canva.
-// It scrolls sideways, and the round tick on the right finishes typing.
-function MobileTextEditBar({ el, dispatch, onDone, onTool }) {
-  const patch = (p) => dispatch({ type: 'update-element', id: el.id, patch: p });
-  const aligns = ['left', 'center', 'right'];
-  const nextAlign = aligns[(aligns.indexOf(el.align) + 1) % 3] || 'left';
-  const chip = (active) => ({ flex: '0 0 auto', minWidth: 38, height: 38, padding: '0 7px', borderRadius: 19, border: 0,
-    background: active ? 'var(--pink-100)' : 'transparent', color: active ? 'var(--pink-600)' : 'var(--ink)',
-    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 14, fontWeight: 600, fontFamily: 'inherit' });
-  const keep = (e) => e.preventDefault();
-  const Sep = () => <span aria-hidden="true" style={{ flex: '0 0 1px', width: 1, height: 20, background: 'var(--line-2)', margin: '0 2px' }} />;
-  return (
-    <div role="toolbar" aria-label="Text editing tools" style={{ flexShrink: 0, zIndex: 15, padding: '4px 8px calc(4px + max(0px, env(safe-area-inset-bottom, 0px) - var(--studio-keyboard, 0px)))', display: 'flex', alignItems: 'center', gap: 6 }}>
-      <div style={{ flex: 1, minWidth: 0, background: 'white', borderRadius: 26, boxShadow: '0 4px 16px rgba(80,30,70,.18)', padding: '2px 4px',
-        display: 'flex', alignItems: 'center', gap: 2, overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
-        <button style={chip(isBoldText(el))} aria-label="Bold" aria-pressed={isBoldText(el)} onMouseDown={keep} onClick={() => patch(toggleBoldPatch(el))}><Icon name="bold" size={20} /></button>
-        <button style={chip(!!el.italic)} aria-label="Italic" aria-pressed={!!el.italic} onMouseDown={keep} onClick={() => patch({ italic: !el.italic })}><span style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 19, fontFamily: 'serif' }}>I</span></button>
-        <button style={chip(!!el.underline)} aria-label="Underline" aria-pressed={!!el.underline} onMouseDown={keep} onClick={() => patch({ underline: !el.underline })}><span style={{ textDecoration: 'underline', fontWeight: 700, fontSize: 18 }}>U</span></button>
-        <button style={chip(false)} aria-label={'Align ' + (el.align || 'left')} onMouseDown={keep} onClick={() => patch({ align: nextAlign })}><Icon name={el.align === 'center' ? 'align_c' : el.align === 'right' ? 'align_r' : 'align_l'} size={20} /></button>
-      </div>
-      <button className="btn btn-tonal" onClick={() => onTool('format')}>More</button>
-    </div>
-  );
-}
-function MobileSelectionBar({ el, activeTool, onAdd, onTool, onAdjust, onAction, locked }) {
+function MobileSelectionTools({ el, activeTool, onTool, onAdjust }) {
   const {dispatch}=useStore();
+  const locked = !!el.locked;
   const change=patch=>{if(!locked&&patch)dispatch({type:'update-element',id:el.id,patch});};
-  const chip={flex:'0 0 auto',minHeight:44,minWidth:44,padding:'0 10px',borderRadius:0,border:0,background:'white',color:'var(--ink)',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,fontSize:12};
-  const tool=(label,key,content=label)=><button key={key} style={{...chip,background:activeTool===key?'var(--pink-100)':'transparent'}} aria-label={label} aria-pressed={activeTool===key} onClick={()=>onTool(key)}>{content}</button>;
-  return <div role="toolbar" aria-label="Selected element tools" style={{display:'flex',gap:6,padding:'6px 8px calc(6px + env(safe-area-inset-bottom,0px))',background:'white',borderTop:'1px solid var(--line)',flexShrink:0,overflowX:'auto',overscrollBehaviorX:'contain'}}>
+  const chip = 'mobile-ribbon-tool';
+  const tool=(label,key,content=label)=><button className={chip} aria-label={label} aria-expanded={key === 'words' ? undefined : activeTool===key} disabled={locked} onClick={()=>onTool(key)}>{content}</button>;
+  return <>
     {el.type==='text'?<>
       {tool('Edit words','words')}
       {tool('Font: '+el.fontFamily,'font',<span style={{fontFamily:el.fontFamily,maxWidth:140,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{el.fontFamily}</span>)}
       {tool('Font size','size',Math.round(el.fontSize)+' px')}
-      {tool('Text colour','colour',<><span style={{width:18,height:18,borderRadius:'50%',background:el.color,border:'1px solid var(--line)'}}/>Colour</>)}
-      <button style={{...chip,background:isBoldText(el)?'var(--pink-100)':'transparent'}} aria-label="Bold" aria-pressed={isBoldText(el)} disabled={locked||!boldWeightFor(el.fontFamily)} onClick={()=>change(toggleBoldPatch(el))}><b>B</b></button>
-      <button style={{...chip,background:el.italic?'var(--pink-100)':'transparent'}} aria-label="Italic" aria-pressed={!!el.italic} disabled={locked} onClick={()=>change({italic:!el.italic})}><i>I</i></button>
-      <button style={chip} aria-label={'Alignment: '+el.align} disabled={locked} onClick={()=>change({align:el.align==='left'?'center':el.align==='center'?'right':'left'})}><Icon name={el.align==='center'?'align_c':el.align==='right'?'align_r':'align_l'} size={16}/></button>
+      {tool('Text colour','colour',<><span className="mobile-ribbon-swatch" style={{background:el.color}}/>Colour</>)}
+      <button className={chip} aria-label="Bold" aria-pressed={isBoldText(el)} disabled={locked||!boldWeightFor(el.fontFamily)} onClick={()=>change(toggleBoldPatch(el))}><b>B</b></button>
+      <button className={chip} aria-label="Italic" aria-pressed={!!el.italic} disabled={locked} onClick={()=>change({italic:!el.italic})}><i>I</i></button>
+      <button className={chip} aria-label={'Alignment: '+el.align} disabled={locked} onClick={()=>change({align:el.align==='left'?'center':el.align==='center'?'right':'left'})}><Icon name={el.align==='center'?'align_c':el.align==='right'?'align_r':'align_l'} size={16}/></button>
       {tool('Text styles','styles')}
       {tool('Weight and spacing','format','Spacing')}
     </>:<>
       {tool('Size','size')}
-      {trayToolsFor(el).includes('colour')?tool('Colour','colour'):<button style={chip} onClick={onAdjust}>Adjust</button>}
+      {trayToolsFor(el).includes('colour')
+        ?tool('Colour','colour',<><span className="mobile-ribbon-swatch" style={{background:el[colourKey(el)]}}/>Colour</>)
+        :<button className={chip} disabled={locked} onClick={onAdjust}>Adjust</button>}
       {tool('Opacity','opacity')}
     </>}
     {tool('Position','position')}
-    <button style={chip} onClick={onAdd}>Add element</button>
-    {[['duplicate','Duplicate element'],['front','Bring to front'],['back','Send to back'],['lock',locked?'Unlock':'Lock'],['hide','Hide'],['settings','All settings'],['delete','Delete']].map(([action,label])=><button key={action} style={{...chip,color:action==='delete'?'var(--pink-600)':'var(--ink)'}} onClick={()=>onAction(action)}>{label}</button>) }
-  </div>;
+  </>;
 }
 
-// The strip that opens under the slide. Tabs along the top switch tools without closing it.
-function MobileToolTray({ el, tool, setTool, onClose }) {
+function MobileToolTray({ el, tool, onClose }) {
   const {dispatch}=useStore();
   const dispatchStylePatch=(id,patch)=>dispatch({type:'update-element',id,patch});
-  const tabs = trayToolsFor(el);
-  const tall = false;
+  const label = TRAY_LABELS[tool];
   return (
-    <div className="safe-bottom" style={{
-      background: 'white', borderTop: '1px solid var(--line)', flexShrink: 0, zIndex: 15,
-      display: 'flex', flexDirection: 'column',
-      maxHeight: 'min(320px, calc(var(--studio-viewport-height, 100dvh) * 0.36))',
-      boxShadow: '0 -8px 24px rgba(150,60,120,.10)',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 8px', borderBottom: '1px solid var(--line)', flexShrink: 0 }}>
-        <div className="scroll" role="tablist" style={{ display: 'flex', gap: 2, flex: 1, overflowX: 'auto', minWidth: 0 }}>
-          {tabs.map(t => (
-            <button key={t} role="tab" aria-selected={tool === t} onClick={() => setTool(t)}
-              style={{ padding: '6px 8px', minHeight:44, minWidth: 46, borderRadius: 10, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0,
-                background: tool === t ? 'var(--pink-200)' : 'transparent', color: tool === t ? 'var(--pink-600)' : 'var(--ink-2)' }}>
-              {TRAY_LABELS[t]}
-            </button>
-          ))}
-        </div>
-        <button aria-label="Done" onClick={onClose}
-          style={{ width: 44, height: 40, borderRadius: 10, background: 'var(--ink)', color: 'var(--cream)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Icon name="check" size={18} />
+    <section className="mobile-ribbon-panel" aria-label={label + ' controls'}>
+      <header>
+        <strong>{label}</strong>
+        <button className="mobile-ribbon-pin" aria-label={'Close ' + label + ' controls'} onClick={onClose}>
+          <Icon name="x" size={18} />
         </button>
-      </div>
-      <div className="scroll" style={{ overflowY: 'auto', padding: '8px 12px 10px', minHeight: 0 }}>
-        {tool === 'words' && <WordsTool el={el} />}
+      </header>
+      <div className="mobile-ribbon-panel-body">
         {tool === 'styles' && <TextLookPicker el={el} update={patch=>{if(!el.locked)dispatchStylePatch(el.id,patch);}} />}
         {tool === 'font' && <FontPicker el={el} maxHeight={Math.round((window.visualViewport?.height || window.innerHeight) * 0.27)} />}
         {tool === 'size' && <SizeTool el={el} />}
@@ -1140,7 +1122,7 @@ function MobileToolTray({ el, tool, setTool, onClose }) {
         {tool === 'opacity' && <OpacityTool el={el} />}
         {tool === 'position' && <PositionTool el={el} />}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -1428,8 +1410,7 @@ function MobileRenameSheet({ proj, onClose, onRename }) {
 Object.assign(window, {
   trayToolsFor, MobileToolTray, ToolBtn,
   MobileEditor, MobileEditorTopBar, MobilePagesStrip,
-  MobileCanvasArea, MobileSelectionOverlay, MobileEditorBottomBar,
-  MobileSelectionBar, MobilePagesList, MobileDownloadOptions, MobileRenameSheet,
+  MobileCanvasArea, MobileSelectionOverlay, MobilePagesList, MobileDownloadOptions, MobileRenameSheet,
 });
 
 function MobileWordsDialog({draft,onChange,onCancel,onDone}) {

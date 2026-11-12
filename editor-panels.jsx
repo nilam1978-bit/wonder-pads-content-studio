@@ -677,20 +677,13 @@ function ShapesPanel() {
 // ------- Images panel -------
 function ImagesPanel() {
   const { state, dispatch } = useStore();
-  const [uploads, setUploads] = pS(() => {
-    try { return JSON.parse(localStorage.getItem('simple-preview-uploads') || '[]'); } catch { return []; }
-  });
+  const uploads = state.uploads;
   const fileRef = pR(null);
 
   const handleFiles = (files) => {
     Array.from(files).forEach(file => {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        const src = e.target.result;
-        const newList = [src, ...uploads].slice(0, 24);
-        setUploads(newList);
-        try { localStorage.setItem('simple-preview-uploads', JSON.stringify(newList)); } catch {}
-      };
+      reader.onload = e => dispatch({ type: 'add-upload', src: e.target.result });
       reader.readAsDataURL(file);
     });
   };
