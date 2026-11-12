@@ -301,6 +301,97 @@
     50%      { opacity: 1;   }
   }
   .skel { animation: wpr-skel-pulse 1.2s ease-in-out infinite; }
+
+  .mobile-ribbon-dock {
+    position: relative;
+    flex: 0 0 auto;
+    z-index: 15;
+    background: #fff;
+    border-top: 1px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .mobile-ribbon {
+    display: flex;
+    align-items: center;
+    height: 58px;
+    padding-inline: 4px;
+    gap: 2px;
+  }
+  .mobile-ribbon-scroll {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: auto hidden;
+    overscroll-behavior: contain;
+    touch-action: pan-x;
+    scrollbar-width: none;
+  }
+  .mobile-ribbon-scroll::-webkit-scrollbar { display: none; }
+  .mobile-ribbon-items {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    width: max-content;
+    padding-inline: 3px;
+  }
+  .mobile-ribbon-tool, .mobile-ribbon-pin {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 8px;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .mobile-ribbon-tool[aria-pressed="true"], .mobile-ribbon-tool[aria-expanded="true"] {
+    background: var(--pink-100);
+    color: var(--pink-600);
+  }
+  .mobile-ribbon-tool:disabled { opacity: .45; }
+  .mobile-ribbon-page-tool {
+    flex-direction: column;
+    min-width: 54px;
+    gap: 3px;
+    font-size: 10px;
+  }
+  .mobile-ribbon-arrow { color: var(--ink-2); border-left: 1px solid var(--line); border-radius: 0; }
+  .mobile-ribbon-arrow:disabled { display: none; }
+  .mobile-ribbon-done { background: var(--pink-100); color: var(--pink-600); }
+  .mobile-ribbon-swatch { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--line); }
+  .mobile-ribbon-panel {
+    position: absolute;
+    inset-inline: 8px;
+    bottom: calc(100% + 6px);
+    display: flex;
+    flex-direction: column;
+    max-height: min(300px, calc(var(--studio-viewport-height, 100dvh) * .36));
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: 0 6px 24px rgba(80, 30, 70, .18);
+    overflow: hidden;
+  }
+  .mobile-ribbon-panel header {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px 0 12px;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+  }
+  .mobile-ribbon-panel-body {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 8px 12px 10px;
+  }
 </style>
 </head>
 <body>
@@ -314,11 +405,12 @@
     // ONE version number for every app file. Change it each time you upload new files,
     // so phones and browsers fetch the fresh copies instead of reusing old ones.
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
-      const APP_VERSION = '2026-11-11-watercolour-social';
+      const APP_VERSION = '2026-11-12-mobile-ribbon';
     // Files load in this order. The data file is plain JavaScript; the rest are React (.jsx).
     const APP_FILES = [
       'editor-icons.jsx',
       'floral-stickers.js',
+      'studio-storage.js',
       'editor-utils.jsx',
       'editor-ai.jsx',
       'editor-export.jsx',

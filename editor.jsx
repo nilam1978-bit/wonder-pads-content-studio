@@ -71,9 +71,12 @@ function SaveIndicator() {
     return () => clearInterval(t);
   }, []);
   const text = state.saveStatus === 'saving' ? 'Saving…'
+    : state.saveStatus === 'error' ? 'Save failed'
     : state.savedAt ? `Saved · ${timeAgo(state.savedAt)}`
+    : state.saveStatus === 'saved' ? 'Saved'
     : 'All changes local';
-  const dot = state.saveStatus === 'saving' ? 'var(--pink-400)' : '#6EBB8F';
+  const dot = state.saveStatus === 'error' ? '#A12E42'
+    : state.saveStatus === 'saving' ? 'var(--pink-400)' : '#6EBB8F';
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 6,
@@ -86,6 +89,26 @@ function SaveIndicator() {
         transition: 'all .3s' }} />
       <span key={tick}>{text}</span>
     </div>
+  );
+}
+
+function SaveErrorBanner() {
+  const { state, retrySave, hasPendingSave } = useStore();
+  if (state.saveStatus !== 'error') return null;
+  return (
+    <aside style={{
+      position: 'fixed', zIndex: 5000, right: 12, bottom: 12, width: 'min(420px, calc(100vw - 24px))',
+      boxSizing: 'border-box', padding: '12px 16px', borderRadius: 10,
+      background: '#fff0f2', border: '1px solid #A12E42', color: '#681B2C',
+    }}>
+      <div role="alert"><strong>Save failed.</strong> {state.saveError}</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+        {hasPendingSave
+          ? <button className="btn btn-tonal" onClick={retrySave}>Retry save</button>
+          : <button className="btn btn-tonal" onClick={() => location.reload()}>Reload studio</button>}
+        <button className="btn btn-tonal" onClick={() => exportEditableProjectFile(state)}>Download editable backup</button>
+      </div>
+    </aside>
   );
 }
 
@@ -545,10 +568,6 @@ class ErrorBoundary extends React.Component {
             onClick={() => { this.setState({ err: null }); }}>
             Try again
           </button>
-          <button style={{ marginLeft: 8, padding: '10px 16px', background: '#F1CFEA', borderRadius: 8, border: 'none', cursor: 'pointer' }}
-            onClick={() => { localStorage.removeItem(STORAGE_KEY); location.reload(); }}>
-            Reset storage & reload
-          </button>
         </div>
       );
     }
@@ -560,6 +579,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <ErrorBoundary>
     <StoreProvider>
       <App />
+      <SaveErrorBanner />
     </StoreProvider>
   </ErrorBoundary>
 );
