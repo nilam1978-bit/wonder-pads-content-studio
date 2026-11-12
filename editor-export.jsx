@@ -217,11 +217,16 @@ function elementToSVG(el, embedImages) {
       : '';
     const filterAttr = filter ? ` filter="url(#${fid})"` : '';
     const clipId = 'clip-' + el.id;
-    const clip = (el.radius || 0) > 0
-      ? `<defs><clipPath id="${clipId}"><rect width="${el.w}" height="${el.h}" rx="${el.radius}" ry="${el.radius}"/></clipPath></defs>`
-      : '';
-    const clipAttr = (el.radius || 0) > 0 ? ` clip-path="url(#${clipId})"` : '';
-    return `<g transform="${t}"${op}>${filter}${clip}<image width="${el.w}" height="${el.h}" preserveAspectRatio="xMidYMid slice" href="${escapeAttr(el.src)}"${filterAttr}${clipAttr}/></g>`;
+    const logo = isBrandLogo(el);
+    let clipShape = '';
+    if (hasBrandLogoMask(el)) {
+      clipShape = `<circle cx="${el.w / 2}" cy="${el.h / 2}" r="${brandLogoSize(el) / 2}"/>`;
+    } else if (!logo && el.radius > 0) {
+      clipShape = `<rect width="${el.w}" height="${el.h}" rx="${el.radius}" ry="${el.radius}"/>`;
+    }
+    const clip = clipShape ? `<defs><clipPath id="${clipId}">${clipShape}</clipPath></defs>` : '';
+    const clipAttr = clipShape ? ` clip-path="url(#${clipId})"` : '';
+    return `<g transform="${t}"${op}>${filter}${clip}<image width="${el.w}" height="${el.h}" preserveAspectRatio="xMidYMid ${logo ? 'meet' : 'slice'}" href="${escapeAttr(el.src)}"${filterAttr}${clipAttr}/></g>`;
   }
   if (el.type === 'icon') {
     const paths = iconMarkup(el.name,el.iconAccent);
