@@ -108,7 +108,7 @@ function SheetAction({ icon, label, onClick, danger }) {
   );
 }
 
-function MobileEditor({ progressNav, onPreview, onSource, onResize }) {
+function MobileEditor({ progressNav, onPreview, onSource, onResize, onBulkCreate }) {
   const { state, dispatch } = useStore();
   const proj = activeProject(state);
   const canvas = activeCanvas(state);
@@ -260,7 +260,7 @@ function MobileEditor({ progressNav, onPreview, onSource, onResize }) {
             <span className="mobile-ribbon-divider" aria-hidden="true" />
           </>}
           <MobilePageTools activeTool={openSheet} onOpen={openTool} onSource={onSource}
-            onResize={onResize} onDuplicate={duplicatePage} />
+            onResize={onResize} onBulkCreate={onBulkCreate} onDuplicate={duplicatePage} />
         </MobileRibbon>
       </div>
 
@@ -887,7 +887,7 @@ function MobileRibbon({ label, children, end }) {
   );
 }
 
-function MobilePageTools({ activeTool, onOpen, onSource, onResize, onDuplicate }) {
+function MobilePageTools({ activeTool, onOpen, onSource, onResize, onBulkCreate, onDuplicate }) {
   const { state, dispatch } = useStore();
   const project = activeProject(state);
   const canvas = activeCanvas(state);
@@ -903,6 +903,7 @@ function MobilePageTools({ activeTool, onOpen, onSource, onResize, onDuplicate }
     sheet('pages', 'copy', 'Pages'),
     { icon: 'duplicate', label: 'Duplicate page', action: onDuplicate },
     ...(onResize ? [{ icon: 'duplicate', label: 'Resize as a copy', caption: 'Resize', action: onResize }] : []),
+    ...(onBulkCreate ? [{ icon: 'grid', label: 'Bulk create', action: onBulkCreate }] : []),
     sheet('layers', 'layers', 'Layers'),
     sheet('templates', 'templates', 'Templates'),
     sheet('shapes', 'shapes', 'Shapes'),
@@ -949,12 +950,12 @@ const SHAPE_TYPES = ['rect', 'circle', 'triangle', 'star', 'heart', 'diamond', '
 // Which tray tools make sense for each kind of item.
 function trayToolsFor(el) {
   if (el.type === 'text') return ['font', 'size', 'colour', 'styles', 'format', 'opacity', 'position'];
-  if (el.type === 'image') return ['size', ...(isIllustration(el) ? ['flip'] : []), 'adjust', 'opacity', 'position'];
+  if (el.type === 'image') return ['size', ...(isIllustration(el) ? ['flip'] : []), 'replace-artwork', 'adjust', 'opacity', 'position'];
   if (el.type === 'icon') return ['colour', 'size', 'flip', 'replace-icon', 'opacity', 'position'];
   if (el.type === 'frame') return ['size', 'frame', 'opacity', 'position'];
   return ['colour', 'size', 'opacity', 'position'];
 }
-const TRAY_LABELS = { styles: 'Text styles', font: 'Font', size: 'Size', colour: 'Colour', format: 'Spacing', opacity: 'Opacity', position: 'Position', flip: 'Flip', adjust: 'Adjust image', frame: 'Frame', 'replace-icon': 'Change icon' };
+const TRAY_LABELS = { styles: 'Text styles', font: 'Font', size: 'Size', colour: 'Colour', format: 'Spacing', opacity: 'Opacity', position: 'Position', flip: 'Flip', adjust: 'Adjust image', frame: 'Frame', 'replace-icon': 'Change icon', 'replace-artwork': 'Replace artwork' };
 // The property that holds this item's main colour.
 function colourKey(el) {
   if (el.type === 'text' || el.type === 'icon') return 'color';
@@ -1009,6 +1010,7 @@ function MobileSelectionTools({ el, activeTool, onTool }) {
       {tool('Size','size')}
       {trayToolsFor(el).includes('colour') && tool('Colour','colour',<><span className="mobile-ribbon-swatch" style={{background:el[colourKey(el)]}}/>Colour</>)}
       {el.type==='image' && tool('Adjust image','adjust')}
+      {el.type==='image' && tool('Replace artwork','replace-artwork')}
       {el.type==='icon' && tool('Change icon','replace-icon')}
       {el.type==='frame' && tool('Frame','frame')}
     </>}
@@ -1051,6 +1053,7 @@ function MobileToolTray({ el, tool, onClose }) {
         {tool === 'adjust' && <ImageProps el={el} update={update} showFlip={false} />}
         {tool === 'frame' && <FrameProps el={el} update={update} />}
         {tool === 'replace-icon' && <IconLibraryGrid selected={el.name} accent={el.iconAccent||'none'} onChoose={name=>update({name})} />}
+        {tool === 'replace-artwork' && <IconsPanel replacement={el} onReplaced={onClose} />}
       </div>
     </section>
   );
