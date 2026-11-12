@@ -1288,8 +1288,6 @@ function ElementProperties({ el }) {
         <SectionLabel>Position on page</SectionLabel>
         <PagePositionControls />
       </PropFold>
-
-      <ElementQuickBar el={el} />
     </>
   );
 }
