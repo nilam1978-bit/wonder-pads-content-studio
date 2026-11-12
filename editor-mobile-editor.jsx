@@ -108,15 +108,14 @@ function SheetAction({ icon, label, onClick, danger }) {
   );
 }
 
-function MobileEditor({ progressNav, onPreview, onSource, onResize, slideActions }) {
+function MobileEditor({ progressNav, onPreview, onSource, onResize }) {
   const { state, dispatch } = useStore();
   const proj = activeProject(state);
   const canvas = activeCanvas(state);
 
-  const [openSheet, setOpenSheet] = meS(null); // 'templates'|'brand'|'text'|'shapes'|'images'|'icons'|'frames'|'bg'|'more'|'pages'|'layers'|'properties'|'menu'|'download'|'rename'|'add'
+  const [openSheet, setOpenSheet] = meS(null);
   // The active tool opens above the ribbon without changing the canvas layout.
   const [tray, setTray] = meS(null);
-  const [longPressMenu, setLongPressMenu] = meS(false);
   // Draft words separately; the canvas never becomes a keyboard input.
   const [wordDraft, setWordDraft] = meS(null);
   const [frozenCanvasHeight, setFrozenCanvasHeight] = meS(null);
@@ -172,6 +171,7 @@ function MobileEditor({ progressNav, onPreview, onSource, onResize, slideActions
   if (!proj || !canvas) return null;
 
   const openTool = (tool) => {
+    setTray(null);
     dispatch({ type: 'set-tool', tool });
     setOpenSheet(tool);
   };
@@ -198,8 +198,6 @@ function MobileEditor({ progressNav, onPreview, onSource, onResize, slideActions
       {/* Top bar */}
       <MobileEditorTopBar proj={proj} canvas={canvas} compact={!!editingId} onDone={endEdit}
         onBack={() => dispatch({ type: 'close-project' })}
-        onMenu={() => setOpenSheet('menu')}
-        onLayers={() => setOpenSheet('layers')}
         onRename={() => setOpenSheet('rename')}
         onDownload={() => onPreview ? onPreview() : setOpenSheet('download')}
         onUndo={() => dispatch({ type: 'undo' })}
@@ -211,8 +209,7 @@ function MobileEditor({ progressNav, onPreview, onSource, onResize, slideActions
 
       {/* Canvas area */}
       <div ref={canvasHost} style={{ flex: frozenCanvasHeight ? '0 0 '+frozenCanvasHeight+'px' : 1, minHeight: 0, position: 'relative' }}>
-        <MobileCanvasArea onLongPress={() => setLongPressMenu(true)}
-          editingId={editingId} setEditingId={setEditingId}
+        <MobileCanvasArea editingId={editingId} setEditingId={setEditingId}
           onEditWords={(id) => beginEdit(id)} />
         {/* Undo / redo float in the empty space beside the slide while typing (replaces the old top stripe). */}
         {editingId && (() => {
@@ -241,36 +238,30 @@ function MobileEditor({ progressNav, onPreview, onSource, onResize, slideActions
           );
           return <>
             {arrow(-1, idx === 0)}{arrow(1, idx === n - 1)}
-            <button aria-label="All slides" onClick={() => setOpenSheet('pages')}
+            <span aria-label={`Slide ${idx + 1} of ${n}`}
               style={{ position: 'absolute', left: '50%', bottom: 10, transform: 'translateX(-50%)', zIndex: 5, border: 0, borderRadius: 999,
                 background: 'rgba(255,255,255,.9)', boxShadow: '0 1px 6px rgba(80,30,70,.16)', padding: '6px 14px', fontSize: 12, fontWeight: 600,
-                color: 'var(--ink-2)', fontVariantNumeric: 'tabular-nums' }}>{idx + 1} / {n}</button>
+                color: 'var(--ink-2)', fontVariantNumeric: 'tabular-nums', pointerEvents: 'none' }}>{idx + 1} / {n}</span>
           </>;
         })()}
       </div>
 
       <div className="mobile-ribbon-dock">
-        {activeTray && !openSheet && !longPressMenu && !wordDraft && (
+        {activeTray && !openSheet && !wordDraft && (
           <MobileToolTray key={primaryEl.id + activeTray} el={primaryEl} tool={activeTray} onClose={() => setTray(null)} />
         )}
-        {primaryEl ? (
-          <MobileRibbon key={primaryEl.type} label="Selected element tools" end={<>
-            <button className="mobile-ribbon-pin" aria-label="More element actions" onClick={() => setLongPressMenu(true)}>
-              <Icon name="more" size={18} />
-            </button>
+        <MobileRibbon key={primaryEl?.type || 'page'} label={primaryEl ? 'Selected element tools' : 'Page tools'}
+          end={primaryEl &&
             <button className="mobile-ribbon-pin mobile-ribbon-done" onClick={clearSelection}>Done</button>
-          </>}>
-            <MobileSelectionTools el={primaryEl} activeTool={activeTray}
-              onTool={tool => tool === 'words' ? beginEdit(primaryEl.id) : pickTool(tool)}
-              onAdjust={() => setOpenSheet('properties')} />
-          </MobileRibbon>
-        ) : (
-          <MobileRibbon label="Page tools" end={
-            <button className="mobile-ribbon-pin" onClick={() => setOpenSheet('pages')}>Pages</button>
           }>
-            <MobilePageTools activeTool={state.tool} onOpen={openTool} onSource={onSource} onDuplicate={duplicatePage} />
-          </MobileRibbon>
-        )}
+          {primaryEl && <>
+            <MobileSelectionTools el={primaryEl} activeTool={activeTray}
+              onTool={tool => tool === 'words' ? beginEdit(primaryEl.id) : pickTool(tool)} />
+            <span className="mobile-ribbon-divider" aria-hidden="true" />
+          </>}
+          <MobilePageTools activeTool={openSheet} onOpen={openTool} onSource={onSource}
+            onResize={onResize} onDuplicate={duplicatePage} />
+        </MobileRibbon>
       </div>
 
       {/* Sheets */}
@@ -299,24 +290,8 @@ function MobileEditor({ progressNav, onPreview, onSource, onResize, slideActions
         <BackgroundPanel />
       </BottomSheet>
 
-      {/* Add something new while an item is selected */}
-      <BottomSheet open={openSheet === 'add'} onClose={closeSheet} title="Add to slide" height="auto">
-        <div style={{ display: 'grid', gap: 10 }}>
-          {[['text', 'Text'], ['images', 'Image'], ['shapes', 'Shape'], ['bg', 'Background']].map(([id, label]) =>
-            <button className="btn btn-tonal" style={{ justifyContent: 'center', padding: 14 }} key={id}
-              onClick={() => { dispatch({ type: 'set-selection', ids: [] }); openTool(id); }}>{label}</button>)}
-        </div>
-      </BottomSheet>
-
-      {/* All settings for the selected item (the full properties list) */}
-      <BottomSheet open={openSheet === 'properties'} onClose={closeSheet}
-        title={primaryEl ? typeLabel(primaryEl.type) : 'Properties'}>
-        {primaryEl ? <ElementProperties el={primaryEl} /> : <CanvasProperties />}
-      </BottomSheet>
-
       {/* Pages sheet */}
       <BottomSheet open={openSheet === 'pages'} onClose={closeSheet} title="Pages">
-        {slideActions}
         <MobilePagesList onSwitch={closeSheet} />
       </BottomSheet>
 
@@ -325,54 +300,7 @@ function MobileEditor({ progressNav, onPreview, onSource, onResize, slideActions
         <LayersPanel />
       </BottomSheet>
 
-      {/* More tools */}
-      <BottomSheet open={openSheet === 'more'} onClose={closeSheet} title="More tools" height="auto">
-        <div style={{ display: 'grid', gap: 4, paddingBottom: 8 }}>
-          <SheetAction icon="frames" label="Frames"
-            onClick={() => { closeSheet(); setTimeout(() => openTool('frames'), 100); }} />
-          <SheetAction icon="icons" label="Icons" onClick={()=>openTool('icons')}/>
-          <SheetAction icon="brand_kit" label="Brand kit"
-            onClick={() => { closeSheet(); setTimeout(() => openTool('brand'), 100); }} />
-          <SheetAction icon="templates" label="Templates"
-            onClick={() => { closeSheet(); setTimeout(() => openTool('templates'), 100); }} />
-        </div>
-      </BottomSheet>
-
-      {/* File menu */}
-      <BottomSheet open={openSheet === 'menu'} onClose={closeSheet}
-        title="File" height="auto">
-        <div style={{ display: 'grid', gap: 4, paddingBottom: 8 }}>
-          {onSource&&<SheetAction icon="text" label="View / edit pasted text" onClick={()=>{closeSheet();onSource();}} />}
-          {onResize&&<SheetAction icon="duplicate" label="Resize as a copy" onClick={()=>{closeSheet();onResize();}} />}
-          <SheetAction icon="layer" label="Layers" onClick={() => setOpenSheet('layers')} />
-          <SheetAction icon="image_export" label="Download formats" onClick={() => setOpenSheet('download')} />
-          <SheetAction icon="templates" label="Back to home"
-            onClick={() => { closeSheet(); dispatch({ type: 'close-project' }); }} />
-          <SheetAction icon="plus" label="New page"
-            onClick={() => { closeSheet(); dispatch({ type: 'add-canvas' }); }} />
-          <SheetAction icon="duplicate" label="Duplicate design"
-            onClick={() => { closeSheet(); dispatch({ type: 'duplicate-project', id: proj.id }); }} />
-          <SheetAction icon="save" label="Save as template"
-            onClick={() => { closeSheet(); setOpenSheet('save-template'); }} />
-          <div style={{ height: 1, background: 'var(--line)', margin: '4px 0' }} />
-          <SheetAction icon="undo" label="Undo"
-            onClick={() => dispatch({ type: 'undo' })} />
-          <SheetAction icon="redo" label="Redo"
-            onClick={() => dispatch({ type: 'redo' })} />
-          <div style={{ height: 1, background: 'var(--line)', margin: '4px 0' }} />
-          <SheetAction icon="clear" label="Clear canvas" danger
-            onClick={() => { if (confirm('Remove all elements?')) {
-              dispatch({ type: 'update-canvas', id: canvas.id, patch: { elements: [] } });
-              closeSheet();
-            } }} />
-        </div>
-      </BottomSheet>
-
       {/* Download */}
-      <BottomSheet open={openSheet === 'save-template'} onClose={closeSheet} title="Save as template" height="auto">
-        <p>Download an editable copy, then import it from My Work whenever you want to reuse this design.</p>
-        <button className="btn btn-tonal" onClick={()=>{exportProjectFile(proj);closeSheet();}}>Save editable template</button>
-      </BottomSheet>
       <BottomSheet open={openSheet === 'download'} onClose={closeSheet}
         title="Download" height="auto">
         <MobileDownloadOptions proj={proj} canvas={canvas} onDone={closeSheet} />
@@ -384,41 +312,11 @@ function MobileEditor({ progressNav, onPreview, onSource, onResize, slideActions
           onRename={n => { dispatch({ type: 'rename-project', id: proj.id, name: n }); closeSheet(); }} />
       )}
 
-      {/* "More" for the selected item (also opens on long-press) */}
-      {longPressMenu && primaryEl && (
-        <BottomSheet open onClose={() => setLongPressMenu(false)}
-          title={typeLabel(primaryEl.type)} height="auto">
-          <div style={{ display: 'grid', gap: 4, paddingBottom: 8 }}>
-            <SheetAction icon="plus" label="Add an element" onClick={()=>{setLongPressMenu(false);setOpenSheet('add');}} />
-            <SheetAction icon="copy" label="Duplicate page" onClick={() => { setLongPressMenu(false); duplicatePage(); }} />
-            <SheetAction icon="duplicate" label="Duplicate"
-              onClick={() => { dispatch({ type: 'duplicate-elements', ids: [primaryEl.id] }); setLongPressMenu(false); }} />
-            <SheetAction icon="grid" label="Move & align"
-              onClick={() => { setLongPressMenu(false); setTray('position'); }} />
-            <SheetAction icon="arrow_up" label="Bring to front"
-              onClick={() => { dispatch({ type: 'reorder-element', id: primaryEl.id,
-                to: canvas.elements.length - 1 }); setLongPressMenu(false); }} />
-            <SheetAction icon="arrow_down" label="Send to back"
-              onClick={() => { dispatch({ type: 'reorder-element', id: primaryEl.id, to: 0 }); setLongPressMenu(false); }} />
-            <SheetAction icon="lock" label={primaryEl.locked ? 'Unlock' : 'Lock'}
-              onClick={() => { dispatch({ type: 'update-element', id: primaryEl.id,
-                patch: { locked: !primaryEl.locked } }); setLongPressMenu(false); }} />
-            <SheetAction icon="eye" label={primaryEl.hidden?'Show':'Hide'} onClick={()=>{dispatch({type:'update-element',id:primaryEl.id,patch:{hidden:!primaryEl.hidden}});dispatch({type:'set-selection',ids:[]});setLongPressMenu(false);}}/>
-            <SheetAction icon="more" label="All settings"
-              onClick={() => { setLongPressMenu(false); setOpenSheet('properties'); }} />
-            <SheetAction icon="x" label="Deselect"
-              onClick={() => { setLongPressMenu(false); dispatch({ type: 'set-selection', ids: [] }); }} />
-            <div style={{ height: 1, background: 'var(--line)', margin: '4px 0' }} />
-            <SheetAction icon="trash" label="Delete" danger
-              onClick={() => { dispatch({ type: 'delete-elements', ids: [primaryEl.id] }); setLongPressMenu(false); }} />
-          </div>
-        </BottomSheet>
-      )}
     </div>
   );
 }
 
-function MobileEditorTopBar({ proj, canvas, compact, onDone, onBack, onMenu, onLayers, onRename, onDownload, onUndo, onRedo, canUndo, canRedo }) {
+function MobileEditorTopBar({ proj, canvas, compact, onDone, onBack, onRename, onDownload, onUndo, onRedo, canUndo, canRedo }) {
   // While typing there is no top stripe at all: undo / redo float on the canvas instead (see MobileEditor).
   // This spacer only keeps the slide clear of the iPhone clock / notch (it is 0 height on browsers with no notch).
   if (compact) return <div className="safe-top" style={{flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'6px 12px',background:'white'}}><span style={{fontSize:13}}>Editing text</span><button className="btn btn-tonal" onClick={onDone}>Done</button></div>;
@@ -451,9 +349,6 @@ function MobileEditorTopBar({ proj, canvas, compact, onDone, onBack, onMenu, onL
       <button className="icon-btn" aria-label="Preview and download" onClick={onDownload}
         style={{ background: 'var(--ink)', color: 'var(--cream)' }}>
         <Icon name="upload" size={16} style={{ transform: 'rotate(180deg)' }} />
-      </button>
-      <button className="icon-btn" aria-label="More actions" onClick={onMenu}>
-        <Icon name="more" size={20} />
       </button>
     </div>
   );
@@ -517,7 +412,7 @@ function MobilePagesStrip({ proj, onOpen }) {
   );
 }
 
-function MobileCanvasArea({ onLongPress, onEditWords, editingId: editingIdProp, setEditingId: setEditingIdProp }) {
+function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId: setEditingIdProp }) {
   const { state, dispatch } = useStore();
   const canvas = activeCanvas(state);
   const stageRef = meR(null);
@@ -525,7 +420,6 @@ function MobileCanvasArea({ onLongPress, onEditWords, editingId: editingIdProp, 
   const [guides, setGuides] = meS([]);
   const startDataRef = meR(null);
   const gestureRef = meR(null);
-  const longPressRef = meR(null);
   const [editingLocal, setEditingLocal] = meS(null);
   const editingId = editingIdProp !== undefined ? editingIdProp : editingLocal;
   const setEditingId = setEditingIdProp || setEditingLocal;
@@ -597,19 +491,6 @@ function MobileCanvasArea({ onLongPress, onEditWords, editingId: editingIdProp, 
       moved: false,
     };
 
-    // Long-press timer
-    clearTimeout(longPressRef.current);
-    longPressRef.current = setTimeout(() => {
-      if (startDataRef.current && !startDataRef.current.moved) {
-        onLongPress?.();
-        startDataRef.current = null;
-        window.removeEventListener('touchmove', move);
-        window.removeEventListener('touchend', up);
-        window.removeEventListener('pointermove', move);
-        window.removeEventListener('pointerup', up);
-      }
-    }, 500);
-
     const move = (ev) => {
       if (!startDataRef.current) return;
       const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
@@ -619,7 +500,6 @@ function MobileCanvasArea({ onLongPress, onEditWords, editingId: editingIdProp, 
       // A real drag needs ~8 screen pixels of finger travel, so a normal tap never nudges the item.
       if (!startDataRef.current.moved && Math.hypot(cx - startDataRef.current.startX, cy - startDataRef.current.startY) > 8) {
         startDataRef.current.moved = true;
-        clearTimeout(longPressRef.current);
       }
       if (!startDataRef.current.moved) return;
 
@@ -643,7 +523,6 @@ function MobileCanvasArea({ onLongPress, onEditWords, editingId: editingIdProp, 
     };
 
     const up = () => {
-      clearTimeout(longPressRef.current);
       setGuides([]);
       const sd = startDataRef.current;
       if (sd?.moved) {
@@ -1008,32 +887,52 @@ function MobileRibbon({ label, children, end }) {
   );
 }
 
-function MobilePageTools({ activeTool, onOpen, onSource, onDuplicate }) {
+function MobilePageTools({ activeTool, onOpen, onSource, onResize, onDuplicate }) {
+  const { state, dispatch } = useStore();
+  const project = activeProject(state);
+  const canvas = activeCanvas(state);
+  const index = project.canvases.findIndex(page => page.id === canvas.id);
+  const last = project.canvases.length - 1;
+  const sheet = (id, icon, label) => ({ id, icon, label, action: () => onOpen(id) });
+  const move = to => dispatch({ type: 'reorder-canvas', from: index, to });
   const tools = [
-    { id: 'text', icon: 'text', label: 'Text' },
-    { id: 'images', icon: 'images', label: 'Image' },
-    { id: 'bg', icon: 'bg', label: 'Background' },
-    { id: 'duplicate-page', icon: 'duplicate', label: 'Duplicate page' },
-    { id: 'icons', icon: 'images', label: 'Illustrations' },
-    { id: 'shapes', icon: 'shapes', label: 'Shapes' },
-    { id: 'frames', icon: 'frames', label: 'Frames' },
-    { id: 'brand', icon: 'brand_kit', label: 'Brand' },
-    { id: 'templates', icon: 'templates', label: 'Templates' },
-    ...(onSource ? [{ id: 'source', icon: 'text', label: 'Source text' }] : []),
-    { id: 'layers', icon: 'layers', label: 'Layers' },
+    sheet('text', 'text', 'Add text'),
+    sheet('images', 'images', 'Image'),
+    sheet('icons', 'images', 'Illustrations'),
+    sheet('bg', 'bg', 'Background'),
+    sheet('pages', 'copy', 'Pages'),
+    { icon: 'duplicate', label: 'Duplicate page', action: onDuplicate },
+    ...(onResize ? [{ icon: 'duplicate', label: 'Resize as a copy', caption: 'Resize', action: onResize }] : []),
+    sheet('layers', 'layers', 'Layers'),
+    sheet('templates', 'templates', 'Templates'),
+    sheet('shapes', 'shapes', 'Shapes'),
+    sheet('frames', 'frames', 'Frames'),
+    sheet('brand', 'brand_kit', 'Brand'),
+    ...(onSource ? [{ icon: 'text', label: 'Source text', action: onSource }] : []),
+    { icon: 'plus', label: 'New page', action: () => dispatch({ type: 'add-canvas' }) },
+    { icon: 'arrow_up', label: 'Move page earlier', caption: 'Page earlier', disabled: index === 0, action: () => move(index - 1) },
+    { icon: 'arrow_down', label: 'Move page later', caption: 'Page later', disabled: index === last, action: () => move(index + 1) },
+    { icon: 'trash', label: 'Delete page', disabled: last === 0, action: () => {
+      if (confirm('Delete this page?')) dispatch({ type: 'delete-canvas', id: canvas.id });
+    } },
+    sheet('download', 'image_export', 'Download formats'),
+    { icon: 'duplicate', label: 'Duplicate design', action: () => dispatch({ type: 'duplicate-project', id: project.id }) },
+    { icon: 'save', label: 'Save as template', action: () => exportProjectFile(project) },
+    { icon: 'clear', label: 'Clear canvas', disabled: canvas.elements.length === 0, action: () => {
+      if (confirm('Remove all elements on this page?')) {
+        dispatch({ type: 'set-selection', ids: [] });
+        dispatch({ type: 'update-canvas', id: canvas.id, patch: { elements: [] } });
+      }
+    } },
   ];
   return (
     <>
       {tools.map(t => (
-        <button key={t.id} className="mobile-ribbon-tool mobile-ribbon-page-tool"
-          aria-pressed={activeTool === t.id}
-          onClick={() => {
-            if (t.id === 'source') onSource();
-            else if (t.id === 'duplicate-page') onDuplicate();
-            else onOpen(t.id);
-          }}>
+        <button key={t.label} className="mobile-ribbon-tool mobile-ribbon-page-tool" aria-label={t.label}
+          aria-expanded={t.id ? activeTool === t.id : undefined}
+          disabled={t.disabled} onClick={t.action}>
           <Icon name={t.icon} size={18} />
-          <span>{t.label}</span>
+          <span>{t.caption || t.label}</span>
         </button>
       ))}
     </>
@@ -1049,11 +948,13 @@ const SHAPE_TYPES = ['rect', 'circle', 'triangle', 'star', 'heart', 'diamond', '
 
 // Which tray tools make sense for each kind of item.
 function trayToolsFor(el) {
-  if (el.type === 'text') return ['font', 'size', 'colour', 'styles', 'format', 'position'];
-  if (SHAPE_TYPES.includes(el.type) || ['line', 'arrow', 'icon'].includes(el.type)) return ['colour', 'size', 'opacity', 'position'];
-  return ['size', 'opacity', 'position']; // image, frame
+  if (el.type === 'text') return ['font', 'size', 'colour', 'styles', 'format', 'opacity', 'position'];
+  if (el.type === 'image') return ['size', ...(isIllustration(el) ? ['flip'] : []), 'adjust', 'opacity', 'position'];
+  if (el.type === 'icon') return ['colour', 'size', 'flip', 'replace-icon', 'opacity', 'position'];
+  if (el.type === 'frame') return ['size', 'frame', 'opacity', 'position'];
+  return ['colour', 'size', 'opacity', 'position'];
 }
-const TRAY_LABELS = { styles: 'Text styles', font: 'Font', size: 'Size', colour: 'Colour', format: 'Spacing', opacity: 'Opacity', position: 'Position' };
+const TRAY_LABELS = { styles: 'Text styles', font: 'Font', size: 'Size', colour: 'Colour', format: 'Spacing', opacity: 'Opacity', position: 'Position', flip: 'Flip', adjust: 'Adjust image', frame: 'Frame', 'replace-icon': 'Change icon' };
 // The property that holds this item's main colour.
 function colourKey(el) {
   if (el.type === 'text' || el.type === 'icon') return 'color';
@@ -1077,12 +978,17 @@ function ToolBtn({ label, onClick, active, children, keepFocus }) {
   );
 }
 
-function MobileSelectionTools({ el, activeTool, onTool, onAdjust }) {
-  const {dispatch}=useStore();
+function MobileSelectionTools({ el, activeTool, onTool }) {
+  const {state,dispatch}=useStore();
+  const canvas = activeCanvas(state);
+  const index = canvas.elements.findIndex(item => item.id === el.id);
+  const last = canvas.elements.length - 1;
   const locked = !!el.locked;
   const change=patch=>{if(!locked&&patch)dispatch({type:'update-element',id:el.id,patch});};
   const chip = 'mobile-ribbon-tool';
   const tool=(label,key,content=label)=><button className={chip} aria-label={label} aria-expanded={key === 'words' ? undefined : activeTool===key} disabled={locked} onClick={()=>onTool(key)}>{content}</button>;
+  const action = (label, onClick, disabled = false) => <button className={chip} disabled={disabled} onClick={onClick}>{label}</button>;
+  const move = to => dispatch({ type: 'reorder-element', id: el.id, to });
   return <>
     {el.type==='text'?<>
       {tool('Edit words','words')}
@@ -1091,24 +997,34 @@ function MobileSelectionTools({ el, activeTool, onTool, onAdjust }) {
       {tool('Text colour','colour',<><span className="mobile-ribbon-swatch" style={{background:el.color}}/>Colour</>)}
       <button className={chip} aria-label="Bold" aria-pressed={isBoldText(el)} disabled={locked||!boldWeightFor(el.fontFamily)} onClick={()=>change(toggleBoldPatch(el))}><b>B</b></button>
       <button className={chip} aria-label="Italic" aria-pressed={!!el.italic} disabled={locked} onClick={()=>change({italic:!el.italic})}><i>I</i></button>
+      <button className={chip} aria-label="Underline" aria-pressed={!!el.underline} disabled={locked} onClick={()=>change({underline:!el.underline})}><u>U</u></button>
       <button className={chip} aria-label={'Alignment: '+el.align} disabled={locked} onClick={()=>change({align:el.align==='left'?'center':el.align==='center'?'right':'left'})}><Icon name={el.align==='center'?'align_c':el.align==='right'?'align_r':'align_l'} size={16}/></button>
       {tool('Text styles','styles')}
       {tool('Weight and spacing','format','Spacing')}
     </>:<>
+      {isIllustration(el) && tool('Flip','flip')}
       {tool('Size','size')}
-      {trayToolsFor(el).includes('colour')
-        ?tool('Colour','colour',<><span className="mobile-ribbon-swatch" style={{background:el[colourKey(el)]}}/>Colour</>)
-        :<button className={chip} disabled={locked} onClick={onAdjust}>Adjust</button>}
-      {tool('Opacity','opacity')}
+      {trayToolsFor(el).includes('colour') && tool('Colour','colour',<><span className="mobile-ribbon-swatch" style={{background:el[colourKey(el)]}}/>Colour</>)}
+      {el.type==='image' && tool('Adjust image','adjust')}
+      {el.type==='icon' && tool('Change icon','replace-icon')}
+      {el.type==='frame' && tool('Frame','frame')}
     </>}
     {tool('Position','position')}
-    {el.type==='icon' && <button className={chip} disabled={locked} onClick={onAdjust}>Adjust</button>}
+    {tool('Opacity','opacity')}
+    {action('Duplicate element', () => dispatch({ type: 'duplicate-elements', ids: [el.id] }))}
+    {action('Bring to front', () => move(last), index === last)}
+    {action('Move forward', () => move(index + 1), index === last)}
+    {action('Move backward', () => move(index - 1), index === 0)}
+    {action('Send to back', () => move(0), index === 0)}
+    {action(el.locked ? 'Unlock' : 'Lock', () => dispatch({ type: 'update-element', id: el.id, patch: { locked: !el.locked } }))}
+    {action(el.hidden ? 'Show' : 'Hide', () => dispatch({ type: 'update-element', id: el.id, patch: { hidden: !el.hidden } }))}
+    {action('Delete element', () => dispatch({ type: 'delete-elements', ids: [el.id] }))}
   </>;
 }
 
 function MobileToolTray({ el, tool, onClose }) {
   const {dispatch}=useStore();
-  const dispatchStylePatch=(id,patch)=>dispatch({type:'update-element',id,patch});
+  const update = patch => dispatch({type:'update-element',id:el.id,patch});
   const label = TRAY_LABELS[tool];
   return (
     <section className="mobile-ribbon-panel" aria-label={label + ' controls'}>
@@ -1119,52 +1035,33 @@ function MobileToolTray({ el, tool, onClose }) {
         </button>
       </header>
       <div className="mobile-ribbon-panel-body">
-        {tool === 'styles' && <TextLookPicker el={el} update={patch=>{if(!el.locked)dispatchStylePatch(el.id,patch);}} />}
+        {tool === 'styles' && <>
+          <TextLookPicker el={el} update={update} />
+          <SlideTextStyleControls el={el} update={update} />
+        </>}
         {tool === 'font' && <FontPicker el={el} maxHeight={Math.round((window.visualViewport?.height || window.innerHeight) * 0.27)} />}
         {tool === 'size' && <SizeTool el={el} />}
         {tool === 'colour' && <ColourTool el={el} />}
         {tool === 'format' && <FormatTool el={el} />}
         {tool === 'opacity' && <OpacityTool el={el} />}
         {tool === 'position' && <PositionTool el={el} />}
+        {tool === 'flip' && <IllustrationFlipControls el={el} update={update} />}
+        {tool === 'adjust' && <ImageProps el={el} update={update} showFlip={false} />}
+        {tool === 'frame' && <FrameProps el={el} update={update} />}
+        {tool === 'replace-icon' && <IconLibraryGrid selected={el.name} accent={el.iconAccent||'none'} onChoose={name=>update({name})} />}
       </div>
     </section>
-  );
-}
-
-// ---- Edit words: type straight into the box; Undo goes back to before you started typing ----
-function WordsTool({ el }) {
-  const { state } = useStore();
-  const { live, done } = useLiveElementEdit(el.id);
-  const { dispatch } = useStore();
-  const [busy, setBusy] = meS(false), [err, setErr] = meS('');
-  const improve = async () => {
-    if (!confirm('Rewrite this text with AI? Other items and slides stay unchanged. You can Undo.')) return;
-    setBusy(true); setErr('');
-    try {
-      const text = await aiGenerate({ brand: state.brand, vocab: state.vocab, provider: 'gemini',
-        task: 'Improve this one carousel text element. Keep the meaning. Return only the revised words, without labels or commentary.',
-        input: el.text, platform: 'Instagram carousel' });
-      if (!text?.trim()) throw new Error('No revised text returned.');
-      dispatch({ type: 'update-element', id: el.id, patch: { text: text.trim() } });
-    } catch (e) { setErr(e.message || 'AI could not rewrite this just now.'); } finally { setBusy(false); }
-  };
-  return (
-    <div>
-      <textarea aria-label="Edit selected words" autoFocus value={el.text || ''}
-        onChange={e => live({ text: e.target.value })} onBlur={done}
-        style={{ width: '100%', minHeight: 96, fontSize: 16, lineHeight: 1.45, padding: 12, boxSizing: 'border-box',
-          border: '1px solid var(--line-2)', borderRadius: 12, fontFamily: 'inherit', resize: 'vertical' }} />
-      <button className="btn btn-tonal" disabled={busy} onClick={improve} style={{ marginTop: 10 }}>{busy ? 'Improving…' : '✦ Improve with AI'}</button>
-      {err && <p role="alert" style={{ fontSize: 12, color: 'var(--pink-600)' }}>{err}</p>}
-    </div>
   );
 }
 
 // ---- Colour ----
 function ColourTool({ el }) {
   const { dispatch } = useStore();
+  const update = patch => dispatch({ type: 'update-element', id: el.id, patch });
+  if (SHAPE_TYPES.includes(el.type)) return <ShapeProps el={el} update={update} />;
+  if (el.type === 'icon') return <IconProps el={el} update={update} showFlip={false} showLibrary={false} />;
   const key = colourKey(el);
-  return <ColorPicker value={el[key]} onChange={v => dispatch({ type: 'update-element', id: el.id, patch: { [key]: v } })} />;
+  return <ColorPicker value={el[key]} onChange={v => update({ [key]: v })} />;
 }
 
 // ---- Size: text gets a size slider + box width; everything else scales as a whole ----
@@ -1181,6 +1078,9 @@ function SizeTool({ el }) {
         <SliderRow label="Box width (wraps the words)" value={Math.round(el.w)} min={80} max={maxW} step={4} unit=" px"
           onLive={v => live({ w: v })} onDone={done}
           onStep={d => dispatch({ type: 'update-element', id: el.id, patch: { w: clamp(el.w + d, 80, maxW) } })} />
+        <button className="btn btn-tonal" onClick={() => dispatch({
+          type: 'update-element', id: el.id, patch: { fontSize: fitTextSize(el, el.h, 400) },
+        })}>Fit to box</button>
       </div>
     );
   }
@@ -1189,12 +1089,22 @@ function SizeTool({ el }) {
   const cx = el.x + el.w / 2, cy = el.y + el.h / 2;
   const maxW = Math.round(Math.max(canvas.w * 1.2, el.w));
   const apply = (nw) => ({ x: cx - nw / 2, y: cy - (nw * ratio) / 2, w: nw, h: nw * ratio });
+  const setDimension = (key, value) => {
+    if (value === '' || !Number.isFinite(Number(value))) return;
+    const size = Math.max(10, Number(value));
+    const patch = isIllustration(el) ? apply(key === 'w' ? size : size / ratio) : { [key]: size };
+    dispatch({ type: 'update-element', id: el.id, patch });
+  };
   const isLine = el.type === 'line' || el.type === 'arrow';
   return (
     <div>
       <SliderRow label="Size" value={Math.round(el.w)} min={24} max={maxW} step={2} unit=" px"
         onLive={v => live(apply(v))} onDone={done}
         onStep={d => dispatch({ type: 'update-element', id: el.id, patch: apply(clamp(el.w + d, 24, maxW)) })} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+        <LabeledInput label="Width" value={Math.round(el.w)} onChange={v => setDimension('w', v)} />
+        <LabeledInput label="Height" value={Math.round(el.h)} onChange={v => setDimension('h', v)} />
+      </div>
       {isLine && <>
         <div style={{ height: 10 }} />
         <SliderRow label="Thickness" value={Math.round(el.strokeWidth || 4)} min={1} max={40} unit=" px"
@@ -1218,50 +1128,29 @@ function OpacityTool({ el }) {
 function FormatTool({ el }) {
   const { dispatch } = useStore();
   const { live, done } = useLiveElementEdit(el.id);
-  const update = (patch) => dispatch({ type: 'update-element', id: el.id, patch });
-  const bold = boldWeightFor(el.fontFamily);
-  const toggle = (on, extra = {}) => ({
-    flex: 1, justifyContent: 'center', minHeight: 46, fontSize: 17,
-    background: on ? 'var(--pink-200)' : 'var(--pink-50)', color: on ? 'var(--pink-600)' : 'var(--ink)', ...extra,
-  });
+  const update = patch => dispatch({ type: 'update-element', id: el.id, patch });
   const ls = Number(el.letterSpacing || 0), lh = Number(el.lineHeight || 1.2);
-  return (
-    <div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button className="btn" disabled={!bold} aria-pressed={isBoldText(el)} aria-label="Bold"
-          onClick={() => { const p = toggleBoldPatch(el); if (p) update(p); }}
-          style={toggle(isBoldText(el), { fontWeight: 800, opacity: bold ? 1 : 0.35 })}>B</button>
-        <button className="btn" aria-pressed={!!el.italic} aria-label="Italic" onClick={() => update({ italic: !el.italic })}
-          style={toggle(!!el.italic, { fontStyle: 'italic', fontFamily: 'serif' })}>I</button>
-        <button className="btn" aria-pressed={!!el.underline} aria-label="Underline" onClick={() => update({ underline: !el.underline })}
-          style={toggle(!!el.underline, { textDecoration: 'underline' })}>U</button>
-        {[['left', 'align_l'], ['center', 'align_c'], ['right', 'align_r']].map(([a, icon]) => (
-          <button key={a} className="btn" aria-label={`Align ${a}`} aria-pressed={el.align === a} onClick={() => update({ align: a })}
-            style={toggle(el.align === a)}><Icon name={icon} size={18} /></button>
-        ))}
-      </div>
-      {!bold && <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--ink-3)' }}>This font only comes in one weight, so Bold is off. Pick another font for bold.</p>}
-      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', margin: '14px 0 6px' }}>Weight</div>
-      <WeightChips el={el} update={update} />
-      <div style={{ height: 12 }} />
-      <SliderRow label="Letter spacing" value={ls} min={-2} max={30} step={0.5} onLive={v => live({ letterSpacing: v })} onDone={done}
-        onStep={d => update({ letterSpacing: clamp(ls + d, -2, 30) })} />
-      <SliderRow label="Line spacing" value={Math.round(lh * 100) / 100} min={0.8} max={2.4} step={0.05} onLive={v => live({ lineHeight: v })} onDone={done}
-        onStep={d => update({ lineHeight: Math.round(clamp(lh + d, 0.8, 2.4) * 100) / 100 })} />
-      <SliderRow label="Visibility" value={Math.round((el.opacity ?? 1) * 100)} min={5} max={100} unit="%" onLive={v => live({ opacity: v / 100 })} onDone={done}
-        onStep={d => update({ opacity: clamp(Math.round((el.opacity ?? 1) * 100) + d, 5, 100) / 100 })} />
-      <details style={{ marginTop: 10 }}>
-        <summary style={{ padding: '10px 0', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}>Slide text styles (Heading, Body…)</summary>
-        <SlideTextStyleControls el={el} update={update} />
-      </details>
-    </div>
-  );
+  return <div>
+    <SectionLabel>Weight</SectionLabel>
+    <WeightChips el={el} update={update} />
+    <SliderRow label="Letter spacing" value={ls} min={-2} max={30} step={0.5}
+      onLive={v => live({ letterSpacing: v })} onDone={done}
+      onStep={d => update({ letterSpacing: clamp(ls + d, -2, 30) })} />
+    <SliderRow label="Line spacing" value={Math.round(lh * 100) / 100} min={0.8} max={2.4} step={0.05}
+      onLive={v => live({ lineHeight: v })} onDone={done}
+      onStep={d => update({ lineHeight: Math.round(clamp(lh + d, 0.8, 2.4) * 100) / 100 })} />
+  </div>;
 }
 
-// ---- Move: nudge with arrows, or snap to the page ----
+// Nudge, align to the slide, or enter exact coordinates.
 function PositionTool({ el }) {
   const { state, dispatch } = useStore();
   const [step, setStep] = meS(10);
+  const setCoordinate = (key, value) => {
+    if (value !== '' && Number.isFinite(Number(value))) {
+      dispatch({ type: 'update-element', id: el.id, patch: { [key]: Number(value) } });
+    }
+  };
   const nudge = (dx, dy) => dispatch({ type: 'update-element', id: el.id, patch: { x: el.x + dx, y: el.y + dy } });
   const arrow = { width: 52, height: 48, borderRadius: 12, background: 'var(--pink-100)', color: 'var(--ink)', fontSize: 20, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' };
   const aligns = [['left', 'Left'], ['hcenter', 'Centre'], ['right', 'Right'], ['top', 'Top'], ['vmiddle', 'Middle'], ['bottom', 'Bottom']];
@@ -1295,6 +1184,11 @@ function PositionTool({ el }) {
           ))}
         </div>
       </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, width: '100%' }}>
+        <LabeledInput label="X" value={Math.round(el.x)} onChange={v => setCoordinate('x', v)} />
+        <LabeledInput label="Y" value={Math.round(el.y)} onChange={v => setCoordinate('y', v)} />
+        <LabeledInput label="Rotation" value={Math.round(el.rot || 0)} suffix="°" onChange={v => setCoordinate('rot', v)} />
+      </div>
     </div>
   );
 }
@@ -1314,7 +1208,7 @@ function MobilePagesList({ onSwitch }) {
             background: active ? 'var(--pink-100)' : 'var(--pink-50)',
             border: active ? '1px solid var(--pink-400)' : '1px solid transparent',
           }}>
-            <button onClick={() => { dispatch({ type: 'set-active-canvas', id: c.id }); onSwitch?.(); }}
+            <button aria-label={`Open page ${i + 1}`} onClick={() => { dispatch({ type: 'set-active-canvas', id: c.id }); onSwitch?.(); }}
               style={{ padding: 0, background: 'transparent', flexShrink: 0 }}>
               <div style={{
                 width: 60, aspectRatio: `${c.w}/${c.h}`,
@@ -1327,27 +1221,9 @@ function MobilePagesList({ onSwitch }) {
               <div style={{ fontSize: 10, color: 'var(--ink-3)', marginTop: 2,
                 fontVariantNumeric: 'tabular-nums' }}>{c.w}×{c.h}</div>
             </div>
-            <button className="icon-btn" onClick={() => dispatch({ type: 'duplicate-canvas', id: c.id })}>
-              <Icon name="duplicate" size={14} />
-            </button>
-            {proj.canvases.length > 1 && (
-              <button className="icon-btn"
-                onClick={() => { if (confirm('Delete this page?')) dispatch({ type: 'delete-canvas', id: c.id }); }}>
-                <Icon name="trash" size={14} />
-              </button>
-            )}
           </div>
         );
       })}
-      <button onClick={() => dispatch({ type: 'add-canvas' })}
-        style={{
-          padding: 14, borderRadius: 12,
-          background: 'white', border: '1.5px dashed var(--pink-400)',
-          color: 'var(--pink-500)', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', gap: 6, fontSize: 13, fontWeight: 500,
-        }}>
-        <Icon name="plus" size={16} /> New page
-      </button>
     </div>
   );
 }
@@ -1419,7 +1295,10 @@ Object.assign(window, {
 });
 
 function MobileWordsDialog({draft,onChange,onCancel,onDone}) {
-  const field=meR(null),cancel=meR(null),done=meR(null),dialog=meR(null);
+  const { state } = useStore();
+  const [improving, setImproving] = meS(false);
+  const [error, setError] = meS('');
+  const field=meR(null),cancel=meR(null),done=meR(null),dialog=meR(null),improveButton=meR(null);
   meE(()=>{
     const previous=document.activeElement;
     const siblings=[...dialog.current.parentElement.children].filter(el=>el!==dialog.current);
@@ -1431,8 +1310,27 @@ function MobileWordsDialog({draft,onChange,onCancel,onDone}) {
   const keys=e=>{
     if(e.key==='Escape'){e.preventDefault();onCancel();}
     if(e.key==='Tab'){
-      const items=[cancel.current,done.current,field.current],i=items.indexOf(document.activeElement);
-      e.preventDefault();items[(i+(e.shiftKey?2:1))%3]?.focus();
+      const items=[cancel.current,done.current,field.current,improveButton.current].filter(el=>el&&!el.disabled);
+      const i=items.indexOf(document.activeElement);
+      e.preventDefault();items[(i+(e.shiftKey?items.length-1:1))%items.length]?.focus();
+    }
+  };
+  const improve = async () => {
+    const input = draft.text;
+    setImproving(true);
+    setError('');
+    try {
+      const text = await aiGenerate({
+        brand: state.brand, vocab: state.vocab, provider: 'gemini',
+        task: 'Improve this one carousel text element. Keep the meaning. Return only the revised words, without labels or commentary.',
+        input, platform: 'Instagram carousel',
+      });
+      if (!text?.trim()) throw new Error('No revised text returned.');
+      if (field.current?.value === input) onChange(text.trim());
+    } catch (err) {
+      setError(err.message || 'AI could not rewrite this just now.');
+    } finally {
+      setImproving(false);
     }
   };
   return <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby="mobile-words-title" onKeyDown={keys}
@@ -1444,6 +1342,12 @@ function MobileWordsDialog({draft,onChange,onCancel,onDone}) {
     </header>
     <textarea ref={field} aria-label="Edit selected words" value={draft.text} onChange={e=>onChange(e.target.value)}
       style={{flex:1,minHeight:0,width:'100%',boxSizing:'border-box',resize:'none',border:0,padding:20,font:'18px/1.6 Montserrat, sans-serif',color:'var(--ink)',background:'transparent',outlineOffset:-3}} />
+    <footer style={{padding:'6px 12px',borderTop:'1px solid var(--line)'}}>
+      <button ref={improveButton} className="btn btn-tonal" disabled={improving||!draft.text.trim()} onClick={improve}>
+        {improving?'Improving…':'Improve with AI'}
+      </button>
+      {error&&<p role="alert">{error}</p>}
+    </footer>
   </div>;
 }
 
