@@ -134,9 +134,9 @@ function escapeAttr(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '
 function escapeText(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
 function transformFor(el) {
-  const cx = el.x + el.w / 2;
-  const cy = el.y + el.h / 2;
-  return `translate(${el.x}, ${el.y}) rotate(${el.rot || 0}, ${el.w / 2}, ${el.h / 2})`;
+  const flip = el.flipX || el.flipY
+    ? ` translate(${el.flipX ? el.w : 0} ${el.flipY ? el.h : 0}) scale(${el.flipX ? -1 : 1} ${el.flipY ? -1 : 1})` : '';
+  return `translate(${el.x}, ${el.y}) rotate(${el.rot || 0}, ${el.w / 2}, ${el.h / 2})${flip}`;
 }
 
 function elementToSVG(el, embedImages) {

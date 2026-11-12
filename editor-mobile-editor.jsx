@@ -108,7 +108,7 @@ function SheetAction({ icon, label, onClick, danger }) {
   );
 }
 
-function MobileEditor({ progressNav, onPreview, onSource, slideActions }) {
+function MobileEditor({ progressNav, onPreview, onSource, onResize, slideActions }) {
   const { state, dispatch } = useStore();
   const proj = activeProject(state);
   const canvas = activeCanvas(state);
@@ -343,6 +343,7 @@ function MobileEditor({ progressNav, onPreview, onSource, slideActions }) {
         title="File" height="auto">
         <div style={{ display: 'grid', gap: 4, paddingBottom: 8 }}>
           {onSource&&<SheetAction icon="text" label="View / edit pasted text" onClick={()=>{closeSheet();onSource();}} />}
+          {onResize&&<SheetAction icon="duplicate" label="Resize as a copy" onClick={()=>{closeSheet();onResize();}} />}
           <SheetAction icon="layer" label="Layers" onClick={() => setOpenSheet('layers')} />
           <SheetAction icon="image_export" label="Download formats" onClick={() => setOpenSheet('download')} />
           <SheetAction icon="templates" label="Back to home"
@@ -688,6 +689,9 @@ function MobileCanvasArea({ onLongPress, onEditWords, editingId: editingIdProp, 
       if (h.includes('n')) { nh = Math.max(20, startData.orig.h - dy); ny = startData.orig.y + (startData.orig.h - nh); }
       const isCorner = h === 'nw' || h === 'ne' || h === 'sw' || h === 'se';
       const patch = { x: nx, y: ny, w: nw, h: nh };
+      if (isIllustration(startData.orig) && isCorner) {
+        Object.assign(patch, proportionalIllustrationResize(startData.orig, h, nw, nh, 20));
+      }
       if (startData.orig.type === 'text' && isCorner) {
         const sx = nw / startData.orig.w;
         const sy = nh / startData.orig.h;
@@ -930,7 +934,7 @@ function MobileSelectionOverlay({ el, scale, onResize, onRotate, onMove }) {
           onTouchStart={(e) => { onMove(e); }}
           onPointerDown={(e) => { if (e.pointerType !== 'touch') onMove(e); }} />
       )}
-      {handles.map(h => (
+      {handles.filter(h => !isIllustration(el) || h.key.length === 2).map(h => (
         <button key={h.key} type="button" aria-label={`Resize ${h.key}`}
           style={{
             position: 'absolute', left: `calc(${h.x} + ${h.dx}px)`, top: `calc(${h.y} + ${h.dy}px)`,
@@ -1098,6 +1102,7 @@ function MobileSelectionTools({ el, activeTool, onTool, onAdjust }) {
       {tool('Opacity','opacity')}
     </>}
     {tool('Position','position')}
+    {el.type==='icon' && <button className={chip} disabled={locked} onClick={onAdjust}>Adjust</button>}
   </>;
 }
 

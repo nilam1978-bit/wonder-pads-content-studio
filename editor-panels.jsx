@@ -774,7 +774,7 @@ function IconsPanel(){
         cut.getContext('2d').drawImage(img,x,y,w,h,0,0,w,h);src=cut.toDataURL('image/png');
       }
       const w=Math.min(360,canvas.w*.65),h=w*item.height/item.width;
-      dispatch({type:'add-element',element:newElement('image',{src,w,h,x:(canvas.w-w)/2,y:(canvas.h-h)/2,stickerId:item.id,stickerLabel:item.label,radius:0})});
+      dispatch({type:'add-element',element:newElement('image',illustrationPatch(item,(canvas.w-w)/2,(canvas.h-h)/2,w,src))});
     }catch{setError('This illustration could not load. Check your connection and try again.');}
   };
   return <><PanelHeader title="Wonder Pads illustrations" subtitle="Your floral collection · tap to add"/>
@@ -1700,6 +1700,7 @@ function ImageProps({ el, update }) {
   const f = el.filter || {};
   return (
     <>
+      {el.stickerId && <IllustrationFlipControls el={el} update={update} />}
       <SectionLabel>Adjustments</SectionLabel>
       <div style={{ display: 'grid', gap: 8 }}>
         {[
@@ -1726,9 +1727,16 @@ function ImageProps({ el, update }) {
   );
 }
 
+function IllustrationFlipControls({ el, update }) {
+  return <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+    <button className="btn btn-tonal" disabled={el.locked} aria-pressed={!!el.flipX} onClick={() => update({ flipX: !el.flipX })}>Flip horizontal</button>
+    <button className="btn btn-tonal" disabled={el.locked} aria-pressed={!!el.flipY} onClick={() => update({ flipY: !el.flipY })}>Flip vertical</button>
+  </div>;
+}
+
 function IconProps({el,update}){
   const care=CARE_ICON_LIBRARY.some(item=>item.id===el.name);
-  return <><SectionLabel>Outline colour</SectionLabel><ColorPicker value={el.color} onChange={color=>update({color})}/>
+  return <><IllustrationFlipControls el={el} update={update} /><SectionLabel>Outline colour</SectionLabel><ColorPicker value={el.color} onChange={color=>update({color})}/>
     {care&&<><SectionLabel>Soft fill</SectionLabel><button className="btn btn-tonal" aria-pressed={el.iconAccent!=='none'&&!!el.iconAccent} onClick={()=>update({iconAccent:el.iconAccent&&el.iconAccent!=='none'?'none':'#F0CEE7'})}>{el.iconAccent&&el.iconAccent!=='none'?'Remove fill':'Add soft fill'}</button>{el.iconAccent&&el.iconAccent!=='none'&&<ColorPicker value={el.iconAccent} onChange={iconAccent=>update({iconAccent})}/>}</>}
     <SectionLabel>Stroke width</SectionLabel><input aria-label="Icon stroke width" type="range" min="0.5" max="3" step="0.1" value={el.strokeWidth} onChange={e=>update({strokeWidth:+e.target.value})}/>
     <details style={{marginTop:16}}><summary>Change icon</summary><IconLibraryGrid selected={el.name} accent={el.iconAccent||'none'} onChoose={name=>update({name})}/></details>

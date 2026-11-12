@@ -113,7 +113,7 @@ function SaveErrorBanner() {
 }
 
 // ---------- Top bar ----------
-function TopBar() {
+function TopBar({ onResize }) {
   const { state, dispatch } = useStore();
   const proj = activeProject(state);
   const canvas = activeCanvas(state);
@@ -229,6 +229,7 @@ function TopBar() {
       {/* Menus */}
       <div style={{ display: 'flex', gap: 2 }}>
         <Menu label="File">
+          {onResize && <MenuItem icon="duplicate" label="Resize as a copy" onClick={onResize} />}
           <MenuItem icon="templates" label="Back to home" onClick={() => dispatch({ type: 'close-project' })} />
           <MenuItem icon="plus" label="New design" onClick={() => { dispatch({ type: 'close-project' }); }} />
           <MenuItem icon="duplicate" label="Duplicate design" onClick={() => dispatch({ type: 'duplicate-project', id: proj.id })} />
@@ -430,7 +431,7 @@ function ExportOption({ title, desc, icon, onClick, recommended }) {
 }
 
 // ---------- Editor screen ----------
-function EditorScreen({ progressNav }) {
+function EditorScreen({ progressNav, onResize }) {
   const { state, dispatch } = useStore();
   const proj = activeProject(state);
 
@@ -504,7 +505,7 @@ function EditorScreen({ progressNav }) {
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <TopBar />
+      <TopBar onResize={onResize} />
       {progressNav}
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         <LeftRail />
@@ -526,7 +527,7 @@ function sigForThumb(canvas) {
     return canvas.w + 'x' + canvas.h + '|' + JSON.stringify(canvas.bg) + '|' +
       canvas.elements.map(e => e.id + ':' + Math.round(e.x) + ',' + Math.round(e.y) + ',' +
         Math.round(e.w) + ',' + Math.round(e.h) + ',' + Math.round(e.rot||0) + ',' +
-        (e.text||'') + ',' + (e.fill||'') + ',' + (e.color||'')).join('|');
+        (e.text||'') + ',' + (e.fill||'') + ',' + (e.color||'') + ',' + !!e.flipX + ',' + !!e.flipY).join('|');
   } catch { return ''; }
 }
 
