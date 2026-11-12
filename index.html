@@ -334,6 +334,21 @@
     padding-inline: 3px;
   }
   .mobile-ribbon-divider { flex: 0 0 1px; height: 26px; background: var(--line); margin-inline: 4px; }
+  .mobile-ribbon-icon-group { display: flex; gap: 3px; }
+  .mobile-ribbon-tool.mobile-ribbon-icon { width: 44px; padding: 0; }
+  .mobile-position-values {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(76px, 1.25fr);
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .mobile-position-values label {
+    display: grid;
+    gap: 4px;
+    font-size: 10px;
+    color: var(--ink-3);
+  }
+  .mobile-position-values select { width: 100%; min-width: 0; }
   .mobile-ribbon-tool, .mobile-ribbon-pin {
     display: inline-flex;
     flex: 0 0 auto;
@@ -425,7 +440,7 @@
     // ONE version number for every app file. Change it each time you upload new files,
     // so phones and browsers fetch the fresh copies instead of reusing old ones.
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
-      const APP_VERSION = '2026-11-12-flat-mobile-ribbon';
+      const APP_VERSION = '2026-11-12-position-icons';
     // Files load in this order. The data file is plain JavaScript; the rest are React (.jsx).
     const APP_FILES = [
       'editor-icons.jsx',
