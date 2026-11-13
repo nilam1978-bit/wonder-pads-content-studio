@@ -47,6 +47,88 @@ function ResizeCopyDialog({ project, onClose, onCreate }) {
   </dialog>;
 }
 
+function PhotoShareControls({ project, canvas, disabled }) {
+  const [format, setFormat] = React.useState('png');
+  const [scope, setScope] = React.useState(() => typeof navigator.share === 'function' && navigator.canShare ? 'all' : 'current');
+  const [files, setFiles] = React.useState(null);
+  const [previewUrl, setPreviewUrl] = React.useState('');
+  const canShare = !!files && typeof navigator.share === 'function' && navigator.canShare?.({ files });
+  React.useEffect(() => {
+    if (files?.length !== 1 || typeof URL.createObjectURL !== 'function') return;
+    const url = URL.createObjectURL(files[0]);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [files]);
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState('');
+
+  function changeOption(setOption, value) {
+    setOption(value);
+    setFiles(null);
+    setPreviewUrl('');
+    setError('');
+  }
+
+  async function prepare() {
+    setBusy(true);
+    setError('');
+    try {
+      const slides = scope === 'current' ? [canvas] : project.canvases;
+      const name = (project.name || 'design').replace(/[^\w-]/g, '_');
+      const images = await prepareImageFiles(slides, format, name);
+      setFiles(images);
+    } catch (err) {
+      setError(err.message || 'Could not prepare the images.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function share() {
+    setError('');
+    try {
+      // A fresh tap opens the share sheet even when rasterizing the slides takes a while.
+      await navigator.share({ files });
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        setError(files.length > 1
+          ? 'Could not open the share sheet. Try This slide, or download the files.'
+          : 'Could not open the share sheet. Try again or download the file.');
+      }
+    }
+  }
+
+  return <fieldset style={{ display: 'grid', gap: 10 }} disabled={busy || disabled}>
+    <legend>Save to Photos</legend>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+      <label>Format <select value={format} onChange={e => changeOption(setFormat, e.target.value)}>
+        <option value="png">PNG</option>
+        <option value="jpg">JPEG</option>
+      </select></label>
+      {project.canvases.length > 1 && <label>Pages <select value={scope} onChange={e => changeOption(setScope, e.target.value)}>
+        <option value="all">All slides</option>
+        <option value="current">This slide</option>
+      </select></label>}
+    </div>
+    {!files && <button type="button" className="simple-action" onClick={prepare}>
+      {busy ? 'Preparing images…' : 'Prepare for Photos'}
+    </button>}
+    {canShare && <button type="button" className="simple-action" onClick={share}>
+      Open share sheet
+    </button>}
+    {canShare && <small role="status">Choose {files.length === 1 ? 'Save Image' : 'Save Images'} if your phone offers it.</small>}
+    {files?.length > 1 && !canShare && <small role="status">
+      This browser cannot share these images together. Choose This slide to save one image or download the files below.
+    </small>}
+    {files?.length === 1 && previewUrl && <details open={!canShare}>
+      <summary>Save from image preview</summary>
+      <p>Touch and hold the image, then choose the option to save it to Photos if available.</p>
+      <img src={previewUrl} alt="Image ready to save" style={{ display: 'block', maxWidth: '100%', maxHeight: 360 }} />
+    </details>}
+    {error && <small role="alert">{error}</small>}
+  </fieldset>;
+}
+
 function FinalProjectWorkspace({isMobile}){
   const {state,dispatch,retrySave}=useStore();const project=activeProject(state);
   const [step,setStep]=React.useState('design'),[busy,setBusy]=React.useState(false),[error,setError]=React.useState('');
@@ -92,7 +174,7 @@ function FinalProjectWorkspace({isMobile}){
   const crowded=project.canvases.flatMap((c,i)=>c.elements.some(e=>e.type==='text'&&!e.hidden&&(e.y+textLayout(e).height>c.h||e.x+e.w>c.w||e.x<0||e.y<0||e.fontSize<24))?[i+1]:[]);
   const go=i=>dispatch({type:'set-active-canvas',id:project.canvases[Math.max(0,Math.min(project.canvases.length-1,i))].id});
   const touch=React.useRef(null);
-  const download=async()=>{setBusy(true);setError('');try{await exportCanvases(project.canvases,'png',project.name.replace(/[^\w-]/g,'_'));if(!project.finished)dispatch({type:'update-project',id:project.id,patch:{finished:true,finishedAt:now()}});}catch(e){setError(e.message||'Download failed');}finally{setBusy(false);}};
+  const download=async(format)=>{setBusy(true);setError('');try{await exportCanvases(project.canvases,format,project.name.replace(/[^\w-]/g,'_'));if(!project.finished)dispatch({type:'update-project',id:project.id,patch:{finished:true,finishedAt:now()}});}catch(e){setError(e.message||'Download failed');}finally{setBusy(false);}};
   const nav=<nav className="simple-nav final-progress" aria-label="Carousel workflow"><button onClick={()=>{dispatch({type:'close-project'});dispatch({type:'set-view',view:project.contentEntryId?'ready-content':'home'});}}>{project.contentEntryId?'← Content Library':'← Home'}</button><button aria-current={step==='design'} onClick={()=>setStep('design')}>Design</button><button aria-current={step==='source'} onClick={()=>setStep('source')}>Source text</button><button aria-current={step==='preview'} onClick={()=>setStep('preview')}>Preview & Download</button></nav>;
   return <div className="simple-workspace"><SimpleStudioStyles/><style>{`.final-progress{justify-content:flex-start!important;padding:6px!important;gap:2px!important}.final-progress button{padding:10px 8px!important;font-size:13px!important}.final-review{display:flex;flex-direction:column;align-items:center;gap:16px}.final-review button{min-height:44px}.final-review .preview-buttons{display:flex;align-items:center;gap:20px}.final-review .preview-image{max-width:100%;overflow:hidden}`}</style>
     {bulkOpen && <BulkCreateDialog project={project} onClose={()=>setBulkOpen(false)} onCreate={copies=>{
@@ -118,7 +200,11 @@ function FinalProjectWorkspace({isMobile}){
       <button className="simple-action simple-secondary" onClick={()=>setStep('design')}>Edit this slide</button>
       <button className="simple-action simple-secondary" onClick={openResize}>Resize as a copy</button>
       <section className="posting-tools" aria-label="Download and copy for posting">
-        <button className="simple-action" disabled={busy} onClick={download}>{busy?'Preparing images…':'Download carousel PNGs'}</button>
+        {isMobile && <PhotoShareControls key={canvas.id} project={project} canvas={canvas} disabled={busy} />}
+        <div className="posting-copy-buttons" aria-label="Download files">
+          <button className="simple-action" disabled={busy} onClick={()=>download('png')}>{busy?'Preparing files…':'Download PNG files'}</button>
+          <button className="simple-action simple-secondary" disabled={busy} onClick={()=>download('jpg')}>Download JPEG files</button>
+        </div>
         <label>Caption &amp; hashtags<textarea aria-label="Caption and hashtags for manual copying" readOnly value={postCaption||''} placeholder="This design has no saved caption." onFocus={e=>e.target.select()}/></label>
         <button className="sc-link" onClick={()=>{const field=document.querySelector('[aria-label="Caption and hashtags for manual copying"]');field?.focus();field?.select();}}>Select caption text</button>
         <details><summary>View all slide text</summary><textarea aria-label="All slide text for manual copying" readOnly value={canvasSlideText(project.canvases)} onFocus={e=>e.target.select()}/></details>
