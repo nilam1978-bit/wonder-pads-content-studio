@@ -27,6 +27,24 @@ const defaultCanvas = (name = 'Page 1', preset = SIZE_PRESETS[0]) => ({
   elements: [],
 });
 
+function defaultNewPageSize(project) {
+  const sizeKey = canvas => `${canvas.w}x${canvas.h}`;
+  const counts = new Map();
+  for (const canvas of project.canvases) {
+    const key = sizeKey(canvas);
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+
+  // Match the most common size so a stray square page cannot set the default.
+  // If sizes are tied, prefer the active page.
+  let best = project.canvases.find(canvas => canvas.id === project.activeCanvasId) || project.canvases[0];
+  if (!best) return SIZE_PRESETS[0];
+  for (const canvas of project.canvases) {
+    if (counts.get(sizeKey(canvas)) > counts.get(sizeKey(best))) best = canvas;
+  }
+  return best;
+}
+
 function resizeSlideToFit(canvas, { w, h }) {
   const scale = Math.min(w / canvas.w, h / canvas.h);
   const offsetX = (w - canvas.w * scale) / 2;
@@ -420,13 +438,12 @@ function reducer(state, action) {
     case 'apply-slide-text-styles':
       return activeProjectMutate(proj=>({...proj,canvases:proj.canvases.map(c=>action.scope==='all'||c.id===proj.activeCanvasId?styleSlideText(c):c)}));
 
-    case 'add-canvas': {
-      const preset = action.preset || SIZE_PRESETS[0];
+    case 'add-canvas':
       return activeProjectMutate(proj => {
-        const c = defaultCanvas(`Page ${proj.canvases.length + 1}`, preset);
+        const size = action.preset || defaultNewPageSize(proj);
+        const c = defaultCanvas(`Page ${proj.canvases.length + 1}`, size);
         return { ...proj, canvases: [...proj.canvases, c], activeCanvasId: c.id };
       });
-    }
 
     case 'delete-canvas':
       return activeProjectMutate(proj => {
