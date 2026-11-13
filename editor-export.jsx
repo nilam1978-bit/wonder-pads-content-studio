@@ -311,9 +311,20 @@ async function rasterizeDesign(canvas,mime='image/png'){
       ctx.globalAlpha=el.opacity??1;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
       const f=el.filter||{};
       ctx.filter=`brightness(${f.brightness??100}%) contrast(${f.contrast??100}%) saturate(${f.saturate??100}%) blur(${f.blur||0}px)`;
-      if(el.radius){ctx.beginPath();ctx.roundRect(0,0,el.w,el.h,Math.min(el.radius,el.w/2,el.h/2));ctx.clip();}
-      const fit=Math.max(el.w/img.naturalWidth,el.h/img.naturalHeight),sw=el.w/fit,sh=el.h/fit;
-      ctx.drawImage(img,(img.naturalWidth-sw)/2,(img.naturalHeight-sh)/2,sw,sh,0,0,el.w,el.h);
+      if (hasBrandLogoMask(el)) {
+        ctx.beginPath();
+        ctx.arc(el.w / 2, el.h / 2, brandLogoSize(el) / 2, 0, Math.PI * 2);
+        ctx.clip();
+      }
+      if (isBrandLogo(el)) {
+        const fit = Math.min(el.w / img.naturalWidth, el.h / img.naturalHeight);
+        const width = img.naturalWidth * fit, height = img.naturalHeight * fit;
+        ctx.drawImage(img, (el.w - width) / 2, (el.h - height) / 2, width, height);
+      } else {
+        if(el.radius){ctx.beginPath();ctx.roundRect(0,0,el.w,el.h,Math.min(el.radius,el.w/2,el.h/2));ctx.clip();}
+        const fit=Math.max(el.w/img.naturalWidth,el.h/img.naturalHeight),sw=el.w/fit,sh=el.h/fit;
+        ctx.drawImage(img,(img.naturalWidth-sw)/2,(img.naturalHeight-sh)/2,sw,sh,0,0,el.w,el.h);
+      }
       ctx.restore();continue;
     }
     if(el.type!=='text'){const embedded=el.src?{...el,src:await embed(el.src)}:el;await paintSVG(`<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.w}" height="${canvas.h}">${elementToSVG(embedded,true)}</svg>`);continue;}
@@ -328,24 +339,33 @@ async function rasterizeDesign(canvas,mime='image/png'){
   }
   return new Promise((resolve,reject)=>output.toBlob(blob=>blob?resolve(blob):reject(new Error('Could not prepare image')),mime,.95));
 }
+async function prepareImageFiles(canvases, format, filename) {
+  const mime = format === 'png' ? 'image/png' : 'image/jpeg';
+  const ext = format === 'png' ? 'png' : 'jpg';
+  const files = [];
+  for (const [index, canvas] of canvases.entries()) {
+    const suffix = canvases.length > 1 ? `-${String(index + 1).padStart(2, '0')}` : '';
+    const blob = await rasterizeDesign(canvas, mime);
+    files.push(new File([blob], `${filename}${suffix}.${ext}`, { type: blob.type }));
+  }
+  return files;
+}
+
 async function exportCanvases(canvases, format, filename = 'design') {
   if (format === 'png' || format === 'jpg') {
-    if(canvases.length>1){
-      const files=[];
-      for(let i=0;i<canvases.length;i++)files.push({name:`${String(i+1).padStart(2,'0')}.${format==='png'?'png':'jpg'}`,bytes:new Uint8Array(await (await rasterizeDesign(canvases[i],format==='png'?'image/png':'image/jpeg')).arrayBuffer())});
-      downloadBlob(makeImageZip(files),`${filename}-carousel.zip`);return;
-    }
-    // Export current canvases as N images (or zip if >1). Here: one per file.
-    for (let i = 0; i < canvases.length; i++) {
-      const c = canvases[i];
-      const svg = canvasToSVG(c);
-      const mime = format === 'png' ? 'image/png' : 'image/jpeg';
+    const files = await prepareImageFiles(canvases, format, filename);
+    if (files.length > 1) {
       const ext = format === 'png' ? 'png' : 'jpg';
-      const blob = await rasterizeDesign(c, mime);
-      const suffix = canvases.length > 1 ? `-${String(i + 1).padStart(2, '0')}` : '';
-      downloadBlob(blob, `${filename}${suffix}.${ext}`);
-      // small pause so browsers don't merge downloads
-      await new Promise(r => setTimeout(r, 250));
+      const entries = [];
+      for (const [index, file] of files.entries()) {
+        entries.push({
+          name: `${String(index + 1).padStart(2, '0')}.${ext}`,
+          bytes: new Uint8Array(await file.arrayBuffer()),
+        });
+      }
+      downloadBlob(makeImageZip(entries), `${filename}-carousel.zip`);
+    } else if (files.length) {
+      downloadBlob(files[0], files[0].name);
     }
     return;
   }

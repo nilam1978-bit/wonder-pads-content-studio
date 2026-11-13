@@ -210,6 +210,7 @@ function MobileEditor({ progressNav, onPreview, onSource, onResize, onBulkCreate
       {/* Canvas area */}
       <div ref={canvasHost} style={{ flex: frozenCanvasHeight ? '0 0 '+frozenCanvasHeight+'px' : 1, minHeight: 0, position: 'relative' }}>
         <MobileCanvasArea editingId={editingId} setEditingId={setEditingId}
+          showTransformHandles={!activeTray && !openSheet}
           onEditWords={(id) => beginEdit(id)} />
         {/* Undo / redo float in the empty space beside the slide while typing (replaces the old top stripe). */}
         {editingId && (() => {
@@ -413,12 +414,25 @@ function MobilePagesStrip({ proj, onOpen }) {
   );
 }
 
-function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId: setEditingIdProp }) {
+function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId: setEditingIdProp, showTransformHandles = true }) {
   const { state, dispatch } = useStore();
   const canvas = activeCanvas(state);
   const stageRef = meR(null);
   const [pan, setPan] = meS({ x: 0, y: 0 });
   const [guides, setGuides] = meS([]);
+  const [stageSize, setStageSize] = meS(null);
+  meE(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const measure = () => {
+      const { width, height } = stage.getBoundingClientRect();
+      setStageSize({ width, height });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, [canvas?.id]);
   const startDataRef = meR(null);
   const gestureRef = meR(null);
   const [editingLocal, setEditingLocal] = meS(null);
@@ -532,14 +546,18 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
       startDataRef.current = null;
       window.removeEventListener('touchmove', move);
       window.removeEventListener('touchend', up);
+      window.removeEventListener('touchcancel', up);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
     };
 
     window.addEventListener('touchmove', move, { passive: false });
     window.addEventListener('touchend', up);
+    window.addEventListener('touchcancel', up);
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   };
 
   const startResize = (e, elId, handleKey) => {
@@ -589,13 +607,17 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
       dispatch({ type: 'commit-transient', snapshot: startData.canvasSnapshot });
       window.removeEventListener('touchmove', move);
       window.removeEventListener('touchend', up);
+      window.removeEventListener('touchcancel', up);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
     };
     window.addEventListener('touchmove', move, { passive: false });
     window.addEventListener('touchend', up);
+    window.addEventListener('touchcancel', up);
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   };
 
   const startRotate = (e, elId) => {
@@ -626,13 +648,17 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
       dispatch({ type: 'commit-transient', snapshot: startData.canvasSnapshot });
       window.removeEventListener('touchmove', move);
       window.removeEventListener('touchend', up);
+      window.removeEventListener('touchcancel', up);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
     };
     window.addEventListener('touchmove', move, { passive: false });
     window.addEventListener('touchend', up);
+    window.addEventListener('touchcancel', up);
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   };
 
   // Stage-level touch (pinch zoom, pan, tap-empty to deselect)
@@ -686,6 +712,9 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
   if (!canvas) return null;
 
   const primary = canvas.elements.find(el => state.selection.includes(el.id));
+  const handlePosition = primary && stageSize && !primary.locked && !primary.hidden && !editingId && showTransformHandles
+    ? mobileTransformHandlePosition(primary, state.zoom, pan, stageSize)
+    : null;
 
   return (
     <div ref={stageRef}
@@ -759,10 +788,14 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
         {primary && !editingId && (
           <MobileSelectionOverlay el={primary} scale={state.zoom}
             onResize={(handle, e) => startResize(e, primary.id, handle)}
-            onRotate={(e) => startRotate(e, primary.id)}
             onMove={(e) => startElementDrag(e, primary.id)} />
         )}
       </div>
+
+      {handlePosition && <div className="mobile-transform-handles" role="group" aria-label="Canvas transform handles" style={handlePosition}>
+        <MobileTransformHandle icon="rotate_element" label="Drag to rotate" onDrag={e => startRotate(e, primary.id)} />
+        <MobileTransformHandle icon="move_element" label="Drag to move" onDrag={e => startElementDrag(e, primary.id)} />
+      </div>}
 
       {/* Zoom badge */}
       <div style={{
@@ -778,7 +811,33 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
   );
 }
 
-function MobileSelectionOverlay({ el, scale, onResize, onRotate, onMove }) {
+function mobileTransformHandlePosition(el, zoom, pan, stage) {
+  // Keep the controls upright beside the rotated selection and above the contextual ribbon.
+  const angle = (el.rot || 0) * Math.PI / 180;
+  const halfHeight = (Math.abs(el.w * Math.sin(angle)) + Math.abs(el.h * Math.cos(angle))) * zoom / 2;
+  const centerX = pan.x + (el.x + el.w / 2) * zoom;
+  const centerY = pan.y + (el.y + el.h / 2) * zoom;
+  const halfGroupWidth = 50, halfTarget = 22, gap = 36;
+  const topLimit = halfTarget + 4;
+  const bottomLimit = Math.max(topLimit, stage.height - 60 - halfTarget - 4);
+  const below = centerY + halfHeight + gap + halfTarget;
+  const above = centerY - halfHeight - gap - halfTarget;
+  const preferred = below <= bottomLimit ? below : above;
+  return {
+    left: clamp(centerX, halfGroupWidth, Math.max(halfGroupWidth, stage.width - halfGroupWidth)),
+    top: clamp(preferred, topLimit, bottomLimit),
+  };
+}
+
+function MobileTransformHandle({ icon, label, onDrag }) {
+  return <button type="button" className="mobile-transform-handle" aria-label={label} title={label}
+    onTouchStart={e => { e.stopPropagation(); if (e.touches.length === 1) onDrag(e); }}
+    onPointerDown={e => { e.stopPropagation(); if (e.pointerType !== 'touch' && e.button === 0) onDrag(e); }}>
+    <span aria-hidden="true"><Icon name={icon} size={16} stroke={1.8} /></span>
+  </button>;
+}
+
+function MobileSelectionOverlay({ el, scale, onResize, onMove }) {
   const bw = el.w * scale, bh = el.h * scale;
   // "Small" = hard to hold on a phone. Then: the handles sit just OUTSIDE the box so they never
   // cover it, and an extra finger-sized grab area makes the item easy to drag.
@@ -806,7 +865,7 @@ function MobileSelectionOverlay({ el, scale, onResize, onRotate, onMove }) {
     <div style={style}>
       <div style={{ position: 'absolute', inset: 0, outline: '2px solid var(--pink-500)' }} />
       {onMove && (bw < 56 || bh < 56) && (
-        <div aria-label="Drag to move" style={{
+        <div aria-hidden="true" style={{
           position: 'absolute', left: '50%', top: '50%',
           width: Math.max(bw, 56), height: Math.max(bh, 56),
           transform: 'translate(-50%,-50%)', pointerEvents: 'auto', touchAction: 'none',
@@ -830,18 +889,14 @@ function MobileSelectionOverlay({ el, scale, onResize, onRotate, onMove }) {
         >
           <span aria-hidden="true" style={{
             position: 'absolute', left: '50%', top: '50%',
-            width: h.side ? 8 : 14, height: h.side ? 22 : 14,
+            width: h.side ? 6 : 10, height: h.side ? 16 : 10,
             transform: 'translate(-50%,-50%)',
-            background: 'white', border: '2px solid var(--pink-500)',
+            background: 'white', border: '1.5px solid var(--pink-500)',
             borderRadius: h.side ? 999 : 4, boxSizing: 'border-box',
             boxShadow: '0 1px 3px rgba(0,0,0,.2)', pointerEvents: 'none',
           }} />
         </button>
       ))}
-      {onRotate && <div className="rotate-handle"
-        style={{ left: '50%', top: small ? -56 : -44, marginLeft: -14, width: 28, height: 28, pointerEvents: 'auto', touchAction: 'none' }}
-        onTouchStart={(e) => { e.stopPropagation(); onRotate(e); }}
-        onPointerDown={(e) => { if (e.pointerType !== 'touch') { e.stopPropagation(); onRotate(e); } }} />}
     </div>
   );
 }
