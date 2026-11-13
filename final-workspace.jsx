@@ -174,7 +174,7 @@ function FinalProjectWorkspace({isMobile}){
   const crowded=project.canvases.flatMap((c,i)=>c.elements.some(e=>e.type==='text'&&!e.hidden&&(e.y+textLayout(e).height>c.h||e.x+e.w>c.w||e.x<0||e.y<0||e.fontSize<24))?[i+1]:[]);
   const go=i=>dispatch({type:'set-active-canvas',id:project.canvases[Math.max(0,Math.min(project.canvases.length-1,i))].id});
   const touch=React.useRef(null);
-  const download=async(format)=>{setBusy(true);setError('');try{await exportCanvases(project.canvases,format,project.name.replace(/[^\w-]/g,'_'));if(!project.finished)dispatch({type:'update-project',id:project.id,patch:{finished:true,finishedAt:now()}});}catch(e){setError(e.message||'Download failed');}finally{setBusy(false);}};
+  const download=async(format,pages=project.canvases)=>{setBusy(true);setError('');try{await exportCanvases(pages,format,project.name.replace(/[^\w-]/g,'_'));if(format!=='pdf'&&pages===project.canvases&&!project.finished)dispatch({type:'update-project',id:project.id,patch:{finished:true,finishedAt:now()}});}catch(e){setError(e.message||'Download failed');}finally{setBusy(false);}};
   const nav=<nav className="simple-nav final-progress" aria-label="Carousel workflow"><button onClick={()=>{dispatch({type:'close-project'});dispatch({type:'set-view',view:project.contentEntryId?'ready-content':'home'});}}>{project.contentEntryId?'← Content Library':'← Home'}</button><button aria-current={step==='design'} onClick={()=>setStep('design')}>Design</button><button aria-current={step==='source'} onClick={()=>setStep('source')}>Source text</button><button aria-current={step==='preview'} onClick={()=>setStep('preview')}>Preview & Download</button></nav>;
   return <div className="simple-workspace"><SimpleStudioStyles/><style>{`.final-progress{justify-content:flex-start!important;padding:6px!important;gap:2px!important}.final-progress button{padding:10px 8px!important;font-size:13px!important}.final-review{display:flex;flex-direction:column;align-items:center;gap:16px}.final-review button{min-height:44px}.final-review .preview-buttons{display:flex;align-items:center;gap:20px}.final-review .preview-image{max-width:100%;overflow:hidden}`}</style>
     {bulkOpen && <BulkCreateDialog project={project} onClose={()=>setBulkOpen(false)} onCreate={copies=>{
@@ -204,6 +204,11 @@ function FinalProjectWorkspace({isMobile}){
         <div className="posting-copy-buttons" aria-label="Download files">
           <button className="simple-action" disabled={busy} onClick={()=>download('png')}>{busy?'Preparing files…':'Download PNG files'}</button>
           <button className="simple-action simple-secondary" disabled={busy} onClick={()=>download('jpg')}>Download JPEG files</button>
+          {isMobile && <>
+            {project.canvases.length > 1 && <button className="simple-action simple-secondary" disabled={busy} onClick={() => download('png', [canvas])}>Download this slide as PNG</button>}
+            <button className="simple-action simple-secondary" disabled={busy} onClick={() => download('pdf')}>Export PDF</button>
+            <button className="simple-action simple-secondary" disabled={busy} onClick={() => download('svg')}>Export SVG</button>
+          </>}
         </div>
         <label>Caption &amp; hashtags<textarea aria-label="Caption and hashtags for manual copying" readOnly value={postCaption||''} placeholder="This design has no saved caption." onFocus={e=>e.target.select()}/></label>
         <button className="sc-link" onClick={()=>{const field=document.querySelector('[aria-label="Caption and hashtags for manual copying"]');field?.focus();field?.select();}}>Select caption text</button>

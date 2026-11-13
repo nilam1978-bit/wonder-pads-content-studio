@@ -101,13 +101,14 @@ function timeAgo(ts) {
 }
 
 // A mini svg-preview of a canvas (used for cards without a rasterized thumbnail yet).
-function MiniPreview({ canvas, maxW = 240, maxH = 240 }) {
+function MiniPreview({ canvas, maxW = 240, maxH = 240, fluid = false }) {
   if (!canvas) return null;
   const scale = Math.min(maxW / canvas.w, maxH / canvas.h);
   const w = canvas.w * scale;
   const h = canvas.h * scale;
   const svg = canvasToSVG(canvas);
-  const url = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+  if (fluid) return <div className="mobile-page-art" style={{ aspectRatio: `${canvas.w} / ${canvas.h}` }}
+    aria-hidden="true" dangerouslySetInnerHTML={{ __html: svg }} />;
   return (
     <div style={{
       width: w, height: h,
