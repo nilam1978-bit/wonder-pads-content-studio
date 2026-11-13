@@ -182,10 +182,6 @@ function MobileEditor({ progressNav, onPreview, onSource, onResize, onBulkCreate
     setTray(null);
     dispatch({ type: 'set-selection', ids: [] });
   };
-  const duplicatePage = () => {
-    clearSelection();
-    dispatch({ type: 'duplicate-canvas', id: canvas.id });
-  };
   const activeTray = primaryEl && (!primaryEl.locked || tray === 'position') && trayToolsFor(primaryEl).includes(tray) ? tray : null;
 
   return (
@@ -199,7 +195,8 @@ function MobileEditor({ progressNav, onPreview, onSource, onResize, onBulkCreate
       <MobileEditorTopBar proj={proj} canvas={canvas} compact={!!editingId} onDone={endEdit}
         onBack={() => dispatch({ type: 'close-project' })}
         onRename={() => setOpenSheet('rename')}
-        onDownload={() => onPreview ? onPreview() : setOpenSheet('download')}
+        onDownload={() => onPreview ? onPreview() : openTool('download')}
+        onLayers={() => openTool('layers')}
         onUndo={() => dispatch({ type: 'undo' })}
         onRedo={() => dispatch({ type: 'redo' })}
         canUndo={state.past.length > 0}
@@ -211,6 +208,7 @@ function MobileEditor({ progressNav, onPreview, onSource, onResize, onBulkCreate
       <div ref={canvasHost} style={{ flex: frozenCanvasHeight ? '0 0 '+frozenCanvasHeight+'px' : 1, minHeight: 0, position: 'relative' }}>
         <MobileCanvasArea editingId={editingId} setEditingId={setEditingId}
           showTransformHandles={!activeTray && !openSheet}
+          onOverview={!openSheet && proj.canvases.length > 1 ? () => openTool('pages') : undefined}
           onEditWords={(id) => beginEdit(id)} />
         {/* Undo / redo float in the empty space beside the slide while typing (replaces the old top stripe). */}
         {editingId && (() => {
@@ -239,10 +237,10 @@ function MobileEditor({ progressNav, onPreview, onSource, onResize, onBulkCreate
           );
           return <>
             {arrow(-1, idx === 0)}{arrow(1, idx === n - 1)}
-            <span aria-label={`Slide ${idx + 1} of ${n}`}
+            <button aria-label={`View all slides, slide ${idx + 1} of ${n}`} onClick={() => openTool('pages')}
               style={{ position: 'absolute', left: '50%', bottom: 10, transform: 'translateX(-50%)', zIndex: 5, border: 0, borderRadius: 999,
                 background: 'rgba(255,255,255,.9)', boxShadow: '0 1px 6px rgba(80,30,70,.16)', padding: '6px 14px', fontSize: 12, fontWeight: 600,
-                color: 'var(--ink-2)', fontVariantNumeric: 'tabular-nums', pointerEvents: 'none' }}>{idx + 1} / {n}</span>
+                color: 'var(--ink-2)', minHeight: 44, fontVariantNumeric: 'tabular-nums' }}>{idx + 1} / {n}</button>
           </>;
         })()}
       </div>
@@ -260,9 +258,12 @@ function MobileEditor({ progressNav, onPreview, onSource, onResize, onBulkCreate
             </MobileRibbon>
           </div>
         )}
-        <MobileRibbon label="Page tools">
-          <MobilePageTools activeTool={openSheet} onOpen={openTool} onSource={onSource}
-            onResize={onResize} onBulkCreate={onBulkCreate} onDuplicate={duplicatePage} />
+        <MobileRibbon label="Page tools" showScrollButton={false} end={
+          <button className="mobile-ribbon-pin mobile-ribbon-arrow" aria-label="More tools"
+            aria-expanded={openSheet === 'more'} onClick={() => openTool('more')}>
+            <Icon name="menu" size={20} />
+          </button>}>
+          <MobilePageTools activeTool={openSheet} onOpen={openTool} />
         </MobileRibbon>
       </div>
 
@@ -292,9 +293,24 @@ function MobileEditor({ progressNav, onPreview, onSource, onResize, onBulkCreate
         <BackgroundPanel />
       </BottomSheet>
 
-      {/* Pages sheet */}
-      <BottomSheet open={openSheet === 'pages'} onClose={closeSheet} title="Pages">
-        <MobilePagesList onSwitch={closeSheet} />
+      {openSheet === 'pages' && <MobilePagesOverview onClose={closeSheet} />}
+      <BottomSheet open={openSheet === 'more'} onClose={closeSheet} title="More tools" height="auto">
+        <SheetAction icon="brand_kit" label="Brand" onClick={() => openTool('brand')} />
+        {onSource && <SheetAction icon="text" label="Source text" onClick={() => { closeSheet(); onSource(); }} />}
+        {onResize && <SheetAction icon="duplicate" label="Resize as a copy" onClick={() => { closeSheet(); onResize(); }} />}
+        {onBulkCreate && <SheetAction icon="grid" label="Bulk create" onClick={() => { closeSheet(); onBulkCreate(); }} />}
+        <SheetAction icon="duplicate" label="Duplicate design" onClick={() => {
+          dispatch({ type: 'duplicate-project', id: proj.id });
+          closeSheet();
+        }} />
+        <SheetAction icon="save" label="Save as template" onClick={() => {
+          const name = prompt('Template name', proj.name)?.trim();
+          if (name) {
+            dispatch({ type: 'save-template', name });
+            closeSheet();
+          }
+        }} />
+        <SheetAction icon="save" label="Save editable backup" onClick={() => { exportProjectFile(proj); closeSheet(); }} />
       </BottomSheet>
 
       {/* Layers sheet */}
@@ -318,7 +334,7 @@ function MobileEditor({ progressNav, onPreview, onSource, onResize, onBulkCreate
   );
 }
 
-function MobileEditorTopBar({ proj, canvas, compact, onDone, onBack, onRename, onDownload, onUndo, onRedo, canUndo, canRedo }) {
+function MobileEditorTopBar({ proj, canvas, compact, onDone, onBack, onRename, onDownload, onLayers, onUndo, onRedo, canUndo, canRedo }) {
   // While typing there is no top stripe at all: undo / redo float on the canvas instead (see MobileEditor).
   // This spacer only keeps the slide clear of the iPhone clock / notch (it is 0 height on browsers with no notch).
   if (compact) return <div className="safe-top" style={{flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'6px 12px',background:'white'}}><span style={{fontSize:13}}>Editing text</span><button className="btn btn-tonal" onClick={onDone}>Done</button></div>;
@@ -326,7 +342,7 @@ function MobileEditorTopBar({ proj, canvas, compact, onDone, onBack, onRename, o
     <div className="safe-top" style={{
       padding: '10px 12px',
       background: 'white', borderBottom: '1px solid var(--line)',
-      display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
+      display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
       zIndex: 20,
     }}>
       <button className="icon-btn" aria-label="Back to home" onClick={onBack}>
@@ -348,6 +364,7 @@ function MobileEditorTopBar({ proj, canvas, compact, onDone, onBack, onRename, o
       </button>
 
       <button className="icon-btn" aria-label="Redo" disabled={!canRedo} onClick={onRedo}><Icon name="redo" size={18} /></button>
+      <button className="icon-btn" aria-label="Layers" onClick={onLayers}><Icon name="layers" size={18} /></button>
       <button className="icon-btn" aria-label="Preview and download" onClick={onDownload}
         style={{ background: 'var(--ink)', color: 'var(--cream)' }}>
         <Icon name="upload" size={16} style={{ transform: 'rotate(180deg)' }} />
@@ -414,7 +431,7 @@ function MobilePagesStrip({ proj, onOpen }) {
   );
 }
 
-function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId: setEditingIdProp, showTransformHandles = true }) {
+function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId: setEditingIdProp, showTransformHandles = true, onOverview }) {
   const { state, dispatch } = useStore();
   const canvas = activeCanvas(state);
   const stageRef = meR(null);
@@ -435,6 +452,13 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
   }, [canvas?.id]);
   const startDataRef = meR(null);
   const gestureRef = meR(null);
+  const endElementGesture = meR(null);
+  const endPinch = meR(null);
+  const fitZoom = meR(1);
+  meE(() => () => {
+    endElementGesture.current?.();
+    endPinch.current?.();
+  }, []);
   const [editingLocal, setEditingLocal] = meS(null);
   const editingId = editingIdProp !== undefined ? editingIdProp : editingLocal;
   const setEditingId = setEditingIdProp || setEditingLocal;
@@ -456,6 +480,7 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
     const availW = rect.width - 40;
     const availH = rect.height - 40;
     const z = clamp(Math.min(availW / canvas.w, availH / canvas.h), 0.05, 4);
+    fitZoom.current = z;
     skipZoomPan.current = z;
     setPan({ x: (rect.width - canvas.w * z) / 2, y: (rect.height - canvas.h * z) / 2 });
     dispatch({ type: 'set-zoom', zoom: z });
@@ -538,6 +563,7 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
     };
 
     const up = () => {
+      endElementGesture.current = null;
       setGuides([]);
       const sd = startDataRef.current;
       if (sd?.moved) {
@@ -552,6 +578,7 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
       window.removeEventListener('pointercancel', up);
     };
 
+    endElementGesture.current = up;
     window.addEventListener('touchmove', move, { passive: false });
     window.addEventListener('touchend', up);
     window.addEventListener('touchcancel', up);
@@ -604,6 +631,7 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
       dispatch({ type: 'update-element', id: elId, transient: true, patch });
     };
     const up = () => {
+      endElementGesture.current = null;
       dispatch({ type: 'commit-transient', snapshot: startData.canvasSnapshot });
       window.removeEventListener('touchmove', move);
       window.removeEventListener('touchend', up);
@@ -612,6 +640,7 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', up);
     };
+    endElementGesture.current = up;
     window.addEventListener('touchmove', move, { passive: false });
     window.addEventListener('touchend', up);
     window.addEventListener('touchcancel', up);
@@ -645,6 +674,7 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
       dispatch({ type: 'update-element', id: elId, transient: true, patch: { rot: rotation } });
     };
     const up = () => {
+      endElementGesture.current = null;
       dispatch({ type: 'commit-transient', snapshot: startData.canvasSnapshot });
       window.removeEventListener('touchmove', move);
       window.removeEventListener('touchend', up);
@@ -653,6 +683,7 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', up);
     };
+    endElementGesture.current = up;
     window.addEventListener('touchmove', move, { passive: false });
     window.addEventListener('touchend', up);
     window.addEventListener('touchcancel', up);
@@ -666,12 +697,14 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
     if ((e.target.dataset.canvasBg || e.target === e.currentTarget) && e.touches.length === 1) {
       dispatch({ type: 'set-selection', ids: [] });
     }
-    if (e.touches.length === 2) {
+    if (e.touches.length === 2 && !gestureRef.current) {
+      endElementGesture.current?.();
       e.preventDefault();
       const [t1, t2] = e.touches;
       const midX = (t1.clientX + t2.clientX) / 2;
       const midY = (t1.clientY + t2.clientY) / 2;
       const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      if (!dist) return;
       gestureRef.current = {
         startDist: dist, startZoom: state.zoom,
         startMidX: midX, startMidY: midY,
@@ -685,7 +718,17 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
         const newMidX = (a.clientX + b.clientX) / 2;
         const newMidY = (a.clientY + b.clientY) / 2;
         const zoomFactor = newDist / gestureRef.current.startDist;
-        const newZoom = clamp(gestureRef.current.startZoom * zoomFactor, 0.05, 4);
+        const { startZoom, startPan } = gestureRef.current;
+        const rawZoom = startZoom * zoomFactor;
+        if (onOverview && zoomFactor < 0.85 && rawZoom <= fitZoom.current * 0.75) {
+          up();
+          skipZoomPan.current = prevZoom.current === startZoom ? false : startZoom;
+          setPan(startPan);
+          dispatch({ type: 'set-zoom', zoom: startZoom });
+          onOverview();
+          return;
+        }
+        const newZoom = clamp(rawZoom, 0.05, 4);
         // Pan to keep midpoint locked
         const rect = stageRef.current.getBoundingClientRect();
         const anchorX = gestureRef.current.startMidX - rect.left;
@@ -697,15 +740,20 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
           x: newAnchorX - (anchorX - gestureRef.current.startPan.x) * zRatio,
           y: newAnchorY - (anchorY - gestureRef.current.startPan.y) * zRatio,
         });
+        skipZoomPan.current = prevZoom.current === newZoom ? false : newZoom;
         dispatch({ type: 'set-zoom', zoom: newZoom });
       };
       const up = () => {
         gestureRef.current = null;
+        endPinch.current = null;
         window.removeEventListener('touchmove', move);
         window.removeEventListener('touchend', up);
+        window.removeEventListener('touchcancel', up);
       };
+      endPinch.current = up;
       window.addEventListener('touchmove', move, { passive: false });
       window.addEventListener('touchend', up);
+      window.addEventListener('touchcancel', up);
     }
   };
 
@@ -718,6 +766,12 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
 
   return (
     <div ref={stageRef}
+      onTouchStartCapture={e => {
+        if (e.touches.length === 2) {
+          onStageTouchStart(e);
+          e.stopPropagation();
+        }
+      }}
       onTouchStart={onStageTouchStart}
       style={{
         position: 'absolute', inset: 0, overflow: 'hidden',
@@ -901,10 +955,11 @@ function MobileSelectionOverlay({ el, scale, onResize, onMove }) {
   );
 }
 
-function MobileRibbon({ label, children, end }) {
+function MobileRibbon({ label, children, end, showScrollButton = true }) {
   const scrollRef = meR(null);
   const [edges, setEdges] = meS({ before: false, after: false });
   meE(() => {
+    if (!showScrollButton) return;
     const scroll = scrollRef.current;
     const measure = () => {
       const before = scroll.scrollLeft > 2;
@@ -920,14 +975,14 @@ function MobileRibbon({ label, children, end }) {
       observer.disconnect();
       scroll.removeEventListener('scroll', measure);
     };
-  }, []);
+  }, [showScrollButton]);
   const forward = edges.after || !edges.before;
   return (
     <div className="mobile-ribbon" role="toolbar" aria-label={label}>
       <div className="mobile-ribbon-scroll" data-ribbon-scroll ref={scrollRef}>
         <div className="mobile-ribbon-items">{children}</div>
       </div>
-      <button className="mobile-ribbon-pin mobile-ribbon-arrow"
+      {showScrollButton && <button className="mobile-ribbon-pin mobile-ribbon-arrow"
         aria-label={forward ? 'Scroll tools forward' : 'Scroll tools back'}
         disabled={!edges.after && !edges.before}
         onClick={() => {
@@ -937,59 +992,30 @@ function MobileRibbon({ label, children, end }) {
         <span style={{ display: 'inline-flex', transform: forward ? undefined : 'scaleX(-1)' }}>
           <Icon name="chevron_r" size={16} />
         </span>
-      </button>
+      </button>}
       {end}
     </div>
   );
 }
 
-function MobilePageTools({ activeTool, onOpen, onSource, onResize, onBulkCreate, onDuplicate }) {
-  const { state, dispatch } = useStore();
-  const project = activeProject(state);
-  const canvas = activeCanvas(state);
-  const index = project.canvases.findIndex(page => page.id === canvas.id);
-  const last = project.canvases.length - 1;
-  const sheet = (id, icon, label) => ({ id, icon, label, action: () => onOpen(id) });
-  const move = to => dispatch({ type: 'reorder-canvas', from: index, to });
+function MobilePageTools({ activeTool, onOpen }) {
   const tools = [
-    sheet('text', 'text', 'Add text'),
-    sheet('images', 'images', 'Image'),
-    sheet('icons', 'images', 'Illustrations'),
-    sheet('bg', 'bg', 'Background'),
-    sheet('pages', 'copy', 'Pages'),
-    { icon: 'duplicate', label: 'Duplicate page', action: onDuplicate },
-    ...(onResize ? [{ icon: 'duplicate', label: 'Resize as a copy', caption: 'Resize', action: onResize }] : []),
-    ...(onBulkCreate ? [{ icon: 'grid', label: 'Bulk create', action: onBulkCreate }] : []),
-    sheet('layers', 'layers', 'Layers'),
-    sheet('templates', 'templates', 'Templates'),
-    sheet('shapes', 'shapes', 'Shapes'),
-    sheet('frames', 'frames', 'Frames'),
-    sheet('brand', 'brand_kit', 'Brand'),
-    ...(onSource ? [{ icon: 'text', label: 'Source text', action: onSource }] : []),
-    { icon: 'plus', label: 'New page', action: () => dispatch({ type: 'add-canvas' }) },
-    { icon: 'arrow_up', label: 'Move page earlier', caption: 'Page earlier', disabled: index === 0, action: () => move(index - 1) },
-    { icon: 'arrow_down', label: 'Move page later', caption: 'Page later', disabled: index === last, action: () => move(index + 1) },
-    { icon: 'trash', label: 'Delete page', disabled: last === 0, action: () => {
-      if (confirm('Delete this page?')) dispatch({ type: 'delete-canvas', id: canvas.id });
-    } },
-    sheet('download', 'image_export', 'Download formats'),
-    { icon: 'duplicate', label: 'Duplicate design', action: () => dispatch({ type: 'duplicate-project', id: project.id }) },
-    { icon: 'save', label: 'Save as template', action: () => exportProjectFile(project) },
-    { icon: 'clear', label: 'Clear canvas', disabled: canvas.elements.length === 0, action: () => {
-      if (confirm('Remove all elements on this page?')) {
-        dispatch({ type: 'set-selection', ids: [] });
-        dispatch({ type: 'update-canvas', id: canvas.id, patch: { elements: [] } });
-      }
-    } },
+    ['text', 'text', 'Add text'],
+    ['images', 'images', 'Image'],
+    ['icons', 'images', 'Illustrations'],
+    ['bg', 'bg', 'Background'],
+    ['pages', 'copy', 'Pages'],
+    ['templates', 'templates', 'Templates'],
+    ['shapes', 'shapes', 'Shapes'],
+    ['frames', 'frames', 'Frames'],
   ];
   return (
     <>
-      {tools.map(t => (
-        <button key={t.label} className="mobile-ribbon-tool mobile-ribbon-page-tool" aria-label={t.label}
-          aria-expanded={t.id ? activeTool === t.id : undefined}
-          disabled={t.disabled} onClick={t.action}>
-          <Icon name={t.icon} size={18} />
-          <span>{t.caption || t.label}</span>
+      {tools.map(([id, icon, label]) => (
+        <button key={id} className="mobile-ribbon-tool mobile-ribbon-page-tool"
+          aria-expanded={activeTool === id} onClick={() => onOpen(id)}>
+          <Icon name={icon} size={18} />
+          <span>{label}</span>
         </button>
       ))}
     </>
@@ -1270,39 +1296,67 @@ function PositionTool({ el }) {
   </>;
 }
 
-function MobilePagesList({ onSwitch }) {
+function MobilePagesOverview({ onClose }) {
   const { state, dispatch } = useStore();
-  const proj = activeProject(state);
-  if (!proj) return null;
-  return (
-    <div style={{ display: 'grid', gap: 10 }}>
-      {proj.canvases.map((c, i) => {
-        const active = c.id === proj.activeCanvasId;
-        return (
-          <div key={c.id} style={{
-            display: 'flex', gap: 12, alignItems: 'center',
-            padding: 10, borderRadius: 12,
-            background: active ? 'var(--pink-100)' : 'var(--pink-50)',
-            border: active ? '1px solid var(--pink-400)' : '1px solid transparent',
-          }}>
-            <button aria-label={`Open page ${i + 1}`} onClick={() => { dispatch({ type: 'set-active-canvas', id: c.id }); onSwitch?.(); }}
-              style={{ padding: 0, background: 'transparent', flexShrink: 0 }}>
-              <div style={{
-                width: 60, aspectRatio: `${c.w}/${c.h}`,
-                background: c.bg?.value || '#FDFBFC',
-                borderRadius: 4, border: '1px solid var(--line)',
-              }} />
+  const project = activeProject(state);
+  const dialog = meR(null);
+  const [menuId, setMenuId] = meS(null);
+
+  meE(() => {
+    const element = dialog.current;
+    element.showModal();
+    return () => element.close();
+  }, []);
+
+  const run = action => {
+    dispatch(action);
+    dispatch({ type: 'set-selection', ids: [] });
+    setMenuId(null);
+  };
+
+  return <dialog ref={dialog} className="mobile-pages-overview" aria-labelledby="mobile-pages-title"
+    onCancel={e => { e.preventDefault(); onClose(); }}>
+    <header className="safe-top">
+      <h2 id="mobile-pages-title">Slides</h2>
+      <button className="icon-btn" aria-label="Close slides" onClick={onClose}><Icon name="x" size={20} /></button>
+    </header>
+    <div className="mobile-pages-grid">
+      {project.canvases.map((page, index) => {
+        const active = page.id === project.activeCanvasId;
+        const menuOpen = menuId === page.id;
+        return <section key={page.id} className="mobile-page-tile">
+          <button className="mobile-page-preview" aria-label={`Open slide ${index + 1}`}
+            aria-current={active ? 'page' : undefined} onClick={() => {
+              dispatch({ type: 'set-active-canvas', id: page.id });
+              onClose();
+            }}>
+            <MiniPreview canvas={page} fluid />
+          </button>
+          <div className="mobile-page-caption">
+            <span>Slide {index + 1}</span>
+            <button className="icon-btn" aria-label={`Actions for slide ${index + 1}`}
+              aria-expanded={menuOpen} onClick={() => setMenuId(menuOpen ? null : page.id)}>
+              <Icon name="more" size={20} />
             </button>
-            <div style={{ flex: 1, minWidth: 0, fontSize: 12 }}>
-              <div style={{ fontWeight: 500, color: 'var(--ink)' }}>{c.name || `Page ${i + 1}`}</div>
-              <div style={{ fontSize: 10, color: 'var(--ink-3)', marginTop: 2,
-                fontVariantNumeric: 'tabular-nums' }}>{c.w}×{c.h}</div>
-            </div>
           </div>
-        );
+          {menuOpen && <div className="mobile-page-actions" role="group" aria-label={`Slide ${index + 1} actions`}>
+            <button onClick={() => run({ type: 'duplicate-canvas', id: page.id })}>Duplicate slide</button>
+            <button disabled={index === 0} onClick={() => run({ type: 'reorder-canvas', from: index, to: index - 1 })}>Move earlier</button>
+            <button disabled={index === project.canvases.length - 1} onClick={() => run({ type: 'reorder-canvas', from: index, to: index + 1 })}>Move later</button>
+            <button disabled={page.elements.length === 0} onClick={() => {
+              if (confirm('Remove all elements on this slide?')) run({ type: 'update-canvas', id: page.id, patch: { elements: [] } });
+            }}>Clear slide</button>
+            <button disabled={project.canvases.length === 1} onClick={() => {
+              if (confirm('Delete this slide? You can restore it with Undo.')) run({ type: 'delete-canvas', id: page.id });
+            }}>Delete slide</button>
+          </div>}
+        </section>;
       })}
+      <button className="mobile-add-page" onClick={() => run({ type: 'add-canvas' })}>
+        <Icon name="plus" size={20} /> Add slide
+      </button>
     </div>
-  );
+  </dialog>;
 }
 
 function MobileDownloadOptions({ proj, canvas, onDone }) {
@@ -1368,7 +1422,7 @@ function MobileRenameSheet({ proj, onClose, onRename }) {
 Object.assign(window, {
   trayToolsFor, MobileToolTray, ToolBtn,
   MobileEditor, MobileEditorTopBar, MobilePagesStrip,
-  MobileCanvasArea, MobileSelectionOverlay, MobilePagesList, MobileDownloadOptions, MobileRenameSheet,
+  MobileCanvasArea, MobileSelectionOverlay, MobilePagesOverview, MobileDownloadOptions, MobileRenameSheet,
 });
 
 function MobileWordsDialog({draft,onChange,onCancel,onDone}) {
