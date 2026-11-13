@@ -1883,7 +1883,7 @@ function FrameProps({ el, update }) {
 }
 
 // ---------- LAYERS PANEL ----------
-function LayersPanel() {
+function LayersPanel({ onSelect } = {}) {
   const { state, dispatch } = useStore();
   const [open, setOpen] = pS(true);
   const canvas = activeCanvas(state);
@@ -1892,7 +1892,7 @@ function LayersPanel() {
 
   return (
     <div style={{ borderTop: '1px solid var(--line)', background: 'var(--pink-50)' }}>
-      <button onClick={() => setOpen(o => !o)}
+      {!onSelect && <button onClick={() => setOpen(o => !o)}
         style={{
           width: '100%', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 8,
           fontSize: 11, fontWeight: 600, color: 'var(--ink-2)',
@@ -1900,16 +1900,16 @@ function LayersPanel() {
         }}>
         <Icon name={open ? 'chevron_d' : 'chevron_r'} size={12} />
         Layers <span style={{ color: 'var(--ink-3)', fontWeight: 400 }}>({els.length})</span>
-      </button>
-      {open && (
-        <div className="scroll" style={{ maxHeight: 240, overflowY: 'auto', paddingBottom: 8 }}>
+      </button>}
+      {(onSelect || open) && (
+        <div className="scroll" style={{ maxHeight: onSelect ? undefined : 240, overflowY: 'auto', paddingBottom: 8 }}>
           {els.map((el, i) => {
             const realIdx = canvas.elements.findIndex(e => e.id === el.id);
             const isTop = realIdx === canvas.elements.length - 1;
             const isBottom = realIdx === 0;
             return (
               <div key={el.id}
-                onClick={() => dispatch({ type: 'set-selection', ids: [el.id] })}
+                onClick={() => { dispatch({ type: 'set-selection', ids: [el.id] }); onSelect?.(); }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 4,
                   padding: '6px 12px 6px 16px', cursor: 'pointer',

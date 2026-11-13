@@ -108,7 +108,7 @@ function SheetAction({ icon, label, onClick, danger }) {
   );
 }
 
-function MobileEditor({ progressNav, onPreview, onSource, onResize, onBulkCreate }) {
+function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBulkCreate }) {
   const { state, dispatch } = useStore();
   const proj = activeProject(state);
   const canvas = activeCanvas(state);
@@ -193,7 +193,7 @@ function MobileEditor({ progressNav, onPreview, onSource, onResize, onBulkCreate
       {wordDraft && <MobileWordsDialog draft={wordDraft} onChange={text=>setWordDraft(d=>({...d,text}))} onCancel={()=>closeWords(false)} onDone={()=>closeWords(true)} />}
       {/* Top bar */}
       <MobileEditorTopBar proj={proj} canvas={canvas} compact={!!editingId} onDone={endEdit}
-        onBack={() => dispatch({ type: 'close-project' })}
+        onBack={onExit}
         onRename={() => setOpenSheet('rename')}
         onDownload={() => onPreview ? onPreview() : openTool('download')}
         onLayers={() => openTool('layers')}
@@ -315,7 +315,7 @@ function MobileEditor({ progressNav, onPreview, onSource, onResize, onBulkCreate
 
       {/* Layers sheet */}
       <BottomSheet open={openSheet === 'layers'} onClose={closeSheet} title="Layers">
-        <LayersPanel />
+        <LayersPanel onSelect={closeSheet} />
       </BottomSheet>
 
       {/* Download */}
@@ -345,7 +345,7 @@ function MobileEditorTopBar({ proj, canvas, compact, onDone, onBack, onRename, o
       display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
       zIndex: 20,
     }}>
-      <button className="icon-btn" aria-label="Back to home" onClick={onBack}>
+      <button className="icon-btn" aria-label="Back to studio" onClick={onBack}>
         <Icon name="chevron_r" size={20} style={{ transform: 'rotate(180deg)' }} />
       </button>
 
@@ -364,7 +364,7 @@ function MobileEditorTopBar({ proj, canvas, compact, onDone, onBack, onRename, o
       </button>
 
       <button className="icon-btn" aria-label="Redo" disabled={!canRedo} onClick={onRedo}><Icon name="redo" size={18} /></button>
-      <button className="icon-btn" aria-label="Layers" onClick={onLayers}><Icon name="layers" size={18} /></button>
+      <button className="icon-btn" aria-label="Layers" onClick={onLayers}><Icon name="layer" size={20} /></button>
       <button className="icon-btn" aria-label="Preview and download" onClick={onDownload}
         style={{ background: 'var(--ink)', color: 'var(--cream)' }}>
         <Icon name="upload" size={16} style={{ transform: 'rotate(180deg)' }} />

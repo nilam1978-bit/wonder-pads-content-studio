@@ -172,7 +172,7 @@ function BackupRestoreCard() {
   const nArrangements = (state.brand.savedArrangements || []).length;
 
   return (
-    <div className="wpr-backup-restore-card" style={{ padding: '10px 40px 20px', maxWidth: 1400, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+    <div className="wpr-backup-restore-card" style={{ padding: '10px 0 20px', maxWidth: 1400, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <div style={{
         background: 'white', border: '1px solid var(--line)', borderRadius: 20,
         padding: 20, display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
@@ -184,7 +184,7 @@ function BackupRestoreCard() {
         }}>
           <Icon name="save" size={20} />
         </div>
-        <div style={{ flex: 1, minWidth: 220 }}>
+        <div style={{ flex: 1, minWidth: 'min(220px, 100%)' }}>
           <div style={{ fontSize: 10, color: 'var(--ink-3)', letterSpacing: '.14em', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>
             Editable project safety
           </div>
@@ -195,7 +195,7 @@ function BackupRestoreCard() {
             {nProjects} project{nProjects === 1 ? '' : 's'} · {nDesigns} canvas{nDesigns === 1 ? '' : 'es'} · {nBackgrounds} saved bg · {nArrangements} arrangement{nArrangements === 1 ? '' : 's'} · brand data · content history
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           <button onClick={() => exportEditableProjectFile(state)}
             style={{
               padding: '10px 16px', background: 'var(--ink)', color: 'white',
