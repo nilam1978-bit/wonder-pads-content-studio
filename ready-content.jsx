@@ -196,7 +196,7 @@ function ReadyContentPlan(){
   React.useEffect(()=>{setCopyFallback('');},[selected]);
   const copyWords=async()=>{const words=[readySlideText(post),post.layout==='floral-quote'?post.footerLine:''].filter(Boolean).join('\n\n');try{await navigator.clipboard.writeText(words);setCopyFallback('');setNotice('All slide text copied.');}catch{setCopyFallback(words);setNotice('Select and copy the slide text below.');}};
   const project=post&&state.projects.find(p=>p.contentEntryId===post.id);
-  const home=()=>{sessionStorage.setItem('wpr-simple-section','work');sessionStorage.setItem('wpr-simple-work-tab','ready');dispatch({type:'set-view',view:'home'});};
+  const home=()=>{sessionStorage.setItem('wpr-simple-section','create');dispatch({type:'set-view',view:'home'});};
   const create=async(rebuild=false)=>{
     setBusy(true);setNotice('');
     try{
