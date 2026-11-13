@@ -1025,7 +1025,6 @@ function StoreProvider({ children }) {
     loaded.current = true;
     if (!shouldWrite) return;
     pending.current = studioSnapshot(state);
-    dispatch({ type: 'set-save-status', status: 'saving' });
     clearTimeout(timer.current);
     timer.current = setTimeout(flush, 250);
   }, [

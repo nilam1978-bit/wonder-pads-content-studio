@@ -277,11 +277,24 @@ function openCarouselDraft(state,dispatch,carouselOverride){
   return true;
 }
 
+function readStudioWordsDraft(key = 'wpr-social-create-draft') {
+  try { return JSON.parse(sessionStorage.getItem(key) || '{}') || {}; }
+  catch { return {}; }
+}
+
 function FinalCarouselFlow(){
   const {state,dispatch}=useStore();
-  const [draft]=React.useState(()=>{try{return JSON.parse(sessionStorage.getItem('wpr-social-create-draft')||'{}');}catch{return {};}});
-  const [input,setInput]=React.useState(draft.input||''),[reuse,setReuse]=React.useState(false),[busy,setBusy]=React.useState(false),[error,setError]=React.useState('');
-  React.useEffect(()=>{try{sessionStorage.setItem('wpr-social-create-draft',JSON.stringify({input}));}catch{}},[input]);
+  const [reused] = React.useState(() => readStudioWordsDraft('wpr-reused-words'));
+  const draftKey = reused.key ? `wpr-social-reuse-${reused.key}` : 'wpr-social-create-draft';
+  const [input,setInput] = React.useState(() => readStudioWordsDraft(draftKey).input ?? reused.input ?? '');
+  const [choosing, setChoosing] = React.useState(false);
+  const [reuse,setReuse]=React.useState(false),[busy,setBusy]=React.useState(false),[error,setError]=React.useState('');
+  React.useEffect(() => {
+    sessionStorage.removeItem('wpr-reused-words');
+  }, []);
+  React.useEffect(() => {
+    try { sessionStorage.setItem(draftKey, JSON.stringify({ input })); } catch {}
+  }, [draftKey, input]);
   const srcRef=React.useRef(null);
   const markLine=prefix=>{
     const ta=srcRef.current;if(!ta)return;
@@ -321,7 +334,7 @@ function FinalCarouselFlow(){
         if(small&&rest)small.text=rest;
         p.activeCanvasId=c.id;p.sourceText=input;
         dispatch({type:'create-project',project:p});
-        try{sessionStorage.removeItem('wpr-social-create-draft');}catch{}
+        try{sessionStorage.removeItem(draftKey);}catch{}
         return;
       }
       let aiError='';
@@ -335,16 +348,22 @@ function FinalCarouselFlow(){
       if(!text.trim())throw new Error('No text was returned. Try without AI.');
       const canvases=createSimpleCanvases(text,s,state.brand);
       dispatch({type:'create-project',project:{id:uid(),name:text.trim().split('\n')[0].replace(/^#{1,2}\s+/,'').slice(0,50),createdAt:now(),updatedAt:now(),thumbnail:null,projectType:'carousel',canvases,activeCanvasId:canvases[0].id,carouselSettings:s,sourceText:input,generatedSourceText:text,aiError}});
-      try{sessionStorage.removeItem('wpr-social-create-draft');}catch{}
+      try{sessionStorage.removeItem(draftKey);}catch{}
     }catch(e){setError(e.message||'Could not create slides.');}finally{setBusy(false);}
   };
   const aiCheck=<div style={{marginTop:12}}><button className="sc-link" disabled={checking} onClick={checkConnection}>{checking?'Checking…':'Check Gemini connection'}</button>{connection&&<p role="status">{connection}</p>}</div>;
   return <div className="sc-shell"><SimpleStudioStyles/><SimpleCarouselStyles/><style>{`.final-options{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}.final-options label{display:flex;gap:8px;align-items:center}.final-options input{width:20px;height:20px}.final-count{display:flex;gap:12px;align-items:center;margin-top:18px}.final-count select{font-size:16px;padding:10px;max-width:70%} .pair-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.pair-option{border:1px solid #dfcbd9;border-radius:12px;background:#fff;padding:16px;text-align:left;color:#2A1F2A;min-width:0}.pair-option[aria-pressed=true]{border:2px solid #963d80;background:#fcf1f8}.pair-option strong{display:block;font-size:17px}.pair-option>span{display:block;font-size:13px;line-height:1.5;margin:8px 0}.pair-samples{display:flex;gap:12px;justify-content:center;align-items:flex-start}.pair-samples>div{min-width:0;flex:none}.pair-samples small{display:block;margin-top:6px;text-align:center}.final-count input{min-width:0;padding:10px;font-size:16px;max-width:60%}@media(max-width:500px){.pair-options{grid-template-columns:1fr}.final-count{flex-wrap:wrap}.final-count select,.final-count input{max-width:100%}}`}</style>
-    <header className="sc-header"><button className="sc-back" onClick={()=>dispatch({type:'set-view',view:'home'})}>← Home</button><div><strong>Create</strong><small>Text → Canvas → Download</small></div></header>
-    <main className="sc-main"><div className="sc-inner"><section className="sc-panel"><h2>Your words</h2><div className="mark-ribbon" role="toolbar" aria-label="Mark slides"><button type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>markLine('# ')}>+ Slide</button><button type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>markLine('## ')}>+ Subheading</button><button type="button" onMouseDown={e=>e.preventDefault()} onClick={clearMarks}>Clear marks</button><span>{slideCount?`${slideCount} slide${slideCount===1?'':'s'} marked`:'Tap a line, then + Slide'}</span></div><textarea ref={srcRef} aria-label="Your carousel text" className="sc-source" value={input} onChange={e=>setInput(e.target.value)} placeholder="Paste your words. Tap a line and press + Slide to start a slide there. Blank lines stay inside the slide. Text with no marks becomes one slide."/><div className="sc-row"><button className="sc-link" onClick={()=>setInput(getExampleText())}>Try example</button><button className="sc-link" onClick={()=>setInput('')}>Clear</button></div><label><input type="checkbox" checked={reuse} onChange={e=>setReuse(e.target.checked)}/> Reuse / improve with AI (optional)</label>{aiCheck}</section>
+    <header className="sc-header"><button className="sc-back" disabled={busy} onClick={() => {
+      if (choosing) setChoosing(false);
+      else dispatch({ type: 'set-view', view: 'home' });
+    }}>{choosing ? '← Your words' : '← Back'}</button><div><strong>{choosing ? 'Choose what to make' : 'Enter my words'}</strong></div></header>
+    <main className="sc-main"><div className="sc-inner"><section className="sc-panel" hidden={choosing}><h2>Your words</h2><div className="mark-ribbon" role="toolbar" aria-label="Mark slides"><button type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>markLine('# ')}>+ Slide</button><button type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>markLine('## ')}>+ Subheading</button><button type="button" onMouseDown={e=>e.preventDefault()} onClick={clearMarks}>Clear marks</button><span>{slideCount?`${slideCount} slide${slideCount===1?'':'s'} marked`:'Tap a line, then + Slide'}</span></div><textarea ref={srcRef} aria-label="Your carousel text" className="sc-source" value={input} onChange={e=>setInput(e.target.value)} placeholder="Paste your words. Tap a line and press + Slide to start a slide there. Blank lines stay inside the slide. Text with no marks becomes one slide."/><div className="sc-row"><button className="sc-link" onClick={()=>setInput(getExampleText())}>Try example</button><button className="sc-link" onClick={()=>setInput('')}>Clear</button></div></section>
+    {!choosing && <div className="create-submit"><button className="simple-action" disabled={!input.trim()}
+      onClick={() => { setChoosing(true); document.querySelector('.sc-main')?.scrollTo?.(0, 0); }}>Continue</button></div>}
+    {choosing && <><section className="sc-panel"><label><input type="checkbox" checked={reuse} onChange={e=>setReuse(e.target.checked)}/> Reuse / improve with AI (optional)</label>{aiCheck}</section>
     <section className="sc-panel"><h2>What do you want to make?</h2><div className="sc-aspects">{[['carousel','Carousel','Several slides'],['post','Single post','One slide']].map(([id,label,sub])=><button key={id} aria-current={format===id} onClick={()=>setFormat(id)}>{label}<small>{sub}</small></button>)}</div>{format==='post'&&<><p className="simple-muted">First paragraph becomes the big headline. A second paragraph becomes the smaller line. Pick a look:</p><div className="tile-grid" style={{gridTemplateColumns:'repeat(auto-fill,minmax(130px,1fr))'}}>{postLayouts.map((t,i)=><button key={t.name} className="tile" aria-current={layout===i} onClick={()=>setLayout(i)}><div className="frame"><MiniPreview canvas={{...defaultCanvas(t.name,t.preset),bg:{type:'color',value:t.bg},elements:t.els.map(e=>newElement(e.type,e.patch))}} maxW={150} maxH={188}/></div><h3>{t.name.replace('Big text · ','')}</h3></button>)}</div></>}</section>
     {format==='carousel'&&<details className="sc-panel"><summary><strong>Carousel options</strong> (size, slides, extras — optional)</summary><section className="sc-panel"><h2>Carousel settings</h2><div className="sc-aspects">{[['post','Square · 1:1','1080 × 1080'],['portrait','Portrait · 4:5','1080 × 1350']].map(([id,label,size])=><button key={id} aria-current={s.size===id} onClick={()=>set('size',id)}>{label}<small>{size}</small></button>)}</div><label className="final-count">Total slides<select aria-label="Total slides" value={s.count} onChange={e=>set('count',e.target.value)}><option value="">Auto — my text breaks</option>{Array.from({length:19},(_,i)=>i+2).map(n=><option key={n} value={n}>{n} slides</option>)}</select></label><p className="simple-muted">{slideCount?"You marked slides with #, so the slide count follows your marks. ":""}Includes cover and closing slides. A chosen count divides all your words without removing any.</p><div className="final-options">{[['cover','First slide / hook'],['outro','Closing slide'],['numbers','Slide numbers'],['logo','Brand logo'],['handles','Social / website'],['swipe','Swipe hint']].map(([key,label])=><label key={key}><input type="checkbox" checked={s[key]} onChange={e=>set(key,e.target.checked)}/>{label}</label>)}</div><p className="simple-muted">Cover and closing slides share a coordinated palette. Middle slides use white and soft pink. The closing slide always includes your contact details.</p></section><CarouselPairPicker settings={s} onChange={set} brand={state.brand}/></details>}{error&&<p role="alert">{error}</p>}
-    <div className="create-submit"><button className="simple-action" disabled={busy} onClick={create}>{busy?'Creating…':(format==='post'?'Create post →':'Create carousel →')}</button></div>
+    <div className="create-submit"><button className="simple-action" disabled={busy} onClick={create}>{busy?'Creating…':(format==='post'?'Create post →':'Create carousel →')}</button></div></>}
     </div></main>
   </div>;
 }

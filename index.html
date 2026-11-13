@@ -302,6 +302,40 @@
   }
   .skel { animation: wpr-skel-pulse 1.2s ease-in-out infinite; }
 
+  .mobile-pages-overview {
+    inset: 0; width: 100%; height: var(--studio-viewport-height, 100dvh);
+    max-width: none; max-height: none; margin: 0; padding: 0; border: 0;
+    background: var(--pink-50); color: var(--ink); overflow: hidden;
+  }
+  .mobile-pages-overview[open] { display: flex; flex-direction: column; }
+  .mobile-pages-overview header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-inline: 16px; background: white; flex-shrink: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .mobile-pages-overview h2 { font: 22px 'DM Serif Display', serif; margin: 0; }
+  .mobile-pages-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(132px, 100%), 1fr));
+    gap: 14px; padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)); align-content: start; align-items: start;
+    min-height: 0; overflow-y: auto;
+  }
+  .mobile-page-tile { min-width: 0; }
+  .mobile-page-preview {
+    width: 100%; display: grid; place-items: center; padding: 5px;
+    border: 2px solid transparent; border-radius: 9px; background: white;
+  }
+  .mobile-page-preview[aria-current="page"] { border-color: var(--pink-500); }
+  .mobile-page-art { width: 100%; max-width: 220px; overflow: hidden; }
+  .mobile-page-art svg { display: block; width: 100%; height: 100%; }
+  .mobile-page-caption { display: flex; align-items: center; justify-content: space-between; padding-left: 5px; }
+  .mobile-page-caption button, .mobile-pages-overview header button { min-width: 44px; min-height: 44px; }
+  .mobile-page-actions { display: grid; background: white; border: 1px solid var(--line); border-radius: 9px; }
+  .mobile-page-actions button { min-height: 44px; padding: 8px; text-align: left; }
+  .mobile-page-actions button:disabled { opacity: .45; }
+  .mobile-add-page {
+    display: flex; justify-content: center; align-items: center; gap: 6px;
+    min-height: 60px; border: 1px dashed var(--pink-500); border-radius: 9px;
+  }
   .mobile-transform-handles {
     position: absolute;
     z-index: 6;
@@ -484,7 +518,7 @@
     // ONE version number for every app file. Change it each time you upload new files,
     // so phones and browsers fetch the fresh copies instead of reusing old ones.
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
-      const APP_VERSION = '2026-11-13-match-new-page-size';
+      const APP_VERSION = '2026-11-13-studio-navigation';
     // Files load in this order. The data file is plain JavaScript; the rest are React (.jsx).
     const APP_FILES = [
       'editor-icons.jsx',
