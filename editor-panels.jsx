@@ -791,7 +791,7 @@ function IconsPanel({ replacement = null, onReplaced } = {}) {
       const patch = illustrationPatch(item, x, y, w, src);
       if (el) {
         const logoSize = isBrandLogo(el) ? brandLogoSizePatch(el) : {};
-        dispatch({ type: 'update-element', id: el.id, patch: { ...patch, ...logoSize, radius: el.radius, artworkRevision: uid() } });
+        dispatch({ type: 'update-element', id: el.id, patch: { ...patch, ...logoSize, artworkRevision: uid() } });
         onReplaced?.();
       } else dispatch({ type: 'add-element', element: newElement('image', patch) });
     } catch {
@@ -1359,10 +1359,11 @@ function ElementProperties({ el }) {
       </PropFold>
 
       <PropFold title="Position & size">
+        {isIllustration(el) && !isBrandLogo(el) && <IllustrationSizeControl el={el} update={update} />}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <LabeledInput label="X" value={Math.round(el.x)} onChange={v => update({ x: +v })} />
           <LabeledInput label="Y" value={Math.round(el.y)} onChange={v => update({ y: +v })} />
-          {!isBrandLogo(el) && <>
+          {!keepsAspectOnResize(el) && <>
             <LabeledInput label="W" value={Math.round(el.w)} onChange={v => update({ w: Math.max(10, +v) })} />
             <LabeledInput label="H" value={Math.round(el.h)} onChange={v => update({ h: Math.max(10, +v) })} />
           </>}
@@ -1793,6 +1794,22 @@ function BrandLogoSizeControl({ el, update }) {
   </div>;
 }
 
+function IllustrationSizeControl({ el, update }) {
+  const reset = illustrationSizePatch(el);
+  const distorted = Math.abs(el.w - reset.w) > 0.01 || Math.abs(el.h - reset.h) > 0.01;
+
+  return <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+    <LabeledInput label="Size" value={Math.round(illustrationSize(el))} suffix="px"
+      disabled={el.locked} onChange={value => {
+        if (value !== '' && Number.isFinite(Number(value))) {
+          update(illustrationSizePatch(el, Math.max(10, Number(value))));
+        }
+      }} />
+    {distorted && <button className="btn btn-tonal" disabled={el.locked}
+      onClick={() => update(reset)}>Reset proportions</button>}
+  </div>;
+}
+
 function ImageProps({ el, update, showFlip = true }) {
   const [replaceOpen, setReplaceOpen] = React.useState(false);
   const f = el.filter || {};
@@ -1823,7 +1840,7 @@ function ImageProps({ el, update, showFlip = true }) {
         ))}
       </div>
 
-      {!isBrandLogo(el) && <>
+      {!fitsWholeImage(el) && <>
         <SectionLabel>Corner radius</SectionLabel>
         <input type="range" min="0" max="200" value={el.radius || 0}
           onChange={e => update({ radius: +e.target.value })} />

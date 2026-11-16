@@ -188,8 +188,8 @@ function ElementView({ el, selected, dispatch, scale, editing, setEditing }) {
       <div {...commonProps}>
         <img src={el.src} draggable={false}
           style={{
-            width: '100%', height: '100%', objectFit: isBrandLogo(el) ? 'contain' : 'cover',
-            display: 'block', borderRadius: isBrandLogo(el) ? undefined : el.radius,
+            width: '100%', height: '100%', objectFit: fitsWholeImage(el) ? 'contain' : 'cover',
+            display: 'block', borderRadius: fitsWholeImage(el) ? undefined : el.radius,
             clipPath: hasBrandLogoMask(el) ? 'circle(closest-side)' : undefined,
             transform: `scale(${el.flipX ? -1 : 1}, ${el.flipY ? -1 : 1})`,
             filter: `brightness(${f.brightness}%) contrast(${f.contrast}%) saturate(${f.saturate}%) blur(${f.blur}px)`,

@@ -643,7 +643,7 @@ const FLORAL_STICKERS = [
 {"id":"shared-wonder-pads-mascot-flower-hair","label":"Wonder Pads Mascot Banner · Flower in Hair","category":"social","src":"assets/stickers/shared-wonder-pads-mascot-flower-hair.webp","width":1774,"height":887}
 ];
 function illustrationPatch(item, x, y, w, src = item.src) {
-  return { src, x, y, w, h: w * item.height / item.width, stickerId: item.id, stickerLabel: item.label, radius: 0 };
+  return { src, x, y, w, h: w * item.height / item.width, stickerId: item.id, stickerLabel: item.label, artworkAspect: item.width / item.height, radius: 0 };
 }
 
 function templateIllustration(id, x, y, w) {
