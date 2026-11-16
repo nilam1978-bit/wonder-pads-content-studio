@@ -1175,6 +1175,10 @@ function SizeTool({ el }) {
     const update = patch => dispatch({ type: 'update-element', id: el.id, patch });
     return <BrandLogoSizeControl el={el} update={update} />;
   }
+  if (isIllustration(el)) {
+    const update = patch => dispatch({ type: 'update-element', id: el.id, patch });
+    return <IllustrationSizeControl el={el} update={update} />;
+  }
   // Scale about the centre, keeping the shape's proportions.
   const ratio = el.h / Math.max(1, el.w);
   const cx = el.x + el.w / 2, cy = el.y + el.h / 2;
@@ -1183,8 +1187,7 @@ function SizeTool({ el }) {
   const setDimension = (key, value) => {
     if (value === '' || !Number.isFinite(Number(value))) return;
     const size = Math.max(10, Number(value));
-    const patch = isIllustration(el) ? apply(key === 'w' ? size : size / ratio) : { [key]: size };
-    dispatch({ type: 'update-element', id: el.id, patch });
+    dispatch({ type: 'update-element', id: el.id, patch: { [key]: size } });
   };
   const isLine = el.type === 'line' || el.type === 'arrow';
   return (

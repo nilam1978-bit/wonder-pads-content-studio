@@ -65,7 +65,27 @@ const isIllustration = el => el.type === 'icon' || !!el.stickerId;
 const isBrandLogo = el => el.type === 'image' && (el.role === 'logo' || el.brandSlot === 'logo');
 const hasBrandLogoMask = el => isBrandLogo(el) && el.src === 'assets/wpr-logo.png';
 const keepsAspectOnResize = el => isIllustration(el) || isBrandLogo(el);
+const fitsWholeImage = el => isBrandLogo(el) || isIllustration(el);
 const brandLogoSize = el => Math.min(el.w, el.h);
+
+function illustrationAspect(el) {
+  if (el.type === 'icon') return 1;
+  if (Number.isFinite(el.artworkAspect) && el.artworkAspect > 0) return el.artworkAspect;
+  const sticker = FLORAL_STICKERS.find(item => item.id === el.stickerId);
+  return sticker ? sticker.width / sticker.height : el.w / el.h;
+}
+
+function illustrationSize(el) {
+  const aspect = illustrationAspect(el);
+  return Math.min(el.w, el.h * aspect) * Math.max(1, 1 / aspect);
+}
+
+function illustrationSizePatch(el, size = illustrationSize(el)) {
+  const aspect = illustrationAspect(el);
+  const w = size * Math.min(1, aspect);
+  const h = size * Math.min(1, 1 / aspect);
+  return { w, h, x: el.x + (el.w - w) / 2, y: el.y + (el.h - h) / 2 };
+}
 
 function brandLogoSizePatch(el, size = brandLogoSize(el)) {
   return { w: size, h: size, x: el.x + (el.w - size) / 2, y: el.y + (el.h - size) / 2 };
@@ -84,9 +104,9 @@ function proportionalElementResize(el, handle, width, height, min) {
 
   const sx = width / el.w;
   const sy = height / el.h;
-  const scale = Math.max(min / Math.min(el.w, el.h), Math.abs(sx - 1) >= Math.abs(sy - 1) ? sx : sy);
-  const w = el.w * scale;
-  const h = el.h * scale;
+  const factor = Math.abs(sx - 1) >= Math.abs(sy - 1) ? sx : sy;
+  const size = Math.max(min, illustrationSize(el) * factor);
+  const { w, h } = illustrationSizePatch(el, size);
   return { w, h, x: handle.includes('w') ? el.x + el.w - w : el.x, y: handle.includes('n') ? el.y + el.h - h : el.y };
 }
 

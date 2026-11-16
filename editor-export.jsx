@@ -217,21 +217,21 @@ function elementToSVG(el, embedImages) {
       : '';
     const filterAttr = filter ? ` filter="url(#${fid})"` : '';
     const clipId = 'clip-' + el.id;
-    const logo = isBrandLogo(el);
+    const contain = fitsWholeImage(el);
     let clipShape = '';
     if (hasBrandLogoMask(el)) {
       clipShape = `<circle cx="${el.w / 2}" cy="${el.h / 2}" r="${brandLogoSize(el) / 2}"/>`;
-    } else if (!logo && el.radius > 0) {
+    } else if (!contain && el.radius > 0) {
       clipShape = `<rect width="${el.w}" height="${el.h}" rx="${el.radius}" ry="${el.radius}"/>`;
     }
     const clip = clipShape ? `<defs><clipPath id="${clipId}">${clipShape}</clipPath></defs>` : '';
     const clipAttr = clipShape ? ` clip-path="url(#${clipId})"` : '';
-    return `<g transform="${t}"${op}>${filter}${clip}<image width="${el.w}" height="${el.h}" preserveAspectRatio="xMidYMid ${logo ? 'meet' : 'slice'}" href="${escapeAttr(el.src)}"${filterAttr}${clipAttr}/></g>`;
+    return `<g transform="${t}"${op}>${filter}${clip}<image width="${el.w}" height="${el.h}" preserveAspectRatio="xMidYMid ${contain ? 'meet' : 'slice'}" href="${escapeAttr(el.src)}"${filterAttr}${clipAttr}/></g>`;
   }
   if (el.type === 'icon') {
     const paths = iconMarkup(el.name,el.iconAccent);
-    // scale from 24x24
-    const s = `scale(${el.w / 24}, ${el.h / 24})`;
+    const size = Math.min(el.w, el.h);
+    const s = `translate(${(el.w - size) / 2} ${(el.h - size) / 2}) scale(${size / 24})`;
     // Icons are stroke-based currentColor
     return `<g transform="${t}"${op}><g transform="${s}" fill="none" stroke="${el.color}" stroke-width="${el.strokeWidth || 1.5}" stroke-linecap="round" stroke-linejoin="round">${paths}</g></g>`;
   }
@@ -316,7 +316,11 @@ async function rasterizeDesign(canvas,mime='image/png'){
         ctx.arc(el.w / 2, el.h / 2, brandLogoSize(el) / 2, 0, Math.PI * 2);
         ctx.clip();
       }
-      if (isBrandLogo(el)) {
+      if (el.flipX || el.flipY) {
+        ctx.translate(el.flipX ? el.w : 0, el.flipY ? el.h : 0);
+        ctx.scale(el.flipX ? -1 : 1, el.flipY ? -1 : 1);
+      }
+      if (fitsWholeImage(el)) {
         const fit = Math.min(el.w / img.naturalWidth, el.h / img.naturalHeight);
         const width = img.naturalWidth * fit, height = img.naturalHeight * fit;
         ctx.drawImage(img, (el.w - width) / 2, (el.h - height) / 2, width, height);
