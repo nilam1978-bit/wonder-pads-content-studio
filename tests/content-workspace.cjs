@@ -1,0 +1,24 @@
+// Run: node tests/content-workspace.cjs
+const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),assert=require('node:assert/strict');
+const root=path.join(__dirname,'..');const read=f=>fs.readFileSync(path.join(root,f),'utf8');let id=0;
+const ctx={uid:()=>String(++id),now:()=>1000,window:{},React:{createContext:()=>({})},document:{createElement:()=>({getContext:()=>({font:'',measureText(s){return {width:s.length*parseFloat(this.font.match(/([\d.]+)px/)[1])*.55};}})})},brandBackgroundElements:()=>[],ctaEngagementElements:()=>[],cleanSlideSwipe:e=>e};vm.createContext(ctx);
+const utils=read('editor-utils.jsx'),renderer=read('editor-export.jsx'),old=read('final-carousel.jsx'),workspace=read('content-workspace.jsx');
+vm.runInContext(utils.slice(utils.indexOf('const newElement ='),utils.indexOf('// Branded backgrounds')),ctx);
+vm.runInContext(utils.slice(utils.indexOf('const SLIDE_TEXT_STYLES'),utils.indexOf('function ctaEngagementElements')),ctx);
+vm.runInContext(renderer.slice(renderer.indexOf('let textMeasureContext'),renderer.indexOf('function fitTextSize')),ctx);
+vm.runInContext(old.slice(0,old.indexOf('const CAROUSEL_STYLE_PAIRS')),ctx);
+vm.runInContext(workspace.slice(0,workspace.indexOf('function ContentWorkspace()'))+'\nglobalThis.looks=CONTENT_LOOKS;',ctx);
+vm.runInContext(utils.slice(utils.indexOf('const HISTORY_LIMIT'),utils.indexOf('function deepMerge')),ctx);
+const settings={format:'carousel',split:'balanced',count:6,cover:true,closing:true,size:'portrait'},brand={};
+const source='# My own cover\nExact punctuation — kept!\n\n# My details\n## Subheading one\nMy wording.\n## Subheading two\nAnother point.\n\n# My own closing\nMessage me.';
+const slides=ctx.prepareContentSlides(source,settings);assert.equal(slides.length,3);assert.equal(slides[0].kind,'hook');assert.equal(slides[2].kind,'cta');assert.equal(slides[1].blocks.filter(b=>b.role==='sub').length,2);
+let draft={id:'draft',slides,index:1,settings};draft.slides[1].blocks[0].text='Edited after splitting';
+const words=s=>s.blocks.map(b=>b.text).join('');const before=slides.map(words);
+for(const look of ctx.looks){draft=ctx.contentWithLook(draft,look.id,'all');assert.deepEqual(draft.slides.map(words),before);assert.deepEqual(draft.slides.map(s=>s.id),slides.map(s=>s.id));for(const size of ['portrait','post'])for(const slide of draft.slides){const c=ctx.renderContentSlide(slide,{...settings,size},brand);assert.equal(c.h,size==='post'?1080:1350);assert.deepEqual(c.elements.filter(ctx.isContentText).map(e=>e.text),slide.blocks.map(b=>b.text));}}
+const once=ctx.contentWithLook(draft,'clear','current');assert.equal(once.slides[0],draft.slides[0]);assert.equal(once.slides[2],draft.slides[2]);assert.equal(once.slides[1].look,'clear');
+const split=ctx.contentSplitSlide(slides[1]);assert.equal(split.map(words).join(''),words(slides[1]));assert.equal(split.length,2);assert.notEqual(split[0].id,split[1].id);
+const long={id:'long',kind:'content',blocks:[{id:'b',role:'body',text:'Many words. '.repeat(300)}],look:'gentle'};const overflowing=ctx.renderContentSlide(long,settings,brand);assert(ctx.contentOverflow(overflowing));assert.equal(overflowing.elements.filter(ctx.isContentText)[0].text,long.blocks[0].text);const fit=ctx.renderContentSlide({...long,fit:true},settings,brand);assert(fit.elements.filter(ctx.isContentText).every(e=>e.fontSize>=28));
+const existing={id:'project',name:'Existing',canvases:[ctx.renderContentSlide(slides[1],settings,brand)],activeCanvasId:slides[1].id};existing.canvases[0].elements.find(ctx.isContentText).text='Canvas edit survives';const resumed=ctx.contentDraftFromProject(existing);assert.equal(ctx.renderContentSlide(resumed.slides[0],resumed.settings,brand),existing.canvases[0]);assert(resumed.slides[0].blocks.some(b=>b.text==='Canvas edit survives'));
+let state={projects:[existing],contentDraft:draft,contentDrafts:[],past:[],future:[],carousel:{}};state=ctx.reducer(state,{type:'start-content-draft',draft:ctx.contentDraftNew('New words')});assert.equal(state.contentDrafts.length,1);state=ctx.reducer(state,{type:'resume-content-draft',id:'draft'});assert.equal(state.contentDraft.id,'draft');assert.equal(state.contentDrafts[0].source,'New words');const completed={...existing,canvases:resumed.slides.map(s=>ctx.renderContentSlide(s,resumed.settings,brand))};state=ctx.reducer(state,{type:'finish-content-draft',project:completed});assert.equal(state.projects.length,1);assert.equal(state.contentDraft,null);assert.equal(state.past[0],existing);state=ctx.reducer(state,{type:'undo'});assert.deepEqual(state.projects[0],existing);
+assert.throws(()=>ctx.prepareContentSlides('   ',settings),/Add your words/);
+console.log('PASS: preserved words/edits/roles/subheadings across all looks and ratios; current-slide scope; lossless explicit splits; visible overflow; editor round trip; draft recovery; atomic handoff and Undo.');

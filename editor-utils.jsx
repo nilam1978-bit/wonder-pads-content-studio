@@ -363,6 +363,24 @@ function reducer(state, action) {
       return added.length||updated?{...state,calendar:[...calendar,...added]}:state;
     }
     // ---------- App-level navigation ----------
+    case 'set-content-draft':
+      return {...state,contentDraft:action.draft};
+    case 'start-content-draft': {
+      const current=state.contentDraft;
+      const drafts=current&&(current.source||current.slides?.length)?[current,...(state.contentDrafts||[]).filter(d=>d.id!==current.id)]:state.contentDrafts||[];
+      return {...state,contentDraft:action.draft,contentDrafts:drafts,activeProjectId:null,view:'carousel'};
+    }
+    case 'resume-content-draft': {
+      const next=(state.contentDrafts||[]).find(d=>d.id===action.id);
+      if(!next)return {...state,activeProjectId:null,view:'carousel'};
+      const current=state.contentDraft;
+      return {...state,contentDraft:next,contentDrafts:[...(current?[current]:[]),...(state.contentDrafts||[]).filter(d=>d.id!==next.id&&d.id!==current?.id)],activeProjectId:null,view:'carousel'};
+    }
+    case 'finish-content-draft': {
+      const project=action.project,existing=state.projects.find(p=>p.id===project.id);
+      return {...state,projects:existing?state.projects.map(p=>p.id===project.id?project:p):[project,...state.projects],activeProjectId:project.id,
+        contentDraft:null,past:existing?[existing]:[],future:[],selection:[],tool:null};
+    }
     case 'open-project':
       return { ...state, activeProjectId: action.id, tool: null, past: [], future: [], selection: [] };
     case 'close-project':
@@ -906,6 +924,8 @@ const defaultCarousel = () => ({
 const initialState = () => ({
   view: 'home',                 // 'home' | 'editor' | 'carousel' | 'repurpose' | 'launch' | 'history' | 'calendar'
   projects: [],
+    contentDraft: null,
+    contentDrafts: [],
   templates: [],
   brand: defaultBrand(),
   carousel: defaultCarousel(),
@@ -1051,7 +1071,7 @@ function StoreProvider({ children }) {
     ready, flush, state.projects, state.templates,
     state.brand, state.vocab, state.copyBlocks, state.products, state.launchAngles,
     state.savedRepurpose, state.savedLaunches, state.calendar,
-    state.savedBackgrounds, state.carousel, state.uploads,
+    state.savedBackgrounds, state.carousel, state.uploads, state.contentDraft, state.contentDrafts,
   ]);
 
   useEffect(() => {
@@ -1178,3 +1198,4 @@ function parseEditableProjectFile(text) {
 }
 
 Object.assign(window, { uid, clamp, now, SIZE_PRESETS, defaultCanvas, newElement, newProject, defaultBrand, defaultCarousel, reducer, initialState, computeSnapGuides, brandBackgroundElements, reflowBrandBackground, SLIDE_TEXT_STYLES, slideTextRole, styleSlideText, cleanSlideSwipe, starterBackgroundElements, StoreCtx, useStore, StoreProvider, activeProject, activeCanvas, useMediaQuery, useIsMobile, alignElementsToPage, exportEditableProjectFile, parseEditableProjectFile, STORAGE_KEY });
+

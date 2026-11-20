@@ -71,6 +71,7 @@ function ProjectMenu({p,dispatch}) {
       <button role="menuitem" onClick={()=>{const name=prompt('Rename design',p.name);if(name?.trim())dispatch({type:'rename-project',id:p.id,name:name.trim()});}}>Rename</button>
       <button role="menuitem" onClick={()=>dispatch({type:'update-project',id:p.id,patch:{finished:!p.finished,finishedAt:p.finished?null:now()}})}>{p.finished?'Move back to in progress':'Mark as finished'}</button>
       <button role="menuitem" onClick={()=>dispatch({type:'duplicate-project',id:p.id})}>Duplicate design</button>
+      <button role="menuitem" onClick={()=>dispatch({type:'update-project',id:p.id,patch:{archived:!p.archived}})}>{p.archived?'Return to My Work':'Move to archive'}</button>
       <button role="menuitem" className="danger" onClick={()=>{if(confirm(`Delete design “${p.name}”? This removes its saved slides from this browser. Download an editable backup first if needed.`))dispatch({type:'delete-project',id:p.id});}}>Delete design</button>
     </div>}
   </>;
@@ -88,14 +89,16 @@ function SimpleStudioHome() {
   });
   const [workFilter,setWorkFilter]=React.useState(()=>{
     const saved=sessionStorage.getItem('wpr-work-filter');
-    return ['all','progress','finished'].includes(saved) ? saved : 'all';
+    return ['all','progress','finished','archive'].includes(saved) ? saved : 'all';
   });
   const [query,setQuery]=React.useState(()=>sessionStorage.getItem('wpr-work-query') || '');
   const go=view=>dispatch({type:'set-view',view});
   const open=id=>dispatch({type:'open-project',id});
-  const projects=[...state.projects].sort((a,b)=>b.updatedAt-a.updatedAt);
+  const allProjects=[...state.projects].sort((a,b)=>b.updatedAt-a.updatedAt);
+  const projects=allProjects.filter(p=>!p.archived);
   const inProgress=projects.filter(p=>!p.finished),finishedList=projects.filter(p=>p.finished);
-  const shownProjects=projects.filter(p=>(workFilter==='all'||(workFilter==='finished'?p.finished:!p.finished))&&p.name.toLowerCase().includes(query.toLowerCase()));
+  const shownProjects=allProjects.filter(p=>(workFilter==='archive'?p.archived:!p.archived)&&(workFilter==='all'||workFilter==='archive'||(workFilter==='finished'?p.finished:!p.finished))&&p.name.toLowerCase().includes(query.toLowerCase()));
+  const textDrafts=[state.contentDraft,...(state.contentDrafts||[])].filter(d=>d&&(d.source?.trim()||d.slides?.length));
   // A draft is only "unfinished" while it has slides and has not yet been saved as a design.
   const hasUnsavedDraft=(state.carousel.slides?.length>0)&&!state.projects.some(p=>p.id===state.carousel.simpleProjectId);
   React.useEffect(()=>sessionStorage.setItem('wpr-simple-section',section),[section]);
@@ -112,8 +115,8 @@ function SimpleStudioHome() {
   };
   const projectCard=p=><div className="tile-wrap" key={p.id}>
     <button className="tile" onClick={()=>open(p.id)}>
-      <div className="frame">{p.thumbnail?<img src={p.thumbnail} alt=""/>:<MiniPreview canvas={p.canvases[0]} maxW={190} maxH={238}/>}</div>
-      <h3>{p.name}</h3><small>{p.canvases.length===1?'Single post':`${p.canvases.length} slides`} · {timeAgo(p.updatedAt)}</small>
+      <div className="frame">{p.thumbnail?<img src={p.thumbnail} alt=""/>:<MiniPreview canvas={p.canvases[0]} maxW={190} maxH={238} fluid/>}<span className="studio-slide-badge">{p.canvases.length===1?'1 page':`${p.canvases.length} slides`}</span></div>
+      <h3>{p.name}</h3><small>{p.canvases.length===1?'Single post':`${p.canvases.length} slides`} · Edited {timeAgo(p.updatedAt)}</small>
     </button>
     <span className="chip" style={{position:'absolute',left:8,top:8,background:'rgba(255,255,255,.92)',color:'#893773',borderRadius:999,fontSize:10,fontWeight:700,letterSpacing:'.06em',textTransform:'uppercase',padding:'4px 9px'}}>{p.finished?'Finished':'In progress'}</span>
     <ProjectMenu p={p} dispatch={dispatch}/>
@@ -138,7 +141,7 @@ function SimpleStudioHome() {
             {projects.length>0&&<span style={{display:'flex',gap:10,marginTop:12}}>{projects.slice(0,4).map(p=><span key={p.id} style={{width:58,aspectRatio:'4/5',background:'#f7e1f0',borderRadius:8,overflow:'hidden',display:'grid',placeItems:'center'}}>{p.thumbnail?<img src={p.thumbnail} alt="" style={{width:'100%',height:'100%',objectFit:'contain'}}/>:<MiniPreview canvas={p.canvases[0]} maxW={58} maxH={72}/>}</span>)}</span>}</button>
         </div>
         {(hasUnsavedDraft||inProgress.length>0)&&<button className="studio-strip" onClick={()=>hasUnsavedDraft?openCarouselDraft(state,dispatch):openWork('progress')}><span>{hasUnsavedDraft?'You have an unfinished carousel':`${inProgress.length} in progress`} · pick up where you left off</span><span>›</span></button>}</>}
-      {section==='create'&&<>
+      {section==='create'&&<>{textDrafts.length>0&&<button className="studio-draft-card" onClick={()=>dispatch({type:'resume-content-draft',id:textDrafts[0].id})}><strong>Continue with your words</strong><span>{textDrafts[0].slides?.length||0} slides prepared · wording and template choices kept</span></button>}
         <div className="studio-hero"><div><button className="studio-back" onClick={()=>setSection('home')}>‹ Studio home</button><span className="studio-eyebrow">Create</span><h1>Let's make something.</h1><p>Paste your words, pick a look, and post.</p></div><div className="hero-count"><b>{projects.length}</b>Designs</div></div>
         <button className="studio-banner studio-create-card" onClick={()=>go('carousel')}><small>New · carousel or single post</small><h2>Start with your words</h2><p>Paste your text once, then choose a carousel or a single post. Add AI polish if you like.</p><span className="go">Add your words ›</span></button>
         <div className="studio-row">
@@ -150,9 +153,9 @@ function SimpleStudioHome() {
           {inProgress.slice(0,5).map(projectCard)}
         </div>{inProgress.length>5&&<button className="simple-action simple-secondary" onClick={()=>openWork('progress')}>See all {inProgress.length} in My Work</button>}</>}</>}
       {section==='work'&&<><div className="studio-hero"><div><button className="studio-back" onClick={()=>setSection('home')}>‹ Studio home</button><span className="studio-eyebrow">My work</span><h1>Everything you've made.</h1><p>Tap a design to open it. Use the ⋯ on a design to rename, finish, copy or delete.</p></div><div className="hero-count"><b>{projects.length}</b>Designs</div></div><nav className="simple-nav" aria-label="My Work sections" style={{padding:'0 0 12px'}}>{[['designs','Designs'],['writing','Saved writing'],['backup','Backup & restore']].map(([id,label])=><button key={id} aria-current={workTab===id} onClick={()=>setWorkTab(id)}>{label}</button>)}</nav>
-        {workTab==='designs'&&<><p className="simple-muted">{finishedList.length} finished · {inProgress.length} in progress. A design counts as finished once you download it. You can change that on any card.</p><nav className="simple-nav" aria-label="Filter designs" style={{padding:'0 0 12px'}}>{[['all','All'],['progress','In progress'],['finished','Finished']].map(([id,label])=><button key={id} aria-current={workFilter===id} onClick={()=>setWorkFilter(id)}>{label}</button>)}</nav><label className="simple-muted studio-work-search">Find a design <input aria-label="Find a design" value={query} onChange={e=>setQuery(e.target.value)}/></label><div className="tile-grid">{shownProjects.map(projectCard)}</div>{!shownProjects.length&&<p>{projects.length?'Nothing matches here. Try another filter.':'No designs yet. Choose Create to start.'}</p>}</>}
+        {workTab==='designs'&&<><p className="simple-muted">{finishedList.length} finished · {inProgress.length} in progress. A design counts as finished once you download it. You can change that on any card.</p><nav className="simple-nav" aria-label="Filter designs" style={{padding:'0 0 12px'}}>{[['all','All'],['progress','In progress'],['finished','Finished'],['archive','Archive']].map(([id,label])=><button key={id} aria-current={workFilter===id} onClick={()=>setWorkFilter(id)}>{label}</button>)}</nav><label className="simple-muted studio-work-search">Find a design <input aria-label="Find a design" value={query} onChange={e=>setQuery(e.target.value)}/></label>{['all','progress'].includes(workFilter)&&textDrafts.filter(d=>(String(d.name||'')+d.source).toLowerCase().includes(query.toLowerCase())).map(d=><button className="studio-draft-card" key={d.id} onClick={()=>dispatch({type:'resume-content-draft',id:d.id})}><strong>Continue with your words</strong><span>{d.name||d.source?.split('\n')[0]?.replace(/^#+\s*/,'')||'Untitled draft'}</span><span>{d.slides?.length?`${d.slides.length} slides · `:''}Edited {timeAgo(d.updatedAt)}</span></button>)}<div className="tile-grid work-gallery">{shownProjects.map(projectCard)}</div>{!shownProjects.length&&<p>{projects.length?'Nothing matches here. Try another filter.':'No designs yet. Choose Create to start.'}</p>}</>}
         {workTab==='backup'&&<BackupRestoreCard/>}
-        {workTab==='writing'&&<><p className="simple-muted">Text you have reused or written for launches, saved so you can find it again and send it to a carousel.</p><div className="simple-grid"><button className="simple-card" onClick={()=>go('history')}><h3>Open saved writing</h3><p>Reused text, saved launches and your library.</p><span>Open →</span></button></div></>}</>}
+        {workTab==='writing'&&<SavedWritingGallery/>}</>}
       {section==='brand'&&<><div className="studio-hero"><div><button className="studio-back" onClick={()=>setSection('home')}>‹ Studio home</button><span className="studio-eyebrow">My brand</span><h1>Your look, set once.</h1><p>Your logo, colours and handles are reused on every design.</p></div></div><BrandKitSection/></>}
       {section==='work' && workTab==='backup' && <p className="simple-muted">Your work saves automatically in this browser. Download an editable backup to keep a separate copy.</p>}
     </div></main>
@@ -187,5 +190,6 @@ function SimpleSlideStrip() {
     <button aria-label="Add page" onClick={()=>dispatch({type:'add-canvas'})} style={arrow}>+</button>
   </nav>;
 }
+
 
 
