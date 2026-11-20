@@ -80,6 +80,7 @@
 .cw-thumbnails button.cw-slide-arrow{flex:0 0 36px;justify-content:center;align-self:stretch;font-size:23px}
 @media(max-width:639px){.cw-template-strip .cw-look{flex-basis:80px}.cw-look>div{max-width:60px}.cw-thumbnails button.cw-slide-arrow{flex-basis:36px;min-width:36px}}
 
+.cw-shell .cw-template-note{font-size:11px;line-height:1.4;margin:2px 0 6px;color:#705c6b}
 /* A phone has one vertical workspace scroller. Preview/strip gestures may chain to it. */
 @media(max-width:639px){
   .cw-body{overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:auto;-webkit-overflow-scrolling:touch}
