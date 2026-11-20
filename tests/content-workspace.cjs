@@ -3,6 +3,7 @@ const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),asse
 const root=path.join(__dirname,'..');const read=f=>fs.readFileSync(path.join(root,f),'utf8');let id=0;
 const ctx={uid:()=>String(++id),now:()=>1000,window:{},React:{createContext:()=>({})},document:{createElement:()=>({getContext:()=>({font:'',measureText(s){return {width:s.length*parseFloat(this.font.match(/([\d.]+)px/)[1])*.55};}})})},brandBackgroundElements:()=>[],ctaEngagementElements:()=>[],cleanSlideSwipe:e=>e};vm.createContext(ctx);
 const utils=read('editor-utils.jsx'),renderer=read('editor-export.jsx'),old=read('final-carousel.jsx'),workspace=read('content-workspace.jsx');
+vm.runInContext(utils.slice(utils.indexOf('function applyBrandSlideFonts'),utils.indexOf('function slideTextRole')),ctx);
 vm.runInContext(utils.slice(utils.indexOf('const newElement ='),utils.indexOf('// Branded backgrounds')),ctx);
 vm.runInContext(utils.slice(utils.indexOf('const SLIDE_TEXT_STYLES'),utils.indexOf('function ctaEngagementElements')),ctx);
 vm.runInContext(renderer.slice(renderer.indexOf('let textMeasureContext'),renderer.indexOf('function fitTextSize')),ctx);
@@ -37,3 +38,31 @@ assert.equal(sourceReview.sourceReview.slides[0].look,sourceDraft.slides[0].look
 assert.throws(()=>ctx.contentDraftForSource(sourceProject,'  '),/Add your words/);
 console.log('PASS: revised source draft restored; preview updates new projects without legacy settings; current canvases retained until apply.');
 console.log('PASS: preserved words/edits/roles/subheadings across all looks and ratios; current-slide scope; lossless explicit splits; visible overflow; editor round trip; draft recovery; atomic handoff and Undo.');
+
+// One global font choice reaches saved/archived projects, drafts, history and every look.
+const fontBrand={slideFontHeading:'Caveat',slideFontSubheading:'Playfair Display'};
+const fontCanvas=ctx.renderContentSlide(slides[1],settings,{});
+fontCanvas.elements.push({id:'brand',type:'text',__role:'heading',fromBrand:true,text:'Brand',fontFamily:'Montserrat'});
+const fontProject={id:'fonts',canvases:[fontCanvas],thumbnail:'old'};
+const fontState={brand:{},projects:[fontProject,{...fontProject,id:'archived',archived:true}],templates:[],contentDraft:{slides:[{originalCanvas:fontCanvas}]},contentDrafts:[{slides:[{originalCanvas:fontCanvas}]}],past:[fontProject],future:[fontProject]};
+const applied=ctx.reducer(fontState,{type:'update-brand',patch:fontBrand});
+for(const p of [...applied.projects,...applied.past,...applied.future]){
+  assert.equal(p.canvases[0].elements.find(e=>e.__role==='heading'&&!e.fromBrand).fontFamily,'Caveat');
+  assert.equal(p.canvases[0].elements.find(e=>e.__role==='sub').fontFamily,'Playfair Display');
+  assert.equal(p.thumbnail,null);
+  p.canvases[0].elements.forEach((e,i)=>{for(const k of ['text','x','y','w','fontSize','color'])assert.equal(e[k],fontCanvas.elements[i][k]);});
+  assert.equal(p.canvases[0].elements.at(-1).fontFamily,'Montserrat');
+}
+assert.equal(applied.contentDraft.slides[0].originalCanvas.elements.find(e=>e.__role==='sub').fontFamily,'Playfair Display');
+assert.equal(applied.contentDrafts[0].slides[0].originalCanvas.elements.find(e=>e.__role==='heading').fontFamily,'Caveat');
+for(const look of ctx.looks){
+  const c=ctx.renderContentSlide({...slides[1],look:look.id},settings,fontBrand);
+  assert.equal(c.elements.find(e=>e.__role==='heading').fontFamily,'Caveat');
+  assert.equal(c.elements.find(e=>e.__role==='sub').fontFamily,'Playfair Display');
+}
+const reset=ctx.reducer(applied,{type:'update-brand',patch:{slideFontHeading:'',slideFontSubheading:''}});
+assert.deepEqual(reset.projects[0].canvases[0].elements,fontCanvas.elements);
+const single=ctx.prepareContentSlides('# One post\n## Important point\nMy details',{...settings,format:'post'});
+assert.equal(single.length,1);assert.equal(single[0].blocks[1].role,'sub');
+assert.equal(ctx.renderContentSlide(single[0],settings,fontBrand).elements.find(e=>e.__role==='sub').fontFamily,'Playfair Display');
+console.log('PASS: global heading/subheading fonts across looks, saved/archived designs, drafts, history, reset and single-post ## parsing; wording/geometry/branding preserved.');

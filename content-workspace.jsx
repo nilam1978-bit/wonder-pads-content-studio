@@ -19,7 +19,7 @@ function contentSlideFromChunk(chunk,kind='content') {
 function prepareContentSlides(source,settings) {
   if(!source.trim())throw new Error('Add your words first.');
   let chunks;
-  if(settings.format==='post')chunks=[source.replace(/^\s*#{1,2}\s+/gm,'')];
+  if(settings.format==='post')chunks=[source.replace(/^\s*#\s+/gm,'')];
   else if(hasSlideMarks(source))chunks=markedChunks(source);
   else if(settings.split==='paragraphs')chunks=source.replace(/\r/g,'').split(/\n\s*\n/).filter(s=>s.trim());
   else if(settings.split==='balanced')chunks=distributeCarouselText(source,Number(settings.count)||4);
@@ -57,7 +57,7 @@ function contentDraftFromProject(project) {
     }))};
 }
 function renderContentSlide(slide,settings,brand,options={}) {
-  if(slide.originalCanvas&&!options.force)return slide.originalCanvas;
+  if(slide.originalCanvas&&!options.force)return applyBrandSlideFonts(slide.originalCanvas,brand);
   const look=contentLook(options.look||slide.look),W=1080,H=settings.size==='post'?1080:1350;
   const c={id:slide.id,name:slide.kind==='hook'?'Cover':slide.kind==='cta'?'Closing slide':'Slide',slideKind:slide.kind,contentLook:look.id,w:W,h:H,bg:{type:'color',value:look.bg},elements:[]};
   const els=c.elements,m=86,top=slide.kind==='content'?130:180,bottom=H-210;
@@ -65,9 +65,9 @@ function renderContentSlide(slide,settings,brand,options={}) {
   if(look.layout==='frame')shape('rect',{x:30,y:30,w:W-60,h:H-60,fill:'transparent',stroke:look.accent,strokeWidth:3,radius:0});
   if(look.layout==='editorial')shape('rect',{x:0,y:H-175,w:W,h:175,fill:look.accent,radius:0});
   if(look.family==='Floral')shape('circle',{x:W-190,y:65,w:90,h:90,fill:look.accent});
-  const blocks=slide.blocks.map(b=>newElement('text',{...SLIDE_TEXT_STYLES[b.role==='heading'?'h1':b.role==='sub'?'h2':'body'],__role:b.role,contentBlockId:b.id,text:b.text,hidden:!!b.hidden,x:m,y:top,w:W-m*2,fontSize:b.role==='heading'?(slide.kind==='content'?76:124):b.role==='sub'?58:44,
+  const blocks=applyBrandSlideFonts({elements:slide.blocks.map(b=>newElement('text',{...SLIDE_TEXT_STYLES[b.role==='heading'?'h1':b.role==='sub'?'h2':'body'],__role:b.role,contentBlockId:b.id,text:b.text,hidden:!!b.hidden,x:m,y:top,w:W-m*2,fontSize:b.role==='heading'?(slide.kind==='content'?76:124):b.role==='sub'?58:44,
     fontFamily:look.layout==='bold'?'Montserrat':b.role==='body'?'Montserrat':'DM Serif Display',fontWeight:look.layout==='bold'&&b.role==='heading'?800:400,
-    color:look.ink,align:look.layout==='center'?'center':'left',lineHeight:b.role==='body'?1.4:1.15}));
+    color:look.ink,align:look.layout==='center'?'center':'left',lineHeight:b.role==='body'?1.4:1.15}))},brand).elements;
   let photoY=top;
   const measure=()=>{let y=top,placedPhoto=false;for(const e of blocks){if(e.hidden)continue;if(slide.photo&&!placedPhoto&&e.__role!=='heading'){photoY=y;y+=Math.round(H*.22)+30;placedPhoto=true;}e.y=y;e.h=textLayout(e).height;y+=e.h+(e.__role==='heading'?40:26);}if(slide.photo&&!placedPhoto){photoY=y;y+=Math.round(H*.22)+30;}return y-26;};
   let end=measure();
@@ -121,7 +121,7 @@ function ContentWorkspace() {
   },[draft?.slides?.length,mobile,tab]);
   React.useEffect(()=>{if(zoom==='fit'&&stageRef.current)stageRef.current.scrollTo(0,0);},[zoom]);
   React.useEffect(()=>{if(!draft){let input='';try{input=JSON.parse(sessionStorage.getItem('wpr-social-create-draft')||'{}').input||'';}catch{}dispatch({type:'set-content-draft',draft:contentDraftNew(input)});}},[]);
-  React.useEffect(()=>{let live=true;loadCarouselFonts().then(()=>{if(live)setFonts(true);}).catch(()=>{if(live)setFonts(true);});return()=>{live=false;};},[]);
+  React.useEffect(()=>{let live=true;setFonts(false);loadCarouselFonts(state.brand).then(()=>{if(live)setFonts(true);}).catch(()=>{if(live)setFonts(true);});return()=>{live=false;};},[state.brand.slideFontHeading,state.brand.slideFontSubheading]);
   const patch=(changes,history=false)=>{if(history){undo.current.push(draft);undo.current=undo.current.slice(-40);redo.current=[];}dispatch({type:'set-content-draft',draft:{...draft,...changes,updatedAt:now()}});setError('');};
   const travel=(from,to)=>{const next=from.current.pop();if(next){to.current.push(draft);dispatch({type:'set-content-draft',draft:next});}};
   const canvases=React.useMemo(()=>draft?.slides?.map(s=>renderContentSlide(s,draft.settings,state.brand))||[],[draft?.slides,draft?.settings,state.brand,fonts]);
@@ -136,7 +136,7 @@ function ContentWorkspace() {
   const prepare=()=>{try{const slides=prepareSourceUpdate(draft);if(draft.slides.length)setReview({slides,label:'Review new split'});else{patch({slides,index:0,appliedSource:draft.source},true);setTab('design');}}catch(e){setError(e.message);}};
   const previewSplit=()=>{try{const next=contentSplitSlide(slide);setReview({slides:[...draft.slides.slice(0,index),...next,...draft.slides.slice(index+1)],label:'Review split into two slides'});}catch(e){setError(e.message);}};
   const back=()=>{if(draft.projectId)dispatch({type:'open-project',id:draft.projectId});else dispatch({type:'set-view',view:draft.returnView||'home'});};
-  const proceed=async()=>{setBusy(true);try{await loadCarouselFonts();const pages=draft.slides.map(s=>renderContentSlide(s,settings,state.brand));const original=state.projects.find(p=>p.id===draft.projectId);const project={...(original||{}),id:original?.id||uid(),name:draft.name||draft.slides[0]?.blocks[0]?.text?.slice(0,65)||'My design',createdAt:original?.createdAt||now(),updatedAt:now(),canvases:pages,activeCanvasId:pages[index].id,projectType:pages.length===1?'post':'carousel',caption:draft.caption,captionDetached:true,contentWorkspaceSettings:settings,generatedSourceText:draft.appliedSource??draft.source,sourceText:original?.sourceText??draft.source,sourceDraft:draft.source,contentEntryId:draft.contentEntryId||original?.contentEntryId,thumbnail:null};dispatch({type:'finish-content-draft',project});try{sessionStorage.removeItem('wpr-social-create-draft');}catch{}}catch(e){setError(e.message);}finally{setBusy(false);}};
+  const proceed=async()=>{setBusy(true);try{await loadCarouselFonts(state.brand);const pages=draft.slides.map(s=>renderContentSlide(s,settings,state.brand));const original=state.projects.find(p=>p.id===draft.projectId);const project={...(original||{}),id:original?.id||uid(),name:draft.name||draft.slides[0]?.blocks[0]?.text?.slice(0,65)||'My design',createdAt:original?.createdAt||now(),updatedAt:now(),canvases:pages,activeCanvasId:pages[index].id,projectType:pages.length===1?'post':'carousel',caption:draft.caption,captionDetached:true,contentWorkspaceSettings:settings,generatedSourceText:draft.appliedSource??draft.source,sourceText:original?.sourceText??draft.source,sourceDraft:draft.source,contentEntryId:draft.contentEntryId||original?.contentEntryId,thumbnail:null};dispatch({type:'finish-content-draft',project});try{sessionStorage.removeItem('wpr-social-create-draft');}catch{}}catch(e){setError(e.message);}finally{setBusy(false);}};
   const moreOptions=<details className="cw-more-options"><summary>More options</summary>
     {slide&&<>{!single&&<label>Slide role<select value={slide.kind} onChange={e=>patch({slides:draft.slides.map((s,i)=>i===index?{...s,kind:e.target.value,originalCanvas:null}:s)},true)}><option value="hook">Cover</option><option value="content">Content</option><option value="cta">Closing</option><option value="post">Single post</option></select></label>}
     <button onClick={()=>patch({slides:draft.slides.map((s,i)=>i===index?{...s,originalCanvas:null,blocks:[...s.blocks,contentBlock('sub','')]}:s)},true)}>Add subheading</button></>}

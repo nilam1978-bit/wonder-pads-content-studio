@@ -604,6 +604,7 @@ function BrandKitModal({ onClose }) {
   const { state, dispatch } = useStore();
   const brand = state.brand;
   const fileRef = bR(null);
+  const fontRequests = bR({});
 
   const update = (patch) => dispatch({ type: 'update-brand', patch });
   const handleLogoUpload = (e) => {
@@ -684,6 +685,24 @@ function BrandKitModal({ onClose }) {
                 {ALL_FONT_OPTIONS.map(f => <option key={f.family} value={f.family} style={{ fontFamily: f.family }}>{f.label}</option>)}
               </select>
             </div>
+          </div>
+        </ModalSection>
+
+        <ModalSection label="Fonts for all slides & posts">
+          <p style={{fontSize:12,color:'var(--ink-3)',lineHeight:1.5}}>Choose the font for text after # and ##. Changes apply to headings in every saved design and draft, and to new posts. Text and positions stay in place; check wrapping after changing fonts.</p>
+          <div style={{display:'grid',gap:12}}>
+            {[['slideFontHeading','# Heading'],['slideFontSubheading','## Subheading']].map(([key,label])=><label key={key} style={{display:'grid',gap:5,fontSize:12}}>{label}
+              <select aria-label={label+' font'} className="pk-select" style={{width:'100%',fontFamily:brand[key]||'inherit',padding:'10px 24px 10px 12px'}} value={brand[key]||''} onChange={async e=>{
+                const family=e.target.value;
+                const request=(fontRequests.current[key]||0)+1; fontRequests.current[key]=request;
+                if(family)await fontChangePatch({fontWeight:400},family);
+                if(fontRequests.current[key]===request)update({[key]:family});
+              }}>
+                <option value="">Use template font</option>
+                {ALL_FONT_OPTIONS.map(f=><option key={f.family} value={f.family}>{f.label}</option>)}
+              </select>
+              <span style={{fontFamily:brand[key]||'inherit',fontSize:key==='slideFontHeading'?23:18}}>Your flow. Your comfort.</span>
+            </label>)}
           </div>
         </ModalSection>
 
@@ -839,3 +858,4 @@ Object.assign(window, {
   BrandPanel, BrandKitSection, BrandKitModal,
   placementElements, PLACEMENTS, HANDLE_PLATFORMS, platformById,
 });
+

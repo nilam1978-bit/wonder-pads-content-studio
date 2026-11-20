@@ -91,8 +91,8 @@ function endpointSlide(kind,heading,body,label,s,brand,W,H,markedHeading=false){
 }
 
 // Use the same editable primitives and measured wrapping as canvas and export.
-function loadCarouselFonts(){
-  return Promise.all(['800 150px "Montserrat"','italic 800 150px "Montserrat"','400 38px "Montserrat"','600 112px "Cormorant Garamond"','italic 400 108px "Cormorant Garamond"','400 140px "DM Serif Display"','italic 400 140px "DM Serif Display"'].map(font=>document.fonts.load(font)));
+function loadCarouselFonts(brand={}){
+  return Promise.all(['800 150px "Montserrat"','italic 800 150px "Montserrat"','400 38px "Montserrat"','600 112px "Cormorant Garamond"','italic 400 108px "Cormorant Garamond"','400 140px "DM Serif Display"','italic 400 140px "DM Serif Display"',...[brand.slideFontHeading,brand.slideFontSubheading].filter(Boolean).map(f=>`400 100px "${f}"`)].map(font=>document.fonts.load(font)));
 }
 function floralHeadlineParts(text){
   const words=String(text||'').trim();
@@ -222,7 +222,7 @@ function createSimpleCanvases(text,s,brand){
     const choice=CAROUSEL_CTA_CHOICES.generic;
     result.push(endpointSlide('cta',choice.title,choice.body,'',s,brand,W,H));
   }
-  return result;
+  return result.map(c=>applyBrandSlideFonts(c,brand));
 }
 
 function fitCarouselContent(elements,height,slideNumber){
@@ -382,3 +382,4 @@ function SimpleCarouselStyles() { return <style>{`
   @media(max-width:640px){.sc-header{height:auto;padding:10px 12px;gap:8px}.sc-header strong{font-size:17px}.sc-header small,.sc-header>.simple-action{display:none}.sc-back{font-size:12px;padding:5px}.sc-main{padding:12px}.sc-panel{padding:15px;border-radius:14px}.sc-stage h1,.sc-stage h2{font-size:20px}.sc-source-tabs{display:grid;grid-template-columns:1fr 1fr}.sc-source-tabs button{padding:9px 6px;font-size:12px}.sc-aspects{grid-template-columns:1fr 1fr}.sc-section-head{display:block}.sc-slide{padding:14px}.sc-slide input{font-size:16px}.sc-slide textarea{min-height:92px}.sc-footer{padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))}.sc-footer span{display:none}.sc-footer .simple-action{width:100%}}
 `}</style>; }
 Object.assign(window,{FinalCarouselFlow,createSimpleCanvases,distributeCarouselText,makeCarouselProject,openCarouselDraft,getExampleText,SimpleCarouselStyles});
+
