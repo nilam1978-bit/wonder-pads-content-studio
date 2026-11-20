@@ -548,8 +548,8 @@ function App() {
   const isMobile = useIsMobile();
   const inEditor = !!state.activeProjectId && !!activeProject(state);
   if (inEditor) return <FinalProjectWorkspace isMobile={isMobile} />;
-  if (state.view === 'carousel') return <FinalCarouselFlow />;
-  if (state.view === 'ready-content') return <ReadyContentPlan />;
+  if (state.view === 'carousel') return <ContentWorkspace />;
+  if (state.view === 'ready-content') return <ContentLibrary />;
   if (state.view === 'repurpose') return <RepurposeScreen />;
   if (state.view === 'launch') return <LaunchScreen />;
   if (state.view === 'history') return <HistoryScreen />;
@@ -588,3 +588,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 );
 
 Object.assign(window, { Menu, MenuItem, MenuDivider, MenuLabel, SaveIndicator, blobToDataURL });
+

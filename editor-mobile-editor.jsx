@@ -108,7 +108,7 @@ function SheetAction({ icon, label, onClick, danger }) {
   );
 }
 
-function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBulkCreate }) {
+function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBulkCreate, onTemplates }) {
   const { state, dispatch } = useStore();
   const proj = activeProject(state);
   const canvas = activeCanvas(state);
@@ -297,6 +297,7 @@ function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBu
       <BottomSheet open={openSheet === 'more'} onClose={closeSheet} title="More tools" height="auto">
         <SheetAction icon="brand_kit" label="Brand" onClick={() => openTool('brand')} />
         {onSource && <SheetAction icon="text" label="Source text" onClick={() => { closeSheet(); onSource(); }} />}
+        {onTemplates && <SheetAction icon="grid" label="Try templates" onClick={() => { closeSheet(); onTemplates(); }} />}
         {onResize && <SheetAction icon="duplicate" label="Resize as a copy" onClick={() => { closeSheet(); onResize(); }} />}
         {onBulkCreate && <SheetAction icon="grid" label="Bulk create" onClick={() => { closeSheet(); onBulkCreate(); }} />}
         <SheetAction icon="duplicate" label="Duplicate design" onClick={() => {
@@ -1484,5 +1485,6 @@ function MobileWordsDialog({draft,onChange,onCancel,onDone}) {
     </footer>
   </div>;
 }
+
 
 
