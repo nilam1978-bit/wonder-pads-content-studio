@@ -255,6 +255,37 @@ function starterBackgroundElements(template, canvas, brand = defaultBrand()) {
   return els;
 }
 
+// Content heading fonts are independent of logo/shop typography.
+function applyBrandSlideFonts(canvas, brand = {}) {
+  let changed=false;
+  const elements=canvas.elements.map(el=>{
+    if(el.type!=='text'||el.fromBrand||el.brandSlot||el.engagementAction||el.endpointDecoration)return el;
+    const role=el.__role||el.role;
+    const key=role==='heading'?'slideFontHeading':role==='sub'?'slideFontSubheading':null;
+    if(!key)return el;
+    const family=brand[key],base=el.brandFontBase;
+    if(!family&&!base)return el;
+    const original=base||{fontFamily:el.fontFamily,fontWeight:el.fontWeight};
+    const weight=family&&typeof nearestWeight==='function'?nearestWeight(family,original.fontWeight):original.fontWeight;
+    if(family&&el.fontFamily===family&&el.fontWeight===weight&&base)return el;
+    changed=true;
+    const next={...el,fontFamily:family||original.fontFamily,fontWeight:weight};
+    if(family)next.brandFontBase=original;else delete next.brandFontBase;
+    return next;
+  });
+  return changed?{...canvas,elements}:canvas;
+}
+function applyBrandFontsToState(state,brand) {
+  const project=p=>{
+    const canvases=p.canvases.map(c=>applyBrandSlideFonts(c,brand));
+    return canvases.some((c,i)=>c!==p.canvases[i])?{...p,canvases,thumbnail:null,updatedAt:now()}:p;
+  };
+  const draft=d=>d?{...d,slides:(d.slides||[]).map(s=>s.originalCanvas?{...s,originalCanvas:applyBrandSlideFonts(s.originalCanvas,brand)}:s)}:d;
+  return {...state,brand,projects:state.projects.map(project),
+    templates:(state.templates||[]).map(t=>t.canvases?project(t):t),
+    contentDraft:draft(state.contentDraft),contentDrafts:(state.contentDrafts||[]).map(draft),
+    past:(state.past||[]).map(project),future:(state.future||[]).map(project)};
+}
 function slideTextRole(el,canvas) {
   if(el.textStyle) return el.textStyle;
   const role=el.__role || el.role;
@@ -384,7 +415,7 @@ function reducer(state, action) {
     case 'open-project':
       return { ...state, activeProjectId: action.id, tool: null, past: [], future: [], selection: [] };
     case 'close-project':
-      return { ...state, activeProjectId: null, past: [], future: [], selection: [] };
+      return { ...state, view:'home', activeProjectId: null, past: [], future: [], selection: [] };
 
     // ---------- Project CRUD ----------
     case 'create-project':
@@ -633,8 +664,11 @@ function reducer(state, action) {
     }
 
     // ---------- Brand ----------
-    case 'update-brand':
-      return { ...state, brand: { ...state.brand, ...action.patch } };
+    case 'update-brand': {
+      const brand={...state.brand,...action.patch};
+      return ['slideFontHeading','slideFontSubheading'].some(key=>key in action.patch)
+        ?applyBrandFontsToState(state,brand):{...state,brand};
+    }
     case 'add-brand-handle':
       return { ...state, brand: { ...state.brand, handles: [...state.brand.handles, { id: uid(), platform: 'instagram', value: '', ...action.handle }] } };
     case 'update-brand-handle':

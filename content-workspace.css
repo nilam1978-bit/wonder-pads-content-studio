@@ -79,3 +79,33 @@
 @media(pointer:coarse){.cw-preview-tools button,.cw-preview-heading button,.cw-families button,.cw-apply button,.cw-footer .cw-primary{min-height:44px;min-width:44px}}
 .cw-thumbnails button.cw-slide-arrow{flex:0 0 36px;justify-content:center;align-self:stretch;font-size:23px}
 @media(max-width:639px){.cw-template-strip .cw-look{flex-basis:80px}.cw-look>div{max-width:60px}.cw-thumbnails button.cw-slide-arrow{flex-basis:36px;min-width:36px}}
+
+.cw-shell .cw-template-note{font-size:11px;line-height:1.4;margin:2px 0 6px;color:#705c6b}
+/* A phone has one vertical workspace scroller. Preview/strip gestures may chain to it. */
+@media(max-width:639px){
+  .cw-body{overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:auto;-webkit-overflow-scrolling:touch}
+  .cw-columns{height:auto;min-height:100%}
+  .cw-columns>div{height:auto;overflow:visible;overscroll-behavior:auto}
+  .cw-words{min-height:0}
+  .cw-design{height:auto;min-height:100%;overflow:visible}
+  .cw-preview-stage{flex:none;height:clamp(260px,40dvh,380px);min-height:260px;overflow:hidden;overscroll-behavior:auto}
+  .cw-preview-stage[data-zoomed=true]{overflow:auto}
+  .cw-template-strip,.cw-thumbnails{overscroll-behavior-y:auto;-webkit-overflow-scrolling:touch}
+  .cw-preview-tools{gap:4px;margin-bottom:2px}
+  .cw-preview-tools button{padding:3px 6px;font-size:12px;border-radius:7px;min-width:38px;min-height:44px}
+  .cw-history{gap:2px}.cw-history button{width:38px}
+  .cw-zoom{gap:2px}.cw-zoom-value{font-size:11px;min-width:28px}
+  .cw-mobile-tabs{gap:4px;padding:5px 12px}.cw-mobile-tabs button{padding:4px 10px;min-height:44px;font-size:13px}
+  .cw-families{gap:3px}.cw-families button{padding:3px 8px;min-height:44px;font-size:12px;border-radius:8px}
+  .cw-apply{gap:2px}.cw-apply button{padding:3px 7px;font-size:12px;min-height:44px;border-radius:7px}
+  .cw-strip-heading{gap:3px}.cw-strip-heading h2{font-size:14px}
+  .cw-review{max-height:calc(var(--studio-viewport-height,100dvh) - 24px);overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  .source-editor .ready-actions{gap:8px}.source-editor .ready-actions button{min-height:44px}
+  .cw-shell .cw-history button{background:transparent;border-color:transparent}
+  .cw-shell .cw-families button{background:transparent;border:0;border-radius:0;padding-inline:8px}
+  .cw-shell .cw-families button[aria-pressed=true]{background:transparent;color:#78265f;box-shadow:inset 0 -2px #78265f}
+  .cw-apply{background:#f5e8f0;border-radius:8px;padding-inline:2px;gap:0}
+  .cw-apply>span{padding:0 6px}
+  .cw-shell .cw-apply button{background:transparent;border-color:transparent}
+  .cw-shell .cw-apply button[aria-pressed=true]{background:#fff;border-color:#dfcbd9}
+}

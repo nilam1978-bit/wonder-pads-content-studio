@@ -7,6 +7,7 @@ const renderer=fs.readFileSync(path.join(root,'editor-export.jsx'),'utf8');
 let nextId=0;
 const ctx={uid:()=>String(++nextId),document:{createElement:()=>({getContext:()=>({font:'',measureText(value){return {width:Array.from(value).length*Number(this.font.match(/([\d.]+)px/)[1])*.58};}})})},brandBackgroundElements:()=>[],ctaEngagementElements:()=>[],cleanSlideSwipe:els=>els};
 vm.createContext(ctx);
+vm.runInContext(utils.slice(utils.indexOf('function applyBrandSlideFonts'),utils.indexOf('function slideTextRole')),ctx);
 ctx.window={};
 vm.runInContext(fs.readFileSync(path.join(root,'floral-stickers.js'),'utf8'),ctx);
 vm.runInContext(utils.slice(utils.indexOf('const newElement ='),utils.indexOf('// Branded backgrounds')),ctx);
@@ -66,3 +67,4 @@ for(const post of quotes)for(const size of ['portrait','post']){
   for(const el of image.elements.filter(e=>e.type==='text'))assert(el.y+ctx.textLayout(el).height<=image.h);
 }
 console.log('PASS: 18 unique single-image quotes, preserved copy, separate captions and both ratios.');
+
