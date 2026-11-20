@@ -21,4 +21,19 @@ const long={id:'long',kind:'content',blocks:[{id:'b',role:'body',text:'Many word
 const existing={id:'project',name:'Existing',canvases:[ctx.renderContentSlide(slides[1],settings,brand)],activeCanvasId:slides[1].id};existing.canvases[0].elements.find(ctx.isContentText).text='Canvas edit survives';const resumed=ctx.contentDraftFromProject(existing);assert.equal(ctx.renderContentSlide(resumed.slides[0],resumed.settings,brand),existing.canvases[0]);assert(resumed.slides[0].blocks.some(b=>b.text==='Canvas edit survives'));
 let state={projects:[existing],contentDraft:draft,contentDrafts:[],past:[],future:[],carousel:{}};state=ctx.reducer(state,{type:'start-content-draft',draft:ctx.contentDraftNew('New words')});assert.equal(state.contentDrafts.length,1);state=ctx.reducer(state,{type:'resume-content-draft',id:'draft'});assert.equal(state.contentDraft.id,'draft');assert.equal(state.contentDrafts[0].source,'New words');const completed={...existing,canvases:resumed.slides.map(s=>ctx.renderContentSlide(s,resumed.settings,brand))};state=ctx.reducer(state,{type:'finish-content-draft',project:completed});assert.equal(state.projects.length,1);assert.equal(state.contentDraft,null);assert.equal(state.past[0],existing);state=ctx.reducer(state,{type:'undo'});assert.deepEqual(state.projects[0],existing);
 assert.throws(()=>ctx.prepareContentSlides('   ',settings),/Add your words/);
+// Updating saved source text works for new projects with no legacy carouselSettings.
+ctx.canvasSlideText=pages=>pages.flatMap(c=>c.elements.filter(ctx.isContentText).map(e=>e.text)).join('\n');
+const revisedSource='# Revised cover\nMy new supporting words.\n# Revised content\n## Still a subheading\nExact revised body.\n# Revised ending\nMy own closing.';
+const sourceProject={...existing,sourceText:'Original paste',sourceDraft:revisedSource,contentWorkspaceSettings:{...settings,count:3}};
+const originalCanvases=JSON.stringify(sourceProject.canvases);
+const sourceDraft=ctx.contentDraftFromProject(sourceProject);assert.equal(sourceDraft.source,revisedSource);
+const sourceReview=ctx.contentDraftForSource(sourceProject,revisedSource);
+assert.equal(JSON.stringify(sourceProject.canvases),originalCanvases,'Preview must leave the saved design intact');
+assert.equal(ctx.renderContentSlide(sourceReview.slides[0],sourceReview.settings,brand),sourceProject.canvases[0]);
+assert.equal(sourceReview.sourceReview.slides.length,3);
+assert.equal(sourceReview.sourceReview.slides[0].blocks[0].text,'Revised cover');
+assert.equal(sourceReview.sourceReview.slides[1].blocks.filter(b=>b.role==='sub').length,1);
+assert.equal(sourceReview.sourceReview.slides[0].look,sourceDraft.slides[0].look);
+assert.throws(()=>ctx.contentDraftForSource(sourceProject,'  '),/Add your words/);
+console.log('PASS: revised source draft restored; preview updates new projects without legacy settings; current canvases retained until apply.');
 console.log('PASS: preserved words/edits/roles/subheadings across all looks and ratios; current-slide scope; lossless explicit splits; visible overflow; editor round trip; draft recovery; atomic handoff and Undo.');
