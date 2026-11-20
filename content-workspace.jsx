@@ -6,6 +6,11 @@ const CONTENT_LOOKS = [
   {id:'handmade',name:'Berry frame',family:'Floral',bg:'#2A1F2A',ink:'#F1CFEA',accent:'#D489C3',layout:'frame'},
   {id:'playful',name:'Leafy cream',family:'Floral',bg:'#EEF3EA',ink:'#354C38',accent:'#849879',layout:'center'},
   {id:'colourful',name:'Orchid question',family:'Bold',bg:'#BC5AA6',ink:'#2A1F2A',accent:'#F1CFEA',layout:'bold'},
+  {id:'floral-lavender',name:'Lavender',family:'Floral',bg:'#F4EEFA',ink:'#493560',accent:'#7652A3',layout:'center',background:'assets/templates/wonder-pads-poster-template-lavender.png'},
+  {id:'floral-peach',name:'Peach',family:'Floral',bg:'#FFF3EC',ink:'#803D2C',accent:'#B2533A',layout:'center',background:'assets/templates/wonder-pads-poster-template-peach.png'},
+  {id:'floral-sage',name:'Sage',family:'Floral',bg:'#F2F7F0',ink:'#31513C',accent:'#4B7359',layout:'center',background:'assets/templates/wonder-pads-poster-template-sage.png'},
+  {id:'floral-slate-blue',name:'Slate blue',family:'Floral',bg:'#EEF3F8',ink:'#314A65',accent:'#4C6F96',layout:'center',background:'assets/templates/wonder-pads-poster-template-slate-blue.png'},
+  {id:'floral-deep-plum',name:'Deep plum',family:'Floral',bg:'#54284A',ink:'#FFFFFF',accent:'#E8C6DF',layout:'center',background:'assets/templates/wonder-pads-poster-template-deep-plum.png'},
 ];
 const contentLook = id => CONTENT_LOOKS.find(l=>l.id===id)||CONTENT_LOOKS[0];
 const contentBlock = (role,text) => ({id:uid(),role,text:String(text??'')});
@@ -74,12 +79,18 @@ function renderContentSlide(slide,settings,brand,options={}) {
   if(slide.originalCanvas&&!options.force)return applyBrandSlideFonts(slide.originalCanvas,brand);
   const standard=!!slide.standardCta;
   const look=contentLook(options.look||slide.look),W=1080,H=settings.size==='post'?1080:1350;
+  const floralBackground=!!look.background&&!standard;
   const c={id:slide.id,name:slide.kind==='hook'?'Cover':slide.kind==='cta'?'Closing slide':'Slide',slideKind:slide.kind,standardCta:standard,contentLook:look.id,w:W,h:H,bg:{type:'color',value:look.bg},elements:[]};
-  const els=c.elements,m=86,top=standard?100:slide.kind==='content'?130:180,bottom=H-(standard?380:210);
+  const els=c.elements,m=86,top=standard?100:slide.kind==='content'?130:180,bottom=floralBackground?H*1153/1350-34:H-(standard?380:210);
+  if(floralBackground){
+    // Fit the complete uploaded artwork, including its footer, in either ratio.
+    const width=H*1080/1350;
+    els.push(newElement('image',{src:look.background,x:(W-width)/2,y:0,w:width,h:H,locked:true,fromBrand:true,contentDecoration:true}));
+  }
   const shape=(type,patch)=>els.push(newElement(type,{...patch,contentDecoration:true}));
   if(standard||look.layout==='frame')shape('rect',{x:30,y:30,w:W-60,h:H-60,fill:'transparent',stroke:look.accent,strokeWidth:3,radius:0});
   if(!standard&&look.layout==='editorial')shape('rect',{x:0,y:H-175,w:W,h:175,fill:look.accent,radius:0});
-  if(!standard&&look.family==='Floral')shape('circle',{x:W-190,y:65,w:90,h:90,fill:look.accent});
+  if(!standard&&!floralBackground&&look.family==='Floral')shape('circle',{x:W-190,y:65,w:90,h:90,fill:look.accent});
   const blocks=applyBrandSlideFonts({elements:slide.blocks.map(b=>newElement('text',{...SLIDE_TEXT_STYLES[b.role==='heading'?'h1':b.role==='sub'?'h2':'body'],__role:b.role,contentBlockId:b.id,text:b.text,hidden:!!b.hidden,x:m,y:top,w:W-m*2,fontSize:b.role==='heading'?(slide.kind==='content'?76:124):b.role==='sub'?58:44,
     ...(standard?{fontSize:b.role==='heading'?78:34}:{}),
     fontFamily:!standard&&look.layout==='bold'?'Montserrat':b.role==='body'?'Montserrat':'DM Serif Display',fontWeight:!standard&&look.layout==='bold'&&b.role==='heading'?800:400,
@@ -87,13 +98,13 @@ function renderContentSlide(slide,settings,brand,options={}) {
   let photoY=top;
   const measure=()=>{let y=top,placedPhoto=false;for(const e of blocks){if(e.hidden)continue;if(slide.photo&&!placedPhoto&&e.__role!=='heading'){photoY=y;y+=Math.round(H*.22)+30;placedPhoto=true;}e.y=y;e.h=textLayout(e).height;y+=e.h+(e.__role==='heading'?40:26);}if(slide.photo&&!placedPhoto){photoY=y;y+=Math.round(H*.22)+30;}return y-26;};
   let end=measure();
-  if(standard||slide.fit||options.fit){for(let pass=0;pass<60&&end>bottom;pass++){let changed=false;for(const e of blocks){const next=Math.max(e.__role==='heading'?40:28,Math.floor(e.fontSize*.95));if(next<e.fontSize){e.fontSize=next;changed=true;}}end=measure();if(!changed)break;}}
+  if(standard||floralBackground||slide.fit||options.fit){for(let pass=0;pass<60&&end>bottom;pass++){let changed=false;for(const e of blocks){const next=Math.max(e.__role==='heading'?40:28,Math.floor(e.fontSize*.95));if(next<e.fontSize){e.fontSize=next;changed=true;}}end=measure();if(!changed)break;}}
   if(!standard&&look.layout==='center'&&!slide.photo&&end<=bottom){const dy=(bottom-end)/2;blocks.forEach(e=>e.y+=dy);}
   els.push(...blocks);
   if(slide.photo)shape('rect',{x:m,y:photoY,w:W-m*2,h:Math.round(H*.22),fill:'#E8D8E3',radius:16});
   els.push(...(slide.assets||[]));
   if(standard)els.push(...ctaEngagementElements(c,look.ink));
-  const branding=brandBackgroundElements(slide.kind==='hook'?'hook':'signature',c,brand);
+  const branding=floralBackground?[]:brandBackgroundElements(slide.kind==='hook'?'hook':'signature',c,brand);
   branding.forEach(e=>{if(e.type==='text')e.color=look.ink;});els.push(...branding);
   if(slide.footerLine)els.push(newElement('text',{text:slide.footerLine,__role:'body',contentBlockId:slide.footerId,x:m,y:H-290,w:W-m*2,fontSize:30,fontFamily:'Montserrat',color:look.ink}));
   return c;

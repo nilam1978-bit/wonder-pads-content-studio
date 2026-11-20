@@ -95,3 +95,31 @@ assert.equal(ctx.prepareContentSlides('# One carousel page\nDetails',settings).l
 assert.equal(ctx.prepareContentSlides('# Single image\nDetails',{...settings,format:'post'}).length,1);
 assert(!/setScope|Whole carousel|This slide|Last slide is a closing slide/.test(workspace));
 console.log('PASS: cover-only picker; fixed cream content; one standard CTA with cover colours and social actions; both ratios; preserved last source slide; no duplicate on reopen; single posts unchanged.');
+
+// Uploaded templates retain their complete footer and aspect ratio on both sizes.
+const floralLooks=ctx.looks.filter(look=>look.background);
+assert.equal(floralLooks.length,5);
+for(const look of floralLooks){
+  assert(fs.existsSync(path.join(root,look.background)));
+  for(const size of ['portrait','post']){
+    const changed=ctx.contentWithLook(draft,look.id);
+    const pages=changed.slides.map(slide=>ctx.renderContentSlide(slide,{...settings,size},fontBrand));
+    const cover=pages[0],background=cover.elements.find(el=>el.src===look.background);
+    assert(background&&background.locked&&background.fromBrand&&background.contentDecoration);
+    assert.equal(background.w/background.h,1080/1350);
+    assert.equal(background.y,0);assert.equal(background.h,cover.h);
+    assert.equal(background.x,(cover.w-background.w)/2);
+    assert(!pages.at(-1).elements.some(el=>el.src===look.background),'CTA only follows the palette');
+    const saved={id:'floral',canvases:pages,activeCanvasId:cover.id,contentWorkspaceSettings:settings};
+    const reopened=ctx.contentDraftFromProject(saved);
+    assert.equal(reopened.slides[0].assets.length,0,'Background must not become duplicated artwork on restyle');
+    const restyled=ctx.renderContentSlide(ctx.contentWithLook(reopened,look.id).slides[0],{...settings,size},fontBrand);
+    assert.equal(restyled.elements.filter(el=>el.src===look.background).length,1);
+  }
+}
+console.log('PASS: five bundled backgrounds, complete uncropped footer in both ratios, palette-only CTA and single background after restyling.');
+const noHookSettings={...settings,cover:false};
+const noHookDraft={...draft,settings:noHookSettings,slides:ctx.prepareContentSlides(source,noHookSettings)};
+const noHookChanged=ctx.contentWithLook(noHookDraft,'floral-lavender');
+assert(ctx.renderContentSlide(noHookChanged.slides[0],noHookSettings,fontBrand).elements.some(el=>el.src===floralLooks[0].background));
+assert.equal(noHookChanged.slides[1],noHookDraft.slides[1]);
