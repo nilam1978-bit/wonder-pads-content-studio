@@ -82,6 +82,9 @@
 
 .cw-shell .cw-template-note{font-size:11px;line-height:1.4;margin:2px 0 6px;color:#705c6b}
 /* Focused first step: one writing surface and one post-options sheet. */
+.cw-workspace-actions{display:flex;align-items:center;gap:12px;padding:6px 22px;background:white;border-bottom:1px solid #eadbe6;flex:none}
+.cw-shell .cw-edit-source{color:#78265f;background:#fcf3fa;font-weight:600;font-size:13px}
+.cw-shell .cw-source-hint{font-size:12px;color:#776371;margin:18px 0;line-height:1.5}
 .cw-entry-shell{background:#fcf6fa}
 .cw-entry-main{flex:1;min-height:0;display:flex;overflow:hidden}
 .cw-entry-paper{width:100%;max-width:920px;margin:0 auto;background:#fff;display:flex;flex-direction:column;min-height:0}
@@ -92,6 +95,7 @@
 .cw-entry-markers{display:flex;align-items:center;gap:8px;padding:8px 24px;background:white;flex:none}
 .cw-entry-markers button{min-height:40px;padding:7px 12px;background:#fcf3fa;font-size:13px;color:#893773}
 .cw-entry-markers .cw-entry-help{margin-left:auto;border-radius:50%;min-width:34px;width:34px;min-height:34px;padding:0;background:transparent}
+.cw-entry-markers .cw-entry-keyboard-done{display:none}
 .cw-entry-shell .cw-entry-marker-help{margin:0;padding:2px 24px 10px;color:#776371;font-size:12px;flex:none}
 .cw-entry-field{position:relative;flex:1;min-height:0;display:flex}
 .cw-entry-shell textarea.cw-source{flex:1;min-height:0;height:100%;resize:none;overflow:auto;margin:0;border:0;border-radius:0;background:white;padding:20px 28px;font:16px/1.7 Montserrat,sans-serif;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
@@ -134,6 +138,10 @@
 .cw-entry-dialog footer button{min-height:44px}.cw-entry-dialog footer .cw-primary{flex:1}
 .cw-entry-dialog input:focus-visible,.cw-entry-dialog textarea:focus-visible,.cw-entry-dialog select:focus-visible{outline:2px solid #893773;outline-offset:2px}
 @media(max-width:639px){
+  .cw-workspace-actions{padding:5px 12px;gap:5px}
+  .cw-workspace-actions .cw-mobile-tabs{padding:0;gap:4px;margin-left:auto;min-width:0}
+  .cw-workspace-actions .cw-mobile-tabs button{padding:4px 8px;white-space:nowrap;font-size:12px}
+  .cw-shell .cw-edit-source{font-size:12px;min-height:44px;padding:6px 8px;white-space:nowrap}
   .cw-entry-tabs{margin:12px 16px 8px;align-self:stretch}.cw-entry-tabs button{min-width:0;flex:1;font-size:12px}
   .cw-entry-markers{padding:6px 16px}.cw-entry-markers button{min-height:44px;font-size:12px}
   .cw-entry-markers .cw-entry-help{width:44px;min-height:44px}
@@ -146,6 +154,12 @@
   .cw-entry-dialog{margin:auto auto max(12px,env(safe-area-inset-bottom,0px));border-radius:18px}
   .cw-entry-dialog-content{padding:16px}.cw-entry-dialog header{padding:14px 16px}.cw-entry-dialog footer{padding-inline:16px}
 }
+/* ResizeObserver follows the actual visual viewport, including an iPhone keyboard. */
+.cw-entry-typing .cw-header,.cw-entry-typing .cw-entry-tabs,.cw-entry-typing .cw-entry-footer,.cw-entry-typing .cw-entry-marker-help{display:none}
+.cw-entry-typing .cw-entry-markers .cw-entry-help{display:none}
+.cw-entry-typing .cw-entry-markers .cw-entry-keyboard-done{display:block;margin-left:auto;background:#893773;color:white;border-color:#893773}
+.cw-entry-typing .cw-entry-markers{padding-block:6px;border-bottom:1px solid #eadbe6}
+.cw-entry-typing .cw-entry-wordbar{min-height:44px}
 @media(max-height:620px){.cw-entry-empty{gap:8px;justify-content:flex-start}.cw-entry-empty-icon{display:none}.cw-entry-empty h2{font-size:21px}.cw-entry-shell .cw-entry-empty p{font-size:12px}}
 /* A phone has one vertical workspace scroller. Preview/strip gestures may chain to it. */
 @media(max-width:639px){
