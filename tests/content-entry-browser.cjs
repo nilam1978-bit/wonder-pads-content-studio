@@ -40,20 +40,53 @@ async function main(){
    await page.evaluate(()=>{delete visualViewport.height;visualViewport.dispatchEvent(new Event('resize'));});await page.locator('.cw-entry-footer').waitFor();
   }
   await page.setViewportSize({width:390,height:844});await source.fill(initial);await page.getByRole('button',{name:'Prepare slides',exact:true}).click();await page.getByRole('heading',{name:'Find your look',exact:true}).waitFor();await poll(s=>s.contentDraft?.slides.length===4);
+  await page.setViewportSize({width:1280,height:900});await source.waitFor();assert.equal(await source.inputValue(),initial);
+  assert.equal(await page.locator('.cw-workspace .cw-entry-options').count(),0);
+  assert.equal(await page.getByRole('button',{name:'Edit source text',exact:true}).count(),0);
+  assert(await page.getByRole('button',{name:'Update slides',exact:true}).isDisabled());
+  const middleBefore=JSON.stringify((await snapshot()).contentDraft.slides.slice(1,-1));
+  await page.getByRole('button',{name:'Slide 2',exact:true}).click();
+  await page.getByRole('button',{name:'Deep plum',exact:true}).click();await poll(s=>s.contentDraft?.slides[0].look==='floral-deep-plum');
+  assert.equal((await snapshot()).contentDraft.index,0);assert.equal(JSON.stringify((await snapshot()).contentDraft.slides.slice(1,-1)),middleBefore);
+  assert.equal((await page.locator('.cw-color-styles').boundingBox()).height<=64,true);assert.equal(await page.locator('.cw-color-styles .mobile-page-art').count(),0);
+  assert((await page.getByRole('button',{name:'Deep plum',exact:true}).boundingBox()).height>=44);
+  await page.getByRole('combobox',{name:'Style family',exact:true}).selectOption('Bold');assert.equal(await page.locator('.cw-color-styles button').count(),2);
+  await page.getByRole('combobox',{name:'Style family',exact:true}).selectOption('All');
+  await page.screenshot({path:path.join(outputs,'source-style-workspace-desktop.png')});
+  for(const width of [390,320]){
+   await page.setViewportSize({width,height:width===320?568:844});await page.getByRole('button',{name:'Design',exact:true}).click();
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert((await page.locator('.cw-preview-stage').boundingBox()).height>(width===390?350:120));
+   await page.getByRole('button',{name:'Peach',exact:true}).click();assert((await page.locator('.cw-color-styles').evaluate(el=>el.scrollLeft))>0);
+   assert((await page.getByRole('button',{name:'Peach',exact:true}).boundingBox()).height<=52);
+   if(width===390)await page.screenshot({path:path.join(outputs,'source-style-workspace-mobile-design.png')});
+  }
+  await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'Slide 2',exact:true}).click();
+  await page.getByRole('button',{name:'Text',exact:true}).click();await source.evaluate(el=>{el.focus();el.setSelectionRange(18,18);});
+  await page.getByRole('button',{name:'Design',exact:true}).click();await page.getByRole('button',{name:'Text',exact:true}).click();assert.equal(await source.evaluate(el=>el.selectionStart),18);
+  await poll(s=>s.contentDraft?.index===1);assert.equal(await source.inputValue(),initial);
   const original=(await snapshot()).contentDraft,oldSlides=JSON.stringify(original.slides);
-  for(const width of [320,390,1280]){await page.setViewportSize({width,height:844});const b=await page.getByRole('button',{name:'Edit source text',exact:true}).boundingBox();assert(b&&b.x>=0&&b.x+b.width<=width);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);}
-  await page.screenshot({path:path.join(outputs,'design-edit-source-desktop.png')});
-  await page.getByRole('button',{name:'Edit source text',exact:true}).click();assert.equal(await source.inputValue(),initial);await source.fill(revised);
-  await page.locator('.cw-entry-options').click();await page.getByRole('button',{name:'Square · 1:1',exact:true}).click();await page.getByRole('button',{name:'Apply options',exact:true}).click();
-  await poll(s=>s.contentDraft?.source===revised&&s.contentDraft.sourceSettings?.size==='post');assert.equal((await snapshot()).contentDraft.settings.size,'portrait');assert.equal(JSON.stringify((await snapshot()).contentDraft.slides),oldSlides);
-  await page.getByRole('button',{name:'Back to design',exact:true}).click();await page.getByRole('heading',{name:'Find your look',exact:true}).waitFor();assert.equal(JSON.stringify((await snapshot()).contentDraft.slides),oldSlides);
-  await page.getByRole('button',{name:'Edit source text',exact:true}).click();assert.equal(await source.inputValue(),revised);await page.getByRole('button',{name:'Preview updated slides',exact:true}).click();await page.getByRole('heading',{name:'Review updated slides',exact:true}).waitFor();await page.getByRole('button',{name:'Keep current slides',exact:true}).click();assert.equal(JSON.stringify((await snapshot()).contentDraft.slides),oldSlides);assert(await source.isVisible());
-  await page.getByRole('button',{name:'Preview updated slides',exact:true}).click();await page.getByRole('button',{name:'Apply this version',exact:true}).click();await page.getByRole('heading',{name:'Find your look',exact:true}).waitFor();await poll(s=>s.contentDraft?.slides.length===5&&s.contentDraft.settings.size==='post');
-  const updated=(await snapshot()).contentDraft;assert.equal(updated.slides[3].blocks[0].text,'One more step');assert.equal(updated.slides[0].blocks[1].role,'sub');assert(updated.slides.every(s=>!s.blocks.some(b=>/^# /m.test(b.text))));assert.equal(updated.sourceSettings,null);
+  await source.fill(revised);await poll(s=>s.contentDraft?.source===revised);assert.equal(JSON.stringify((await snapshot()).contentDraft.slides),oldSlides);
+  assert(await page.getByRole('button',{name:'Update slides',exact:true}).isEnabled());
+  await page.getByRole('button',{name:'Caption & hashtags',exact:true}).click();await page.getByRole('textbox',{name:'Caption & hashtags',exact:true}).fill('A retained caption #wonderpads');await page.getByRole('button',{name:'Save changes',exact:true}).click();
+  await page.getByRole('button',{name:'Design',exact:true}).click();assert(await page.getByRole('button',{name:'Continue with current slides',exact:true}).isVisible());
+  await page.getByRole('button',{name:'Text',exact:true}).click();await page.getByRole('button',{name:'Update slides',exact:true}).click();await page.getByRole('heading',{name:'Review updated slides',exact:true}).waitFor();await page.getByRole('button',{name:'Keep current slides',exact:true}).click();assert.equal(JSON.stringify((await snapshot()).contentDraft.slides),oldSlides);assert(await source.isVisible());
+  await page.getByRole('button',{name:'Update slides',exact:true}).click();await page.getByRole('button',{name:'Apply this version',exact:true}).click();await poll(s=>s.contentDraft?.slides.length===5);
+  const updated=(await snapshot()).contentDraft;assert.equal(updated.slides[3].blocks[0].text,'One more step');assert.equal(updated.slides[0].blocks[1].role,'sub');assert(updated.slides.every(s=>!s.blocks.some(b=>/^# /m.test(b.text))));assert.equal(updated.appliedSource,revised);assert.equal(updated.slides[0].look,'floral-peach');
   await page.getByRole('button',{name:'Undo',exact:true}).click();await poll(s=>s.contentDraft?.slides.length===4);assert.equal(JSON.stringify((await snapshot()).contentDraft.slides),oldSlides);
-  await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'Edit source text',exact:true}).click();await source.focus();await page.evaluate(()=>{Object.defineProperty(visualViewport,'height',{configurable:true,get:()=>380});visualViewport.dispatchEvent(new Event('resize'));});await page.locator('.cw-entry-typing').waitFor();assert((await source.boundingBox()).height>200);
-  await page.getByRole('button',{name:'Done',exact:true}).tap();await page.evaluate(()=>{delete visualViewport.height;visualViewport.dispatchEvent(new Event('resize'));});await page.getByRole('button',{name:'Back to design',exact:true}).click();await page.screenshot({path:path.join(outputs,'design-edit-source-mobile.png')});
-  assert.deepEqual(errors,[]);console.log('PASS: simulated keyboard viewports at 390x380, 320x300 and 390x470; large usable text area, visible markers/Done, touch marking and restored controls. Source editing at desktop/mobile: retained drafts, staged options, exact slides kept on Back/Cancel, review/apply, marker parsing and Undo.');
+  await page.getByRole('button',{name:'Text',exact:true}).click();assert(await page.getByRole('button',{name:'Update slides',exact:true}).isEnabled());
+  await page.screenshot({path:path.join(outputs,'source-style-workspace-mobile-text.png')});
+  await source.focus();await page.evaluate(()=>{Object.defineProperty(visualViewport,'height',{configurable:true,get:()=>380});visualViewport.dispatchEvent(new Event('resize'));});await page.locator('.cw-workspace-typing').waitFor();assert((await source.boundingBox()).height>200);
+  await page.getByRole('button',{name:'+ Subheading',exact:true}).tap();await page.locator('.cw-workspace-typing').waitFor();assert(await source.evaluate(el=>document.activeElement===el));
+  await page.screenshot({path:path.join(outputs,'source-style-workspace-keyboard.png'),clip:{x:0,y:0,width:390,height:380}});
+  await page.getByRole('button',{name:'Done',exact:true}).tap();await page.evaluate(()=>{delete visualViewport.height;visualViewport.dispatchEvent(new Event('resize'));});
+  const pendingSource=await source.inputValue();await poll(s=>s.contentDraft?.source===pendingSource);await page.reload();await page.getByRole('button',{name:/Continue with your words/}).click({timeout:60000});await page.getByRole('button',{name:'Text',exact:true}).click();assert.equal(await source.inputValue(),pendingSource);assert.equal(JSON.stringify((await snapshot()).contentDraft.slides),oldSlides);
+  await page.getByRole('button',{name:'Continue with current slides',exact:true}).click();await poll(s=>s.projects?.length===1);assert.equal((await snapshot()).projects[0].sourceDraft,pendingSource);
+  await page.getByRole('button',{name:'Back to studio',exact:true}).click();await page.getByRole('button',{name:/Start with your words/}).click();
+  await source.fill('A first sentence with several useful words. A second point also has enough words for balanced slides. A final sentence completes this small example.');
+  await page.locator('.cw-entry-options').click();await page.getByRole('combobox',{name:'Split by',exact:true}).selectOption('balanced');await page.getByRole('spinbutton',{name:'Source slides',exact:true}).fill('2');await page.getByRole('button',{name:'Apply options',exact:true}).click();await page.getByRole('button',{name:'Prepare slides',exact:true}).click();await page.getByRole('button',{name:'Text',exact:true}).click();
+  await page.getByRole('button',{name:'Slide breaks: Balanced · Change',exact:true}).click();assert.equal(await page.getByRole('button',{name:'Square · 1:1',exact:true}).count(),0);await page.getByRole('spinbutton',{name:'Source slides',exact:true}).fill('3');await page.getByRole('button',{name:'Save changes',exact:true}).click();await poll(s=>s.contentDraft?.sourceSettings?.count===3);assert.equal((await snapshot()).contentDraft.settings.count,2);
+  await page.getByRole('button',{name:'Update slides',exact:true}).click();await page.getByRole('button',{name:'Apply this version',exact:true}).click();await poll(s=>s.contentDraft?.slides.length===4&&s.contentDraft.settings.count===3);
+  assert.deepEqual(errors,[]);console.log('PASS: keyboard layouts; persistent raw source and caret/slide retention; compact scrollable colour cards with larger canvas; no repeated post settings; review/cancel/apply/Undo; caption, pending draft and reload preservation; splitting-only options for balanced designs.');
  }catch(e){await page.screenshot({path:path.join(outputs,'source-mobile-failure.png')});console.error(errors);throw e;}finally{await browser.close();}
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});
