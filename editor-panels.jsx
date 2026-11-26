@@ -657,7 +657,7 @@ function ShapesPanel() {
       <PanelHeader title="Shapes" subtitle="Click to place" />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
         {shapes.map(s => (
-          <button key={s.label} onClick={() => addShape(s.type, s.extra)}
+          <button key={s.label} aria-label={s.label} title={s.label} onClick={() => addShape(s.type, s.extra)}
             style={{
               aspectRatio: '1', background: 'var(--pink-50)', borderRadius: 12,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -675,7 +675,7 @@ function ShapesPanel() {
 }
 
 // ------- Images panel -------
-function ImagesPanel() {
+function ImagesPanel({replacement,onReplaced} = {}) {
   const { state, dispatch } = useStore();
   const uploads = state.uploads;
   const fileRef = pR(null);
@@ -689,6 +689,7 @@ function ImagesPanel() {
   };
 
   const addImage = (src) => {
+    if(replacement){if(!replacement.locked){dispatch({type:'update-element',id:replacement.id,patch:{src}});onReplaced?.();}return;}
     const canvas = activeCanvas(state);
     const img = new Image();
     img.onload = () => {
@@ -724,7 +725,7 @@ function ImagesPanel() {
       <SectionLabel>Your library</SectionLabel>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
         {[...uploads, ...stockImages].map((src, i) => (
-          <button key={i} onClick={() => addImage(src)}
+          <button key={i} aria-label={`Use image ${i+1}`} onClick={() => addImage(src)}
             style={{
               aspectRatio: '1', borderRadius: 10, overflow: 'hidden',
               background: 'var(--pink-50)', padding: 0,

@@ -12,6 +12,9 @@ const Icon = ({ name, size = 20, stroke = 1.5, accent = 'none', style, className
 };
 
 const ICONS = {
+  opacity: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 010 18z" fill="currentColor"/>',
+  sliders: '<path d="M4 7h4m6 0h6M4 17h10m6 0h0"/><circle cx="11" cy="7" r="3"/><circle cx="17" cy="17" r="3"/>',
+  resize: '<path d="M4 10V4h6M14 4h6v6M20 14v6h-6M10 20H4v-6M4 4l6 6m4 4 6 6"/>',
   // rail
   templates: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
   text: '<path d="M5 6V4h14v2"/><path d="M12 4v16"/><path d="M9 20h6"/>',
