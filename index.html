@@ -386,7 +386,7 @@
   .mobile-ribbon {
     display: flex;
     align-items: center;
-    height: 58px;
+    height: 50px;
     padding-inline: 4px;
     gap: 2px;
   }
@@ -409,19 +409,6 @@
   .mobile-ribbon-divider { flex: 0 0 1px; height: 26px; background: var(--line); margin-inline: 4px; }
   .mobile-ribbon-icon-group { display: flex; gap: 3px; }
   .mobile-ribbon-tool.mobile-ribbon-icon { width: 44px; padding: 0; }
-  .mobile-position-values {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(76px, 1.25fr);
-    gap: 8px;
-    margin-top: 8px;
-  }
-  .mobile-position-values label {
-    display: grid;
-    gap: 4px;
-    font-size: 10px;
-    color: var(--ink-3);
-  }
-  .mobile-position-values select { width: 100%; min-width: 0; }
   .mobile-ribbon-tool, .mobile-ribbon-pin {
     display: inline-flex;
     flex: 0 0 auto;
@@ -449,9 +436,10 @@
     gap: 3px;
     font-size: 10px;
   }
-  .mobile-ribbon-arrow { color: var(--ink-2); border-left: 1px solid var(--line); border-radius: 0; }
-  .mobile-ribbon-arrow:disabled { display: none; }
-  .mobile-ribbon-done { background: var(--pink-100); color: var(--pink-600); }
+  .mobile-ribbon-menu { color: var(--ink-2); border-left: 1px solid var(--line); border-radius: 0; }
+  .mobile-ribbon-fixed-actions { display:flex;flex:0 0 auto;align-items:center;gap:2px;padding-left:4px;border-left:1px solid var(--line);background:white; }
+  .mobile-ribbon-done { width:44px;padding:0;background:var(--pink-600);color:white;box-shadow:0 1px 4px rgba(120,38,95,.22); }
+  .mobile-ribbon-done:focus-visible { outline:3px solid var(--pink-400);outline-offset:1px; }
   .mobile-ribbon-swatch { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--line); }
   .mobile-ribbon-panel {
     position: absolute;
@@ -518,7 +506,7 @@
     // ONE version number for every app file. Change it each time you upload new files,
     // so phones and browsers fetch the fresh copies instead of reusing old ones.
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
-      const APP_VERSION = '2026-11-26-source-panel-colour-styles';
+      const APP_VERSION = '2026-11-26-compact-ribbons-slide-branding';
     document.write('<link rel="stylesheet" href="content-workspace.css?v=' + APP_VERSION + '">');
     // Files load in this order. The data file is plain JavaScript; the rest are React (.jsx).
     const APP_FILES = [

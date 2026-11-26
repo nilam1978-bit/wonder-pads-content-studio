@@ -252,14 +252,18 @@ function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBu
               <MobileToolTray key={primaryEl.id + activeTray} el={primaryEl} tool={activeTray} onClose={() => setTray(null)} />
             )}
             <MobileRibbon key={primaryEl.type} label="Selected element tools"
-              end={<button className="mobile-ribbon-pin mobile-ribbon-done" onClick={clearSelection}>Done</button>}>
+              end={<div className="mobile-ribbon-fixed-actions" role="group" aria-label="Selected element actions">
+                <MobileIconAction label="Duplicate element" icon="duplicate" onClick={()=>dispatch({type:'duplicate-elements',ids:[primaryEl.id]})}/>
+                <MobileIconAction label="Delete element" icon="trash" onClick={()=>dispatch({type:'delete-elements',ids:[primaryEl.id]})}/>
+                <button className="mobile-ribbon-pin mobile-ribbon-done" aria-label="Done selecting" title="Done" onClick={clearSelection}><Icon name="check" size={22}/></button>
+              </div>}>
               <MobileSelectionTools el={primaryEl} activeTool={activeTray}
                 onTool={tool => tool === 'words' ? beginEdit(primaryEl.id) : pickTool(tool)} />
             </MobileRibbon>
           </div>
         )}
-        <MobileRibbon label="Page tools" showScrollButton={false} end={
-          <button className="mobile-ribbon-pin mobile-ribbon-arrow" aria-label="More tools"
+        <MobileRibbon label="Page tools" end={
+          <button className="mobile-ribbon-pin mobile-ribbon-menu" aria-label="Design actions"
             aria-expanded={openSheet === 'more'} onClick={() => openTool('more')}>
             <Icon name="menu" size={20} />
           </button>}>
@@ -294,7 +298,7 @@ function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBu
       </BottomSheet>
 
       {openSheet === 'pages' && <MobilePagesOverview onClose={closeSheet} />}
-      <BottomSheet open={openSheet === 'more'} onClose={closeSheet} title="More tools" height="auto">
+      <BottomSheet open={openSheet === 'more'} onClose={closeSheet} title="Design actions" height="auto">
         <SheetAction icon="brand_kit" label="Brand" onClick={() => openTool('brand')} />
         {onSource && <SheetAction icon="text" label="Source text" onClick={() => { closeSheet(); onSource(); }} />}
         {onTemplates && <SheetAction icon="grid" label="Try templates" onClick={() => { closeSheet(); onTemplates(); }} />}
@@ -956,44 +960,12 @@ function MobileSelectionOverlay({ el, scale, onResize, onMove }) {
   );
 }
 
-function MobileRibbon({ label, children, end, showScrollButton = true }) {
-  const scrollRef = meR(null);
-  const [edges, setEdges] = meS({ before: false, after: false });
-  meE(() => {
-    if (!showScrollButton) return;
-    const scroll = scrollRef.current;
-    const measure = () => {
-      const before = scroll.scrollLeft > 2;
-      const after = scroll.scrollLeft + scroll.clientWidth < scroll.scrollWidth - 2;
-      setEdges(old => old.before === before && old.after === after ? old : { before, after });
-    };
-    const observer = new ResizeObserver(measure);
-    observer.observe(scroll);
-    observer.observe(scroll.firstElementChild);
-    scroll.addEventListener('scroll', measure, { passive: true });
-    measure();
-    return () => {
-      observer.disconnect();
-      scroll.removeEventListener('scroll', measure);
-    };
-  }, [showScrollButton]);
-  const forward = edges.after || !edges.before;
+function MobileRibbon({ label, children, end }) {
   return (
     <div className="mobile-ribbon" role="toolbar" aria-label={label}>
-      <div className="mobile-ribbon-scroll" data-ribbon-scroll ref={scrollRef}>
+      <div className="mobile-ribbon-scroll" data-ribbon-scroll>
         <div className="mobile-ribbon-items">{children}</div>
       </div>
-      {showScrollButton && <button className="mobile-ribbon-pin mobile-ribbon-arrow"
-        aria-label={forward ? 'Scroll tools forward' : 'Scroll tools back'}
-        disabled={!edges.after && !edges.before}
-        onClick={() => {
-          const scroll = scrollRef.current;
-          scroll.scrollBy({ left: (forward ? 1 : -1) * scroll.clientWidth * 0.8 });
-        }}>
-        <span style={{ display: 'inline-flex', transform: forward ? undefined : 'scaleX(-1)' }}>
-          <Icon name="chevron_r" size={16} />
-        </span>
-      </button>}
       {end}
     </div>
   );
@@ -1099,10 +1071,8 @@ function MobileSelectionTools({ el, activeTool, onTool }) {
     </>}
     {tool('Position','position')}
     {tool('Opacity','opacity')}
-    <MobileIconAction label="Duplicate element" icon="duplicate" onClick={() => dispatch({ type: 'duplicate-elements', ids: [el.id] })} />
     <MobileIconAction label={el.locked ? 'Unlock' : 'Lock'} icon={el.locked ? 'unlock' : 'lock'} onClick={() => update({ locked: !el.locked })} />
     <MobileIconAction label={el.hidden ? 'Show' : 'Hide'} icon={el.hidden ? 'eye' : 'eye_off'} onClick={() => update({ hidden: !el.hidden })} />
-    <MobileIconAction label="Delete element" icon="trash" onClick={() => dispatch({ type: 'delete-elements', ids: [el.id] })} />
   </>;
 }
 
@@ -1239,15 +1209,12 @@ function FormatTool({ el }) {
 
 function PositionTool({ el }) {
   const { state, dispatch } = useStore();
-  const [step, setStep] = meS(10);
+  const step = 10;
   const canvas = activeCanvas(state);
   const index = canvas.elements.findIndex(item => item.id === el.id);
   const last = canvas.elements.length - 1;
   const move = to => dispatch({ type: 'reorder-element', id: el.id, to });
   const update = patch => dispatch({ type: 'update-element', id: el.id, patch });
-  const setCoordinate = (key, value) => {
-    if (value !== '' && Number.isFinite(Number(value))) update({ [key]: Number(value) });
-  };
   const layerActions = [
     ['Move forward one layer', 'layer_forward', index + 1, index === last],
     ['Move backward one layer', 'layer_backward', index - 1, index === 0],
@@ -1287,16 +1254,6 @@ function PositionTool({ el }) {
             onClick={() => update({ x: el.x + dx, y: el.y + dy })} />)}
       </div>
     </MobileRibbon>
-    {!el.locked && <div className="mobile-position-values">
-      <LabeledInput label="X" value={Math.round(el.x)} onChange={v => setCoordinate('x', v)} />
-      <LabeledInput label="Y" value={Math.round(el.y)} onChange={v => setCoordinate('y', v)} />
-      <LabeledInput label="Rotation" value={Math.round(el.rot || 0)} suffix="°" onChange={v => setCoordinate('rot', v)} />
-      <label>Nudge step
-        <select className="pk-select" value={step} onChange={e => setStep(Number(e.target.value))}>
-          {[2, 10, 40].map(pixels => <option key={pixels} value={pixels}>{pixels} px</option>)}
-        </select>
-      </label>
-    </div>}
   </>;
 }
 

@@ -154,6 +154,23 @@ function brandBackgroundElements(kind, canvas, brand = defaultBrand()) {
     text('website',website,x+col+gap,y+45*s,col,'left',tone);
     for(const el of els.filter(e=>e.type==='text'))el.h=50*s;
   };
+  if(kind==='content-cover'){image(W-174*s,70*s,88*s);return els;}
+  if(kind==='content-footer'){
+    text('instagram',social,86*s,H-112*s,W-172*s,'left',ink);
+    for(const el of els){el.fontSize=28*s;el.h=48*s;}
+    return els;
+  }
+  if(kind==='content-closing'){
+    image(86*s,H-170*s,80*s);
+    const x=brand.logo?190*s:86*s,w=W-x-86*s;
+    text('instagram',social,x,H-182*s,w,'left',ink);
+    text('website',website,x,H-124*s,w,'left',ink);
+    for(const el of els.filter(e=>e.type==='text')){
+      el.fontSize=28*s;el.h=48*s;
+      if(typeof textLayout==='function')while(el.fontSize>18*s&&textLayout(el).height>48*s)el.fontSize-=s;
+    }
+    return els;
+  }
   if(kind==='hook'){image(W-160*s,50*s,96*s);return els;}
   if(kind==='header'){
     rect('brandBar',0,0,W,band,'#F1CFEA');compact(0);
@@ -194,10 +211,14 @@ function reflowBrandBackground(canvas, W, H, brand) {
   const layouts = [...new Set(canvas.elements.map(e => e.brandLayout).filter(Boolean))];
   const maps = new Map(layouts.map(kind => [kind, {
     old: brandBackgroundElements(kind, canvas, brand),
-    next: brandBackgroundElements(kind, {w:W,h:H}, brand),
+    next: brandBackgroundElements(kind, {...canvas,w:W,h:H}, brand),
   }]));
   const scale = Math.min(W,H)/Math.min(canvas.w,canvas.h);
   return canvas.elements.map(el => {
+    if(el.contentFrame){
+      const oldMargin=30*Math.min(canvas.w,canvas.h)/1080,margin=30*Math.min(W,H)/1080;
+      return {...el,x:margin+(el.x-oldMargin)*scale,y:margin+(el.y-oldMargin)*scale,w:W-2*margin+(el.w-(canvas.w-2*oldMargin))*scale,h:H-2*margin+(el.h-(canvas.h-2*oldMargin))*scale,strokeWidth:el.strokeWidth*scale};
+    }
     if(el.engagementAction){
       const old=ctaEngagementElements(canvas).find(e=>e.type===el.type&&e.engagementAction===el.engagementAction);
       const next=ctaEngagementElements({...canvas,w:W,h:H}).find(e=>e.type===el.type&&e.engagementAction===el.engagementAction);
