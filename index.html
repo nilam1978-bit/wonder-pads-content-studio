@@ -368,107 +368,54 @@
     pointer-events: none;
   }
   .mobile-ribbon-dock {
-    position: relative;
-    flex: 0 0 auto;
-    z-index: 15;
-    background: #fff;
-    border-top: 1px solid var(--line);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    position:relative;flex:0 0 auto;z-index:15;background:#fff;
+    border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);
+    box-shadow:0 -2px 16px rgba(80,30,70,.06);
   }
   .mobile-ribbon-context {
-    position: absolute;
-    inset-inline: 0;
-    bottom: 100%;
-    background: #fff;
-    border-top: 1px solid var(--line);
-    box-shadow: 0 -4px 12px rgba(42, 31, 42.08);
+    position:absolute;inset-inline:0;bottom:100%;background:#fff;
+    border:1px solid var(--line);border-bottom:0;border-radius:20px 20px 0 0;
+    box-shadow:0 -4px 18px rgba(80,30,70,.08);
   }
-  .mobile-ribbon {
-    display: flex;
-    align-items: center;
-    height: 50px;
-    padding-inline: 4px;
-    gap: 2px;
+  .mobile-ribbon {display:flex;align-items:center;height:58px;padding-inline:8px;gap:6px;min-width:0;}
+  .mobile-ribbon-scroll {flex:1 1 auto;min-width:0;overflow:auto hidden;overscroll-behavior:contain;touch-action:pan-x;scrollbar-width:none;}
+  .mobile-ribbon-scroll::-webkit-scrollbar{display:none}
+  .mobile-ribbon-items{display:flex;align-items:center;gap:6px;width:max-content;padding:1px 0;}
+  .mobile-ribbon-tool,.mobile-ribbon-pin{
+    display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;gap:7px;
+    min-width:44px;min-height:44px;height:44px;padding:0 12px;border:1px solid #e7d3e1;
+    border-radius:13px;background:#fff;color:var(--ink);font:600 12px/1.2 Montserrat,sans-serif;
+    white-space:nowrap;box-shadow:0 1px 2px rgba(80,30,70,.035);transition:background .12s,border-color .12s;
   }
-  .mobile-ribbon-scroll {
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow: auto hidden;
-    overscroll-behavior: contain;
-    touch-action: pan-x;
-    scrollbar-width: none;
+  .mobile-ribbon-tool svg,.mobile-ribbon-pin svg{flex:none;display:block;}
+  .mobile-ribbon-tool:hover,.mobile-ribbon-pin:hover{background:var(--pink-50);border-color:#d5b4ca;}
+  .mobile-ribbon-tool[aria-pressed="true"],.mobile-ribbon-tool[aria-expanded="true"],.mobile-ribbon-pin[aria-expanded="true"]{
+    background:var(--pink-100);border-color:var(--pink-400);color:var(--pink-600);
   }
-  .mobile-ribbon-scroll::-webkit-scrollbar { display: none; }
-  .mobile-ribbon-items {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    width: max-content;
-    padding-inline: 3px;
-  }
-  .mobile-ribbon-divider { flex: 0 0 1px; height: 26px; background: var(--line); margin-inline: 4px; }
-  .mobile-ribbon-icon-group { display: flex; gap: 3px; }
-  .mobile-ribbon-tool.mobile-ribbon-icon { width: 44px; padding: 0; }
-  .mobile-ribbon-tool.mobile-ribbon-pin {
-    display: inline-flex;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    min-width: 44px;
-    min-height: 44px;
-    padding: 0 8px;
-    border-radius: 10px;
-    background: transparent;
-    color: var(--ink);
-    font-size: 12px;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-  .mobile-ribbon-tool[aria-pressed="true"].mobile-ribbon-tool[aria-expanded="true"] {
-    background: var(--pink-100);
-    color: var(--pink-600);
-  }
-  .mobile-ribbon-tool:disabled { opacity: .45; }
-  .mobile-ribbon-page-tool {
-    flex-direction: column;
-    min-width: 54px;
-    gap: 3px;
-    font-size: 10px;
-  }
-  .mobile-ribbon-menu { color: var(--ink-2); border-left: 1px solid var(--line); border-radius: 0; }
-  .mobile-ribbon-fixed-actions { display:flex;flex:0 0 auto;align-items:center;gap:2px;padding-left:4px;border-left:1px solid var(--line);background:white; }
-  .mobile-ribbon-done { width:44px;padding:0;background:var(--pink-600);color:white;box-shadow:0 1px 4px rgba(120,38,95.22); }
-  .mobile-ribbon-done:focus-visible { outline:3px solid var(--pink-400);outline-offset:1px; }
-  .mobile-ribbon-swatch { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--line); }
-  .mobile-ribbon-panel {
-    position: absolute;
-    inset-inline: 8px;
-    bottom: calc(100% + 6px);
-    display: flex;
-    flex-direction: column;
-    max-height: min(300px, calc(var(--studio-viewport-height, 100dvh) * .36));
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    box-shadow: 0 6px 24px rgba(80, 30, 70.18);
-    overflow: hidden;
-  }
-  .mobile-ribbon-panel header {
-    display: flex;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 4px 0 12px;
-    border-bottom: 1px solid var(--line);
-    font-size: 13px;
-  }
-  .mobile-ribbon-panel-body {
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding: 8px 12px 10px;
-  }
+  .mobile-ribbon-tool:disabled{opacity:.4;box-shadow:none;cursor:default;}
+  .mobile-ribbon-tool:focus-visible,.mobile-ribbon-pin:focus-visible{outline:2px solid var(--pink-600);outline-offset:1px;}
+  .mobile-ribbon-divider{flex:0 0 1px;height:26px;background:var(--line);margin-inline:3px;}
+  .mobile-ribbon-icon-group{display:flex;gap:5px;}
+  .mobile-ribbon-tool.mobile-ribbon-icon{width:44px;padding:0;font-size:17px;}
+  .mobile-ribbon-page-tool{flex-direction:column;min-width:68px;height:48px;gap:4px;font-size:10px;padding:4px 9px;border-color:transparent;background:transparent;box-shadow:none;color:#6c4b61;border-radius:14px;}
+  .mobile-ribbon-page-tool svg{width:21px;height:21px;}
+  .mobile-ribbon-page-tool[aria-expanded="true"]{border-color:#dfbfd3;box-shadow:0 1px 3px rgba(80,30,70,.07);}
+  .mobile-ribbon-menu{width:44px;padding:0;color:var(--pink-600);background:var(--pink-50);}
+  .mobile-ribbon-fixed-actions{display:flex;flex:0 0 auto;align-items:center;gap:5px;padding-left:7px;border-left:1px solid var(--line);background:#fff;box-shadow:-6px 0 10px #fff;}
+  .mobile-ribbon-fixed-actions .mobile-ribbon-tool{border-color:transparent;background:var(--pink-50);color:#6c4b61;}
+  .mobile-ribbon-fixed-actions .mobile-ribbon-tool:hover{border-color:#dfbfd3;}
+  .mobile-ribbon-done{width:44px;padding:0;background:var(--pink-600);border-color:var(--pink-600);color:white;box-shadow:0 2px 5px rgba(120,38,95,.18);}
+  .mobile-ribbon-done:hover{background:var(--pink-600);color:white;}
+  .mobile-ribbon-swatch{display:inline-block;vertical-align:middle;width:19px;height:19px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 1px #d7c5d1;flex:none;}
+  .mobile-ribbon-font{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mobile-ribbon-size{display:flex;flex:none;align-items:center;border:1px solid #e7d3e1;border-radius:13px;overflow:hidden;background:#fff;}
+  .mobile-ribbon-size .mobile-ribbon-tool{border:0;border-radius:0;box-shadow:none;padding:0;}
+  .mobile-ribbon-size .mobile-ribbon-tool:nth-child(2){font-variant-numeric:tabular-nums;min-width:46px;font-size:14px;}
+  .mobile-ribbon-panel{position:absolute;inset-inline:8px;bottom:calc(100% + 8px);display:flex;flex-direction:column;max-height:min(300px,calc(var(--studio-viewport-height,100dvh)*.36));background:#fff;border:1px solid #e7d3e1;border-radius:18px;box-shadow:0 6px 24px rgba(80,30,70,.14);overflow:hidden;}
+  .mobile-ribbon-panel header{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;padding:8px 10px 8px 16px;border-bottom:1px solid var(--line);font-size:13px;}
+  .mobile-ribbon-panel header .mobile-ribbon-pin{min-width:44px;min-height:44px;width:44px;height:44px;padding:0;border-radius:50%;background:var(--pink-50);}
+  .mobile-ribbon-panel-body{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:12px 14px 14px;}
+  .mobile-ribbon-panel .mobile-ribbon{padding:0;height:48px;}
   .studio-resize-dialog {
     width: min(440px, calc(100vw - 28px));
     max-height: calc(100dvh - 28px);
@@ -506,7 +453,7 @@
     // ONE version number for every app file. Change it each time you upload new files,
     // so phones and browsers fetch the fresh copies instead of reusing old ones.
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
-      const APP_VERSION = '2026-11-26-compact-update-review';
+      const APP_VERSION = '2026-11-26-polished-ribbon-controls';
     document.write('<link rel="stylesheet" href="content-workspace.css?v=' + APP_VERSION + '">');
     // Files load in this order. The data file is plain JavaScript; the rest are React (.jsx).
     const APP_FILES = [

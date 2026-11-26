@@ -975,7 +975,7 @@ function MobilePageTools({ activeTool, onOpen }) {
   const tools = [
     ['text', 'text', 'Add text'],
     ['images', 'images', 'Image'],
-    ['icons', 'images', 'Illustrations'],
+    ['icons', 'sparkles', 'Illustrations'],
     ['bg', 'bg', 'Background'],
     ['pages', 'copy', 'Pages'],
     ['templates', 'templates', 'Templates'],
@@ -987,7 +987,7 @@ function MobilePageTools({ activeTool, onOpen }) {
       {tools.map(([id, icon, label]) => (
         <button key={id} className="mobile-ribbon-tool mobile-ribbon-page-tool"
           aria-expanded={activeTool === id} onClick={() => onOpen(id)}>
-          <Icon name={icon} size={18} />
+          <Icon name={icon} size={21} stroke={1.7} />
           <span>{label}</span>
         </button>
       ))}
@@ -1046,26 +1046,27 @@ function MobileSelectionTools({ el, activeTool, onTool }) {
   const locked = !!el.locked;
   const change=patch=>{if(!locked&&patch)dispatch({type:'update-element',id:el.id,patch});};
   const chip = 'mobile-ribbon-tool';
-  const tool=(label,key,content=label)=><button className={chip} aria-label={label} aria-expanded={key === 'words' ? undefined : activeTool===key} disabled={locked&&key!=='position'} onClick={()=>onTool(key)}>{content}</button>;
+  const toolIcons={words:'edit',size:'resize',flip:'flip_horizontal',adjust:'sliders',position:'move_element',opacity:'opacity',styles:'text',format:'sliders','replace-artwork':'images','replace-icon':'icons',frame:'frames'};
+  const tool=(label,key,content=label)=><button className={chip} aria-label={label} aria-expanded={key === 'words' ? undefined : activeTool===key} disabled={locked&&key!=='position'} onClick={()=>onTool(key)}>{toolIcons[key]&&<Icon name={toolIcons[key]} size={17}/>}<span>{content}</span>{key==='font'&&<Icon name="chevron_d" size={13}/>}</button>;
   const update = patch => dispatch({ type: 'update-element', id: el.id, patch });
   return <>
     {el.type==='text'?<>
-      {tool('Edit words','words')}
-      {tool('Font: '+el.fontFamily,'font',<span style={{fontFamily:el.fontFamily,maxWidth:140,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{el.fontFamily}</span>)}
-      {tool('Font size','size',Math.round(el.fontSize)+' px')}
-      {tool('Text colour','colour',<><span className="mobile-ribbon-swatch" style={{background:el.color}}/>Colour</>)}
-      <button className={chip} aria-label="Bold" aria-pressed={isBoldText(el)} disabled={locked||!boldWeightFor(el.fontFamily)} onClick={()=>change(toggleBoldPatch(el))}><b>B</b></button>
-      <button className={chip} aria-label="Italic" aria-pressed={!!el.italic} disabled={locked} onClick={()=>change({italic:!el.italic})}><i>I</i></button>
-      <button className={chip} aria-label="Underline" aria-pressed={!!el.underline} disabled={locked} onClick={()=>change({underline:!el.underline})}><u>U</u></button>
-      <button className={chip} aria-label={'Alignment: '+el.align} disabled={locked} onClick={()=>change({align:el.align==='left'?'center':el.align==='center'?'right':'left'})}><Icon name={el.align==='center'?'align_c':el.align==='right'?'align_r':'align_l'} size={16}/></button>
+      {tool('Edit words','words','Edit')}
+      {tool('Font: '+el.fontFamily,'font',<span className="mobile-ribbon-font">{el.fontFamily}</span>)}
+      <div className="mobile-ribbon-size" role="group" aria-label="Font size"><button className={chip} aria-label="Decrease font size" disabled={locked||el.fontSize<=6} onClick={()=>change({fontSize:clamp(Math.round(el.fontSize)-2,6,600)})}><Icon name="minus" size={16}/></button><button className={chip} aria-label="Font size" aria-expanded={activeTool==='size'} disabled={locked} onClick={()=>onTool('size')}>{Math.round(el.fontSize)}</button><button className={chip} aria-label="Increase font size" disabled={locked||el.fontSize>=600} onClick={()=>change({fontSize:clamp(Math.round(el.fontSize)+2,6,600)})}><Icon name="plus" size={16}/></button></div>
+      {tool('Text colour','colour',<><span className="mobile-ribbon-swatch" style={{background:el.color}}/></>)}
+      <button className={chip+' mobile-ribbon-icon'} aria-label="Bold" aria-pressed={isBoldText(el)} disabled={locked||!boldWeightFor(el.fontFamily)} onClick={()=>change(toggleBoldPatch(el))}><b>B</b></button>
+      <button className={chip+' mobile-ribbon-icon'} aria-label="Italic" aria-pressed={!!el.italic} disabled={locked} onClick={()=>change({italic:!el.italic})}><i>I</i></button>
+      <button className={chip+' mobile-ribbon-icon'} aria-label="Underline" aria-pressed={!!el.underline} disabled={locked} onClick={()=>change({underline:!el.underline})}><u>U</u></button>
+      <button className={chip+' mobile-ribbon-icon'} aria-label={'Alignment: '+el.align} disabled={locked} onClick={()=>change({align:el.align==='left'?'center':el.align==='center'?'right':'left'})}><Icon name={el.align==='center'?'align_c':el.align==='right'?'align_r':'align_l'} size={16}/></button>
       {tool('Text styles','styles')}
       {tool('Weight and spacing','format','Spacing')}
     </>:<>
       {isIllustration(el) && tool('Flip','flip')}
       {tool('Size','size')}
       {trayToolsFor(el).includes('colour') && tool('Colour','colour',<><span className="mobile-ribbon-swatch" style={{background:el[colourKey(el)]}}/>Colour</>)}
-      {el.type==='image' && tool('Adjust image','adjust')}
-      {el.type==='image' && tool('Replace artwork','replace-artwork')}
+      {el.type==='image' && tool('Adjust image','adjust','Adjust')}
+      {el.type==='image' && tool('Replace artwork','replace-artwork','Replace')}
       {el.type==='icon' && tool('Change icon','replace-icon')}
       {el.type==='frame' && tool('Frame','frame')}
     </>}
