@@ -97,7 +97,7 @@ for(const look of ctx.looks){
     const cover=pages[0],cta=pages.at(-1);
     assert.equal(cta.bg.value,cover.bg.value);assert.equal(pages[1].bg.value,'#FFF9FC');
     assert.equal(cta.elements.find(e=>e.__role==='heading').color,cover.elements.find(e=>e.__role==='heading').color);
-    assert.equal(cta.elements.filter(e=>e.type==='icon'&&e.engagementAction).length,3);
+    assert.equal(cta.elements.filter(e=>e.ctaGroup&&e.engagementAction).length,1);
     assert(cta.elements.filter(ctx.isContentText).every(e=>e.y+ctx.textLayout(e).height<=cta.h-380));
     const saved={id:'saved',canvases:pages,contentWorkspaceSettings:settings,activeCanvasId:pages[0].id};
     const resumed=ctx.contentDraftFromProject(saved);

@@ -42,7 +42,7 @@ function prepareContentSlides(source,settings) {
   else if(settings.split==='paragraphs')chunks=source.replace(/\r/g,'').split(/\n\s*\n/).filter(s=>s.trim());
   else if(settings.split==='balanced')chunks=distributeCarouselText(source,Number(settings.count)||4);
   else chunks=[source];
-  return contentCarouselSlides(chunks.map((text,i)=>({...contentSlideFromChunk(text,settings.format==='post'?'post':i===0&&settings.cover?'hook':'content'),look:i===0?'gentle':'informative'})),settings);
+  return contentCarouselSlides(chunks.map((text,i)=>({...contentSlideFromChunk(text,settings.format==='post'?'post':i===0&&settings.cover?'hook':'content'),look:i===0?'gentle':'informative',sourceIndex:i,contentTone:Math.max(0,i-(settings.cover?1:0))%3})),settings);
 }
 function contentDraftNew(source='') {
   return {id:uid(),source,slides:[],settings:{size:'portrait',format:'carousel',split:'markers',count:4,cover:true,closing:true},index:0,caption:'',returnView:'home',updatedAt:now()};
@@ -63,7 +63,7 @@ function contentDraftFromPost(post) {
   const draft=contentDraftNew();
   const prepared={...draft,name:post.title,contentEntryId:post.id,caption:[post.caption,post.hashtags].filter(Boolean).join('\n\n'),footerLine:post.footerLine||'',returnView:'ready-content',
     settings:{...draft.settings,size:post.defaultSize||'portrait',format:slides.length===1?'post':'carousel'},
-    slides:slides.map((s,i)=>{const slide=contentSlideFromChunk(s.title+'\n'+(s.body||''),slides.length===1?'post':i===0?'hook':'content');if(i===0&&post.footerLine)slide.blocks.push(contentBlock('body',post.footerLine));return {...slide,look:i===0?contentLook(post.stylePair).id:'informative',photo:!!s.photo};}),
+    slides:slides.map((s,i)=>{const slide=contentSlideFromChunk(s.title+'\n'+(s.body||''),slides.length===1?'post':i===0?'hook':'content');if(i===0&&post.footerLine)slide.blocks.push(contentBlock('body',post.footerLine));return {...slide,look:i===0?contentLook(post.stylePair).id:'informative',sourceIndex:i,contentTone:Math.max(0,i-1)%3,photo:!!s.photo};}),
     source:slides.map(s=>'# '+s.title+'\n'+(s.body||'')).join('\n\n')};
   return {...prepared,appliedSource:prepared.source,slides:contentCarouselSlides(prepared.slides,prepared.settings)};
 }
@@ -75,7 +75,7 @@ function contentDraftFromProject(project) {
   const result={...draft,projectId:project.id,name:project.name,caption:project.caption||'',returnView:'editor',
     index:Math.max(0,project.canvases.findIndex(c=>c.id===project.activeCanvasId)),
     settings:{...draft.settings,size:project.canvases[0]?.h===1080?'post':'portrait',format:project.canvases.length===1?'post':'carousel',...(project.carouselSettings?{split:project.carouselSettings.count?'balanced':'markers',count:project.carouselSettings.count||4,cover:!!project.carouselSettings.cover,closing:!!project.carouselSettings.outro}:{}),...project.contentWorkspaceSettings},
-    slides:project.canvases.map(c=>({id:c.id,kind:c.slideKind||'content',standardCta:!!c.standardCta,look:c.contentLook||'gentle',originalCanvas:c,
+    slides:project.canvases.map((c,i)=>({id:c.id,kind:c.slideKind||'content',standardCta:!!c.standardCta,look:c.contentLook||'gentle',sourceIndex:i,contentTone:c.contentTone||0,originalCanvas:c,
       blocks:c.elements.filter(isContentText).slice().sort((a,b)=>a.y-b.y||a.x-b.x).map(e=>({id:e.contentBlockId||e.id,role:e.__role==='heading'?'heading':e.__role==='sub'?'sub':'body',text:e.text,hidden:!!e.hidden})),
       // Keep user-added photos, shapes and illustrations when restyling a saved canvas.
       assets:c.elements.filter(e=>e.type!=='text'&&!e.fromBrand&&!e.endpointDecoration&&!e.contentDecoration&&!e.engagementAction&&!e.brandSlot)
@@ -92,18 +92,18 @@ function renderContentSlide(slide,settings,brand,options={}) {
   if(slide.originalCanvas&&!options.force)return applyBrandSlideFonts(slide.originalCanvas,brand);
   const standard=!!slide.standardCta;
   const look=contentLook(options.look||slide.look),W=1080,H=settings.size==='post'?1080:1350;
-  const floralBackground=!!look.background&&!standard;
-  const c={id:slide.id,name:slide.kind==='hook'?'Cover':slide.kind==='cta'?'Closing slide':'Slide',slideKind:slide.kind,standardCta:standard,contentLook:look.id,w:W,h:H,bg:{type:'color',value:look.bg},elements:[]};
-  const els=c.elements,m=86,top=standard?100:slide.kind==='content'?130:180,bottom=floralBackground?H*1153/1350-34:H-(standard?380:210);
+  const middle=slide.kind==='content'&&!standard&&(options.slideNumber??((slide.sourceIndex??1)+1))>1,floralBackground=!!look.background&&!standard&&!middle;
+  const background=middle&&look.id==='informative'?['#FFF9FC','#FCF8F2','#F5F8F3'][slide.contentTone||0]:look.bg;
+  const c={id:slide.id,name:slide.kind==='hook'?'Cover':slide.kind==='cta'?'Closing slide':'Slide',slideKind:slide.kind,standardCta:standard,contentLook:look.id,contentTone:slide.contentTone||0,w:W,h:H,bg:{type:'color',value:background},elements:[]};
+  const els=c.elements,m=86,top=standard?100:slide.kind==='content'?130:floralBackground?180:Math.max(180,102+Math.max(48,Math.min(180,Number(brand.coverLogoSize)||88))),bottom=floralBackground?H*1153/1350-34:H-(standard?380:210);
   if(floralBackground){
     // Fit the complete uploaded artwork, including its footer, in either ratio.
     const width=H*1080/1350;
     els.push(newElement('image',{src:look.background,x:(W-width)/2,y:0,w:width,h:H,locked:true,fromBrand:true,contentDecoration:true}));
   }
   const shape=(type,patch)=>els.push(newElement(type,{...patch,contentDecoration:true}));
-  if(standard||look.layout==='frame')shape('rect',{x:30,y:30,w:W-60,h:H-60,fill:'transparent',stroke:look.accent,strokeWidth:3,radius:0});
-  if(!standard&&look.layout==='editorial')shape('rect',{x:0,y:H-175,w:W,h:175,fill:look.accent,radius:0});
-  if(!standard&&!floralBackground&&look.family==='Floral')shape('circle',{x:W-190,y:65,w:90,h:90,fill:look.accent});
+  if(standard||(!middle&&look.layout==='frame'))shape('rect',{x:30,y:30,w:W-60,h:H-60,fill:'transparent',stroke:look.accent,strokeWidth:3,radius:0,contentFrame:true});
+  if(!standard&&!middle&&look.layout==='editorial')shape('rect',{x:0,y:H-175,w:W,h:175,fill:look.accent,radius:0});
   const blocks=applyBrandSlideFonts({elements:slide.blocks.map(b=>newElement('text',{...SLIDE_TEXT_STYLES[b.role==='heading'?'h1':b.role==='sub'?'h2':'body'],__role:b.role,contentBlockId:b.id,text:b.text,hidden:!!b.hidden,x:m,y:top,w:W-m*2,fontSize:b.role==='heading'?(slide.kind==='content'?76:124):b.role==='sub'?58:44,
     ...(standard?{fontSize:b.role==='heading'?78:34}:{}),
     fontFamily:!standard&&look.layout==='bold'?'Montserrat':b.role==='body'?'Montserrat':'DM Serif Display',fontWeight:!standard&&look.layout==='bold'&&b.role==='heading'?800:400,
@@ -117,7 +117,7 @@ function renderContentSlide(slide,settings,brand,options={}) {
   if(slide.photo)shape('rect',{x:m,y:photoY,w:W-m*2,h:Math.round(H*.22),fill:'#E8D8E3',radius:16});
   els.push(...(slide.assets||[]));
   if(standard)els.push(...ctaEngagementElements(c,look.ink));
-  const branding=floralBackground?[]:brandBackgroundElements(slide.kind==='hook'?'hook':'signature',c,brand);
+  const branding=floralBackground?[]:brandBackgroundElements(standard?'content-closing':middle?'content-footer':slide.kind==='hook'?'content-cover':'content-closing',c,brand);
   branding.forEach(e=>{if(e.type==='text')e.color=look.ink;});els.push(...branding);
   if(slide.footerLine)els.push(newElement('text',{text:slide.footerLine,__role:'body',contentBlockId:slide.footerId,x:m,y:H-290,w:W-m*2,fontSize:30,fontFamily:'Montserrat',color:look.ink}));
   return c;
@@ -187,7 +187,7 @@ function ContentWorkspace() {
   React.useEffect(()=>{let live=true;setFonts(false);loadCarouselFonts(state.brand).then(()=>{if(live)setFonts(true);}).catch(()=>{if(live)setFonts(true);});return()=>{live=false;};},[state.brand.slideFontHeading,state.brand.slideFontSubheading]);
   const patch=(changes,history=false)=>{if(history){undo.current.push(draft);undo.current=undo.current.slice(-40);redo.current=[];}dispatch({type:'set-content-draft',draft:{...draft,...changes,updatedAt:now()}});setError('');};
   const travel=(from,to)=>{const next=from.current.pop();if(next){to.current.push(draft);dispatch({type:'set-content-draft',draft:next});}};
-  const canvases=React.useMemo(()=>draft?.slides?.map(s=>renderContentSlide(s,draft.settings,state.brand))||[],[draft?.slides,draft?.settings,state.brand,fonts]);
+  const canvases=React.useMemo(()=>draft?.slides?.map((s,i)=>renderContentSlide(s,draft.settings,state.brand,{slideNumber:i+1,totalSlides:draft.slides.length}))||[],[draft?.slides,draft?.settings,state.brand,fonts]);
   if(!draft)return <p role="status">Opening your text workspace…</p>;
   const index=Math.min(draft.index||0,Math.max(0,draft.slides.length-1)),slide=draft.slides[index],canvas=canvases[index],overflow=canvases.map((c,i)=>contentOverflow(c)?i:-1).filter(i=>i>=0);
   const fitScale=canvas?Math.min((stageSize.w-24)/canvas.w,(stageSize.h-24)/canvas.h):1;
@@ -201,7 +201,7 @@ function ContentWorkspace() {
   const prepare=()=>{try{const slides=prepareSourceUpdate({...draft,settings:sourceSettings});if(draft.slides.length)setReview({slides,source:draft.source,original:contentSlidesSource(draft.slides,settings),settings:sourceSettings,label:'Review updated slides'});else{patch({slides,index:0,appliedSource:draft.source},true);setTab('design');}}catch(e){setError(e.message);}};
   const previewSplit=()=>{try{const next=contentSplitSlide(slide),slides=[...draft.slides.slice(0,index),...next,...draft.slides.slice(index+1)],splitSettings={...settings,split:'markers'};setReview({slides,source:contentSlidesSource(slides,splitSettings),settings:splitSettings,original:draft.source,label:'Review split into two slides'});}catch(e){setError(e.message);}};
   const back=()=>{if(draft.projectId)dispatch({type:'open-project',id:draft.projectId});else dispatch({type:'set-view',view:draft.returnView||'home'});};
-  const proceed=async()=>{setBusy(true);try{await loadCarouselFonts(state.brand);const pages=draft.slides.map(s=>renderContentSlide(s,settings,state.brand));const original=state.projects.find(p=>p.id===draft.projectId);const project={...(original||{}),id:original?.id||uid(),name:draft.name||draft.slides[0]?.blocks[0]?.text?.slice(0,65)||'My design',createdAt:original?.createdAt||now(),updatedAt:now(),canvases:pages,activeCanvasId:pages[index].id,projectType:pages.length===1?'post':'carousel',caption:draft.caption,captionDetached:true,contentWorkspaceSettings:settings,generatedSourceText:draft.appliedSource??draft.source,sourceText:original?.sourceText??draft.source,sourceDraft:draft.source,contentEntryId:draft.contentEntryId||original?.contentEntryId,thumbnail:null};dispatch({type:'finish-content-draft',project});try{sessionStorage.removeItem('wpr-social-create-draft');}catch{}}catch(e){setError(e.message);}finally{setBusy(false);}};
+  const proceed=async()=>{setBusy(true);try{await loadCarouselFonts(state.brand);const pages=draft.slides.map((s,i)=>renderContentSlide(s,settings,state.brand,{slideNumber:i+1,totalSlides:draft.slides.length}));const original=state.projects.find(p=>p.id===draft.projectId);const project={...(original||{}),id:original?.id||uid(),name:draft.name||draft.slides[0]?.blocks[0]?.text?.slice(0,65)||'My design',createdAt:original?.createdAt||now(),updatedAt:now(),canvases:pages,activeCanvasId:pages[index].id,projectType:pages.length===1?'post':'carousel',caption:draft.caption,captionDetached:true,contentWorkspaceSettings:settings,generatedSourceText:draft.appliedSource??draft.source,sourceText:original?.sourceText??draft.source,sourceDraft:draft.source,contentEntryId:draft.contentEntryId||original?.contentEntryId,thumbnail:null};dispatch({type:'finish-content-draft',project});try{sessionStorage.removeItem('wpr-social-create-draft');}catch{}}catch(e){setError(e.message);}finally{setBusy(false);}};
   const previewAi=async()=>{
     setBusy(true);setError('');
     try{
@@ -224,7 +224,7 @@ function ContentWorkspace() {
       <div className="cw-style-heading"><span>{single?'Post style':'Cover style'}</span><label className="cw-style-filter"><span className="cw-entry-sr">Style family</span><select value={family} onChange={e=>setFamily(e.target.value)}>{['All','Floral','Editorial','Bold'].map(f=><option key={f} value={f}>{f==='All'?'All styles':f}</option>)}</select></label><details className="cw-style-info"><summary aria-label="About cover styles">ⓘ</summary><p>{single?'Select a colour card to preview its style.':'Cover and closing slide share the selected colours. Content slides keep their layout.'}</p></details></div>
       <div ref={styleStrip} className="cw-template-strip cw-color-styles" aria-label="Cover styles">{CONTENT_LOOKS.filter(l=>family==='All'||l.family===family).map(l=><button key={l.id} className="cw-look" style={{background:l.bg,color:l.ink}} aria-pressed={(single?slide:coverSlide).look===l.id} onClick={()=>patch(contentWithLook(draft,l.id),true)}><span>{l.name}</span>{(single?slide:coverSlide).look===l.id&&<span aria-hidden="true">✓</span>}</button>)}</div></section>
     </>:<div className="cw-empty"><h2>Your words, your look.</h2><p>Prepare your slides once. Then tap the template strip to compare designs using your own text.</p>{mobile&&<button onClick={()=>setTab('text')}>Enter your text</button>}</div>}</main></div></div>
-    {error&&<p className="cw-error" role="alert">{error}</p>}<SaveErrorBanner/><footer className="cw-footer"><span>{canvases.length?`${single?'Single post':canvases.length+' slides'}${overflow.length?` · check ${overflow.length} for overflow`:''}`:'Start with your words'}</span><button className="cw-primary" disabled={busy||!canvas} onClick={proceed}>{busy?'Preparing…':sourceChanged?'Continue with current slides':'Continue editing'}</button></footer>
+    {error&&<p className="cw-error" role="alert">{error}</p>}<SaveErrorBanner/><footer className={"cw-footer"+(sourceChanged?" cw-footer-pending":"")}><span>{canvases.length?`${single?'Single post':canvases.length+' slides'}${overflow.length?` · check ${overflow.length} for overflow`:''}`:'Start with your words'}</span>{sourceChanged?<div className="cw-update-choice"><p role="status">Text changes saved. Update slides to apply.</p><div className="cw-choice-actions" role="group" aria-label="Apply source changes"><button disabled={busy||!canvas} onClick={proceed} title="Continue with the current slides. Your text draft stays saved.">Keep current</button><button className="cw-primary" disabled={busy||!draft.source.trim()} onClick={()=>{document.activeElement?.blur();prepare();}}>Update slides</button></div></div>:<button className="cw-primary" disabled={busy||!canvas} onClick={proceed}>{busy?'Preparing…':'Continue editing'}</button>}</footer>
     {contentReview}
   </div>;
 }
@@ -277,7 +277,7 @@ function ContentEntryScreen({draft,hasSlides=false,embedded=false,dirty=false,on
       {cleared&&<p className="cw-entry-clear-notice" role="status">Text cleared. Your post options are kept.</p>}
     </div></main>
     {!embedded&&<>{error&&<p className="cw-error" role="alert">{error}</p>}<SaveErrorBanner/></>}
-    {embedded?<footer className="cw-entry-footer cw-source-footer"><div className="cw-source-controls">{settings.format!=='post'&&settings.split!=='markers'&&!hasSlideMarks(source)&&<button className="cw-entry-link" onClick={()=>setOptions('split')}>Slide breaks: {settings.split==='balanced'?'Balanced':'Paragraphs'} · Change</button>}<button className="cw-entry-link" onClick={()=>setOptions('caption')}>Caption & hashtags</button></div><p role="status">{dirty?'Text changes saved · update slides to apply.':'Your words match the current slides.'}</p><button className="cw-primary" disabled={busy||!source.trim()||!dirty} onClick={()=>{field.current?.blur();onPrepare();}}>Update slides</button></footer>:<footer className="cw-entry-footer"><div className="cw-entry-footer-inner"><button className="cw-entry-options" aria-haspopup="dialog" aria-expanded={!!options} onClick={()=>setOptions('post')} disabled={busy}><Icon name="menu" size={16}/><span>{settings.format==='post'?'Single post':'Carousel'} · {settings.size==='post'?'1:1':'4:5'}{settings.format!=='post'&&` · ${splitLabel}`}</span><span aria-hidden="true">⌄</span></button>
+    {embedded?<footer className="cw-entry-footer cw-source-footer"><div className="cw-source-controls">{settings.format!=='post'&&settings.split!=='markers'&&!hasSlideMarks(source)&&<button className="cw-entry-link" onClick={()=>setOptions('split')}>Slide breaks: {settings.split==='balanced'?'Balanced':'Paragraphs'} · Change</button>}<button className="cw-entry-link" onClick={()=>setOptions('caption')}>Caption & hashtags</button></div></footer>:<footer className="cw-entry-footer"><div className="cw-entry-footer-inner"><button className="cw-entry-options" aria-haspopup="dialog" aria-expanded={!!options} onClick={()=>setOptions('post')} disabled={busy}><Icon name="menu" size={16}/><span>{settings.format==='post'?'Single post':'Carousel'} · {settings.size==='post'?'1:1':'4:5'}{settings.format!=='post'&&` · ${splitLabel}`}</span><span aria-hidden="true">⌄</span></button>
       <div className="cw-entry-actions"><button disabled={busy||!source.trim()} onClick={onPrepare}>{settings.format==='post'?'Prepare post':'Prepare slides'} <span aria-hidden="true">→</span></button><button className="cw-primary" disabled={busy||!source.trim()} onClick={onAi}><Icon name="sparkles" size={16}/>{busy?'Preparing…':'Improve with AI'}</button></div><p>Your words stay as written when you prepare {settings.format==='post'?'a post':'slides'}.</p>
     </div></footer>}
     {options&&(embedded?<ContentSourceOptions mode={options} settings={settings} caption={draft.caption} onClose={()=>setOptions(false)} onApply={changes=>{onChange(changes,true);setOptions(false);}}/>:<ContentEntryOptions settings={settings} caption={draft.caption} source={source} onClose={()=>setOptions(false)} onApply={(next,caption)=>{onChange({settings:next,caption},true);setOptions(false);}}/>)}{children}
@@ -322,8 +322,12 @@ function ContentSplitOptions({settings,source,onChange,showFormat=true}) {
   </div>;
 }
 function ContentReview({review,original,onCancel,onApply}) {
-  const ref=React.useRef(null);React.useEffect(()=>{ref.current.showModal();},[]);
-  return <dialog className="cw-review" ref={ref} onCancel={onCancel}><h2>{review.label}</h2>{review.source&&<details><summary>Original wording</summary><pre>{original}</pre></details>}<p>{review.slides.length} slides. Apply only when you are happy with the wording and breaks.</p>{review.slides.map((s,i)=><section key={s.id}><strong>Slide {i+1}</strong>{s.blocks.map(b=><p key={b.id} style={{whiteSpace:'pre-wrap'}}>{b.text}</p>)}</section>)}<div><button onClick={onCancel}>Keep current slides</button><button onClick={onApply}>Apply this version</button></div></dialog>;
+  const ref=React.useRef(null);React.useEffect(()=>{ref.current.showModal();ref.current.querySelector('h2')?.focus();},[]);
+  return <dialog className="cw-review" ref={ref} onCancel={onCancel} aria-labelledby="cw-review-title">
+    <header className="cw-review-header"><h2 id="cw-review-title" tabIndex={-1}>{review.label}</h2><p>{review.slides.length} slides. Check the wording and breaks before applying.</p></header>
+    <div className="cw-review-body">{review.source&&<details><summary>Original wording</summary><pre>{original}</pre></details>}{review.slides.map((s,i)=><section key={s.id}><strong>Slide {i+1}{s.standardCta?' · Closing':''}</strong>{s.blocks.map(b=><p key={b.id} style={{whiteSpace:'pre-wrap'}}>{b.text}</p>)}</section>)}</div>
+    <footer className="cw-review-footer cw-choice-actions"><button onClick={onCancel}>Keep current</button><button className="cw-primary" onClick={onApply}>Apply update</button></footer>
+  </dialog>;
 }
 
 function ProjectSourceEditor({project,caption}) {

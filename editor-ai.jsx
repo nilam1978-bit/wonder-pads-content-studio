@@ -25,7 +25,7 @@ const CONTENT_SEED = {
 
   vocab: [
     { id: 'v1', term: 'cloth pad', def: 'reusable cotton menstrual pad' },
-    { id: 'v2', term: 'reusable pad', def: "same thing, different name — often used by folks new to cloth" },
+    { id: 'v2', term: 'reusable pad', def: "same thing, different name, often used by folks new to cloth" },
     { id: 'v3', term: 'topper', def: 'the layer that touches your skin: printed cotton, with organic solid cotton options' },
     { id: 'v4', term: 'core', def: 'the absorbent layers in the middle; use the selected product specifications, not an assumed material' },
     { id: 'v5', term: 'backing', def: 'the layer facing your underwear; confirm the selected product construction before naming its materials' },
@@ -33,7 +33,7 @@ const CONTENT_SEED = {
     { id: 'v7', term: 'wing', def: 'the flaps that wrap under your undies with a snap' },
     { id: 'v8', term: 'snap width', def: 'distance from snap to snap when the wings are open' },
     { id: 'v9', term: 'length', def: 'from tip to tip along the pad' },
-    { id: 'v10', term: 'absorbency', def: 'how much liquid the pad holds — liner / light / reg / heavy / overnight' },
+    { id: 'v10', term: 'absorbency', def: 'how much liquid the pad holds, liner / light / reg / heavy / overnight' },
     { id: 'v11', term: 'postpartum', def: 'the weeks after giving birth; do not give blanket product or medical guidance' },
     { id: 'v12', term: 'made-to-order', def: 'each pad sewn after you buy it, not from a warehouse' },
   ],
@@ -58,7 +58,7 @@ const CONTENT_SEED = {
   products: [
     { id: 'p1', name: 'everyday regular', absorbency: 'regular', length: "10\"", snapWidth: "2.75\"",
       fabric: 'Printed cotton topper, with organic solid cotton options; confirm core and backing for this product', price: 18,
-      notes: 'our bestseller — most people order 3–5 of these' },
+      notes: 'our bestseller, most people order 3-5 of these' },
     { id: 'p2', name: 'overnight long', absorbency: 'overnight', length: "14\"", snapWidth: "2.75\"",
       fabric: 'Printed cotton topper, with organic solid cotton options; confirm core and backing for this product', price: 26,
       notes: 'extra core in the back third for sleeping' },
@@ -77,13 +77,13 @@ const CONTENT_SEED = {
   ],
 
   repurposeTemplates: {
-    'instagram-caption':  { label: 'Instagram caption',    hint: 'warm, chatty, 2–4 short paragraphs, ending with a soft CTA & question' },
-    'instagram-carousel': { label: 'Instagram carousel',   hint: 'N punchy slides — first is the hook, last is a soft CTA, middle slides are the meat. Return one slide per double-newline.', bridge: 'carousel', variableCount: true, defaultCount: 6, minCount: 3, maxCount: 10 },
-    'tiktok-hook':        { label: 'TikTok hook + script', hint: 'one killer hook line + a 30–45 sec spoken script' },
+    'instagram-caption':  { label: 'Instagram caption',    hint: 'warm, chatty, 2-4 short paragraphs, ending with a soft CTA & question' },
+    'instagram-carousel': { label: 'Instagram carousel',   hint: 'N punchy slides, first is the hook, last is a soft CTA, middle slides are the meat. Return one slide per double-newline.', bridge: 'carousel', variableCount: true, defaultCount: 6, minCount: 3, maxCount: 10 },
+    'tiktok-hook':        { label: 'TikTok hook + script', hint: 'one killer hook line + a 30-45 sec spoken script' },
     'facebook-post':      { label: 'Facebook post',        hint: 'slightly longer, more storytelling, friendly-community tone' },
     'youtube-shorts':     { label: 'YouTube Shorts',       hint: 'punchy title (under 60 chars) + 2-line description' },
-    'story-frames':       { label: 'Story frames',         hint: 'N tap-through frames — text-only, one sentence each, feels like texting. Return one frame per double-newline.', bridge: 'carousel', variableCount: true, defaultCount: 4, minCount: 3, maxCount: 8 },
-    'website-blurb':      { label: 'Website blurb',        hint: 'a warm 3–4 sentence intro suitable for the shop page or blog' },
+    'story-frames':       { label: 'Story frames',         hint: 'N tap-through frames, text-only, one sentence each, feels like texting. Return one frame per double-newline.', bridge: 'carousel', variableCount: true, defaultCount: 4, minCount: 3, maxCount: 8 },
+    'website-blurb':      { label: 'Website blurb',        hint: 'a warm 3-4 sentence intro suitable for the shop page or blog' },
     'reel-hook':          { label: 'Reel hooks (5)',       hint: '5 different opening lines to grab attention in 3 seconds' },
   },
 };
@@ -112,7 +112,7 @@ async function aiComplete({ messages, provider = 'built-in' }) {
 }
 
 // Refresh only exact shipped defaults; leave personalised copy and designs alone.
-const WONDER_PREVIOUS_COPY = {"aboutLine":"handmade reusable cloth pads, made with love — cotton woven tops, bamboo hemp cores, soft fleece backing.","vocab":[{"term":"cloth pad","def":"reusable cotton menstrual pad"},{"term":"reusable pad","def":"same thing, different name — often used by folks new to cloth"},{"term":"topper","def":"the top layer that touches your skin — ours is cotton woven"},{"term":"core","def":"the absorbent layers in the middle — ours is bamboo hemp fleece"},{"term":"backing","def":"the outside/back layer — ours is soft shell fleece with hidden PUL"},{"term":"PUL","def":"polyurethane laminate — thin waterproof layer inside the backing"},{"term":"wing","def":"the flaps that wrap under your undies with a snap"},{"term":"snap width","def":"distance from snap to snap when the wings are open"},{"term":"length","def":"from tip to tip along the pad"},{"term":"absorbency","def":"how much liquid the pad holds — liner / light / reg / heavy / overnight"},{"term":"postpartum","def":"the weeks after giving birth — needs heaviest absorbency"},{"term":"made-to-order","def":"each pad sewn after you buy it, not from a warehouse"}],"copyBlocks":[{"id":"wash-basic","content":"hi! so — rinse in cold water right after use (this is the trick that keeps stains away). then toss in with your regular wash on cold or warm, mild detergent, no fabric softener. line dry if you can, tumble low if you can't. that's it. no soaking, no stress. your pads will last for years."},{"id":"absorbency","content":"quick guide:\n• liner — spotting, discharge, backup\n• light — light days, teens, tweens\n• regular — most days for most bodies\n• heavy — heavy days, postpartum start of period\n• overnight — sleep, super heavy days, postpartum\n\nnot sure? most people love a set with 2 regulars + 1 heavy + 1 overnight to cover a whole cycle."},{"id":"day-vs-night","content":"day pads are shorter (usually 8–10\") so they sit comfy while you're moving around. night pads are longer (12–14\") with extra core in the back — because gravity is real when you sleep! both have the same soft cotton top and leakproof backing. it's really just about length + how much you bleed."},{"id":"first-time","content":"welcome!! okay so here's the honest truth: it's easier than you think. you snap it around your undies just like a disposable, wear it, rinse it after, wash it with your regular laundry. no special products. no soaking bin (unless you want one). the switch takes about one cycle to feel totally normal. and your body will thank you — no more that plastic-y feeling."},{"id":"shipping","content":"each pad is made by me, one at a time, so orders ship in 2–3 weeks. i'll email you when yours ships. custom orders take a little longer (3–4 weeks) — worth the wait, promise."},{"id":"materials","content":"top layer → 100% cotton woven (soft, breathable, gentle on skin)\ncore → bamboo hemp fleece (bamboo wicks moisture, hemp is antimicrobial, together they hold a LOT)\nbacking → soft shell fleece with a hidden PUL layer (waterproof but breathable)\n\nno plastic against your skin. ever."},{"id":"stains","content":"real talk — some staining is normal and totally fine. it doesn't affect how the pad works. but if you want them looking fresh: rinse in cold water immediately (never hot — hot sets blood stains), and lay them in the sun for a few hours after washing. sunshine bleaches stains like magic. no lie."}],"productFabrics":["cotton woven top, bamboo hemp core, soft shell fleece back","cotton woven top, double bamboo hemp core, soft shell fleece back","cotton woven top, single bamboo layer, soft shell fleece back"]};
+const WONDER_PREVIOUS_COPY = {"aboutLine":"handmade reusable cloth pads, made with love, cotton woven tops, bamboo hemp cores, soft fleece backing.","vocab":[{"term":"cloth pad","def":"reusable cotton menstrual pad"},{"term":"reusable pad","def":"same thing, different name, often used by folks new to cloth"},{"term":"topper","def":"the top layer that touches your skin, ours is cotton woven"},{"term":"core","def":"the absorbent layers in the middle, ours is bamboo hemp fleece"},{"term":"backing","def":"the outside/back layer, ours is soft shell fleece with hidden PUL"},{"term":"PUL","def":"polyurethane laminate, thin waterproof layer inside the backing"},{"term":"wing","def":"the flaps that wrap under your undies with a snap"},{"term":"snap width","def":"distance from snap to snap when the wings are open"},{"term":"length","def":"from tip to tip along the pad"},{"term":"absorbency","def":"how much liquid the pad holds, liner / light / reg / heavy / overnight"},{"term":"postpartum","def":"the weeks after giving birth, needs heaviest absorbency"},{"term":"made-to-order","def":"each pad sewn after you buy it, not from a warehouse"}],"copyBlocks":[{"id":"wash-basic","content":"hi! so, rinse in cold water right after use (this is the trick that keeps stains away). then toss in with your regular wash on cold or warm, mild detergent, no fabric softener. line dry if you can, tumble low if you can't. that's it. no soaking, no stress. your pads will last for years."},{"id":"absorbency","content":"quick guide:\n• liner, spotting, discharge, backup\n• light, light days, teens, tweens\n• regular, most days for most bodies\n• heavy, heavy days, postpartum start of period\n• overnight, sleep, super heavy days, postpartum\n\nnot sure? most people love a set with 2 regulars + 1 heavy + 1 overnight to cover a whole cycle."},{"id":"day-vs-night","content":"day pads are shorter (usually 8-10\") so they sit comfy while you're moving around. night pads are longer (12-14\") with extra core in the back, because gravity is real when you sleep! both have the same soft cotton top and leakproof backing. it's really just about length + how much you bleed."},{"id":"first-time","content":"welcome!! okay so here's the honest truth: it's easier than you think. you snap it around your undies just like a disposable, wear it, rinse it after, wash it with your regular laundry. no special products. no soaking bin (unless you want one). the switch takes about one cycle to feel totally normal. and your body will thank you, no more that plastic-y feeling."},{"id":"shipping","content":"each pad is made by me, one at a time, so orders ship in 2-3 weeks. i'll email you when yours ships. custom orders take a little longer (3-4 weeks), worth the wait, promise."},{"id":"materials","content":"top layer → 100% cotton woven (soft, breathable, gentle on skin)\ncore → bamboo hemp fleece (bamboo wicks moisture, hemp is antimicrobial, together they hold a LOT)\nbacking → soft shell fleece with a hidden PUL layer (waterproof but breathable)\n\nno plastic against your skin. ever."},{"id":"stains","content":"real talk, some staining is normal and totally fine. it doesn't affect how the pad works. but if you want them looking fresh: rinse in cold water immediately (never hot, hot sets blood stains), and lay them in the sun for a few hours after washing. sunshine bleaches stains like magic. no lie."}],"productFabrics":["cotton woven top, bamboo hemp core, soft shell fleece back","cotton woven top, double bamboo hemp core, soft shell fleece back","cotton woven top, single bamboo layer, soft shell fleece back"]};
 function refreshWonderBrandCopy(saved){
   if(saved.brand?.aboutLine===WONDER_PREVIOUS_COPY.aboutLine)saved.brand.aboutLine=CONTENT_SEED.aboutLine;
   saved.vocab=(saved.vocab||[]).map(v=>{
@@ -143,17 +143,17 @@ function buildBrandContext(brand, vocab) {
   // Style-rule lines — only add rules the user has enabled.
   const styleLines = [];
   if (rules.capitalizeSentences !== false) {
-    styleLines.push("Capitalise the first letter of every sentence. Sentence case throughout — do NOT write in all-lowercase.");
+    styleLines.push("Capitalise the first letter of every sentence. Sentence case throughout, do NOT write in all-lowercase.");
   } else {
-    styleLines.push("Use lowercase where it feels natural — soft, chatty, texting-a-friend energy.");
+    styleLines.push("Use lowercase where it feels natural, soft, chatty, texting-a-friend energy.");
   }
-  if (rules.avoidEmDashes !== false) {
-    styleLines.push("Do NOT use em-dashes (—) or en-dashes (–). Use commas, periods, or 'and' instead.");
+  {
+    styleLines.push("Do NOT use em dashes or en dashes. Use commas, periods, or 'and' instead. Use a short hyphen for numeric ranges.");
   }
 
   // Real examples are the strongest signal — model matches these better than any rule list.
   const examplesBlock = examples.length
-    ? `\n\nREAL POSTS FROM THIS BRAND (match this voice exactly — cadence, rhythm, sentence length, quirks):\n${examples.slice(0, 6).map((e, i) => `Example ${i + 1}${e.note ? ` (${e.note})` : ''}:\n"""\n${e.text.trim()}\n"""`).join('\n\n')}`
+    ? `\n\nREAL POSTS FROM THIS BRAND (match this voice exactly, cadence, rhythm, sentence length, quirks):\n${examples.slice(0, 6).map((e, i) => `Example ${i + 1}${e.note ? ` (${e.note})` : ''}:\n"""\n${e.text.trim()}\n"""`).join('\n\n')}`
     : '';
 
   return `You are writing social media copy for "${name}".
@@ -185,7 +185,7 @@ ${vocabLines || '- (no custom vocabulary defined)'}
 STYLE RULES (hard constraints):
 ${styleLines.map(l => '- ' + l).join('\n')}${examplesBlock}
 
-Write in the brand voice. Be warm, chatty, human. Never use emoji unless explicitly asked. Never use hashtags unless asked. Never invent facts about products. If you don't have info, keep it general. Keep it short and punchy — no filler.`;
+Write in the brand voice. Be warm, chatty, human. Never use emoji unless explicitly asked. Never use hashtags unless asked. Never invent facts about products. If you don't have info, keep it general. Keep it short and punchy, no filler.`;
 }
 
 // Idea starters — surface 10 post ideas tailored to this brand.
@@ -193,7 +193,7 @@ async function aiGenerateIdeas({ brand, vocab, products = [], recentSubjects = [
   const system = buildBrandContext(brand, vocab);
   const productList = products.slice(0, 8).map(p => `- ${p.name} (${p.absorbency || 'general'}${p.price ? `, $${p.price}` : ''})`).join('\n');
   const recentBlock = recentSubjects.length
-    ? `\n\nAVOID (recently posted about — pick fresh angles):\n${recentSubjects.slice(0, 8).map(s => `- ${s}`).join('\n')}`
+    ? `\n\nAVOID (recently posted about, pick fresh angles):\n${recentSubjects.slice(0, 8).map(s => `- ${s}`).join('\n')}`
     : '';
 
   const userPrompt = `Give me 10 short, distinct post ideas for this brand's social media.
@@ -232,9 +232,9 @@ function applyVoiceRules(text, brand) {
   const rules = (brand && brand.voiceRules) || {};
   let out = text;
 
-  if (rules.avoidEmDashes !== false) {
+  {
     // Replace em/en dash surrounded by spaces with ", ".
-    out = out.replace(/\s*[—–]\s*/g, ', ');
+    out = normalizeLongDashes(out);
     // Tighten any accidental double punctuation from the swap.
     out = out.replace(/,\s*,/g, ',').replace(/\.\s*,/g, '.').replace(/,\s*\./g, '.');
   }
@@ -264,7 +264,7 @@ function productContextBlock(product) {
   if (product.fabric)     bits.push(`Fabric: ${product.fabric}`);
   if (product.price)      bits.push(`Price: $${product.price}`);
   if (product.notes)      bits.push(`Notes: ${product.notes}`);
-  return `\n\nLINKED PRODUCT (talk about THIS specifically — use the real specs, don't invent):\nProduct: ${product.name}\n${bits.join('\n')}`;
+  return `\n\nLINKED PRODUCT (talk about THIS specifically, use the real specs, don't invent):\nProduct: ${product.name}\n${bits.join('\n')}`;
 }
 
 async function aiGenerate({ brand, vocab, task, input, platform, extra = '', product = null, provider = 'built-in' }) {
@@ -294,7 +294,7 @@ async function aiRepurposeAll({ brand, vocab, input, platforms, counts = {}, pro
       const n = counts[p] || tmpl.defaultCount || 6;
       hint = hint.replace(/\bN\b/, String(n));
     }
-    return `${p}: ${tmpl?.label || p} — ${hint}`;
+    return `${p}: ${tmpl?.label || p}, ${hint}`;
   }).join('\n');
 
   const system = buildBrandContext(brand, vocab);
@@ -333,12 +333,12 @@ Each string is the finished, ready-to-post copy. Use \\n for line breaks. No emo
 async function aiLaunchPack({ brand, vocab, product, angle, heroFact, carouselCount = 6, storyCount = 4 }) {
   const system = buildBrandContext(brand, vocab);
   const productDesc = `Product: ${product.name}
-Absorbency: ${product.absorbency || '—'}
-Length: ${product.length || '—'}
-Snap width: ${product.snapWidth || '—'}
-Fabric: ${product.fabric || '—'}
-Price: $${product.price || '—'}
-Notes: ${product.notes || '—'}`;
+Absorbency: ${product.absorbency || 'Not set'}
+Length: ${product.length || 'Not set'}
+Snap width: ${product.snapWidth || 'Not set'}
+Fabric: ${product.fabric || 'Not set'}
+Price: $${product.price || 'Not set'}
+Notes: ${product.notes || 'Not set'}`;
 
   const userPrompt = `You're writing a full social launch pack for this ${angle}.
 
@@ -348,9 +348,9 @@ ${heroFact ? `Hero fact / thing to lead with: ${heroFact}\n` : ''}
 Write ALL of the following pieces. Return ONLY a valid JSON object.
 
 Pieces:
-- "announcement": short punchy announcement (2-3 sentences) — the "it's happening" moment
+- "announcement": short punchy announcement (2-3 sentences), the "it's happening" moment
 - "instagram_caption": IG caption, warm & chatty, 2-4 short paragraphs, soft CTA at end
-- "carousel": array of exactly ${carouselCount} short slide texts — first is the hook, last is a soft CTA, middle slides are the highlights
+- "carousel": array of exactly ${carouselCount} short slide texts, first is the hook, last is a soft CTA, middle slides are the highlights
 - "tiktok_hook": one killer opening line (under 12 words)
 - "tiktok_script": 30-45 sec spoken script, natural + conversational
 - "facebook_post": slightly longer, warmer, more storytelling (3-5 short paragraphs)
@@ -451,9 +451,8 @@ function VoiceRulesBar() {
       <Chip label="Sentence case" active={rules.capitalizeSentences !== false}
         onClick={() => flip('capitalizeSentences')}
         title="Capitalise the first letter of every sentence" />
-      <Chip label="No em-dashes" active={rules.avoidEmDashes !== false}
-        onClick={() => flip('avoidEmDashes')}
-        title="Use commas and periods instead of — or –" />
+      <Chip label="Simple punctuation" active={true}
+        title="Generated copy uses commas and periods instead of long dashes" />
     </div>
   );
 }

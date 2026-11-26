@@ -31,9 +31,9 @@
     --cream:    #FDFBFC;
     --line:     #EADDE5;
     --line-2:   #D9C4D2;
-    --shadow-sm: 0 1px 2px rgba(150, 60, 120, .06), 0 2px 6px rgba(150, 60, 120, .04);
-    --shadow-md: 0 4px 14px rgba(150, 60, 120, .08), 0 12px 32px rgba(150, 60, 120, .06);
-    --shadow-lg: 0 12px 40px rgba(150, 60, 120, .12), 0 32px 80px rgba(150, 60, 120, .10);
+    --shadow-sm: 0 1px 2px rgba(150, 60, 120.06), 0 2px 6px rgba(150, 60, 120.04);
+    --shadow-md: 0 4px 14px rgba(150, 60, 120.08), 0 12px 32px rgba(150, 60, 120.06);
+    --shadow-lg: 0 12px 40px rgba(150, 60, 120.12), 0 32px 80px rgba(150, 60, 120.10);
   }
   html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
   body {
@@ -47,13 +47,13 @@
   #root { position:fixed; inset:0; top:var(--studio-viewport-top,0px); height:var(--studio-viewport-height,100dvh); width:100%; overflow:hidden; isolation:isolate; }
   html, body { width:100%; overscroll-behavior:none; }
   #root > * { min-width:0; }
-  .simple-shell, .simple-workspace, .sc-shell { width:100%; max-width:100%; min-width:0; min-height:0; box-sizing:border-box; }
-  .simple-content, .sc-main { overflow-x:hidden!important; overscroll-behavior:contain; scrollbar-gutter:stable; min-width:0; min-height:0; -webkit-overflow-scrolling:touch; }
-  .simple-inner, .sc-inner { width:100%; min-width:0; box-sizing:border-box; }
-  .simple-header, .sc-header, .simple-nav, .sc-footer { flex-shrink:0; }
-  .simple-nav, .ready-sections, .scroll { overscroll-behavior:contain; }
-  .simple-content img, .sc-main img { max-width:100%; }
-  @media(max-width:640px){.simple-content,.sc-main{scrollbar-gutter:auto;}}
+  .simple-shell.simple-workspace.sc-shell { width:100%; max-width:100%; min-width:0; min-height:0; box-sizing:border-box; }
+  .simple-content.sc-main { overflow-x:hidden!important; overscroll-behavior:contain; scrollbar-gutter:stable; min-width:0; min-height:0; -webkit-overflow-scrolling:touch; }
+  .simple-inner.sc-inner { width:100%; min-width:0; box-sizing:border-box; }
+  .simple-header.sc-header.simple-nav.sc-footer { flex-shrink:0; }
+  .simple-nav.ready-sections.scroll { overscroll-behavior:contain; }
+  .simple-content img.sc-main img { max-width:100%; }
+  @media(max-width:640px){.simple-content.sc-main{scrollbar-gutter:auto;}}
   button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; padding: 0; }
   input, textarea { font-family: inherit; }
   ::selection { background: var(--pink-400); color: white; }
@@ -91,7 +91,7 @@
     -webkit-appearance: none; appearance: none;
     height: 16px; width: 16px; border-radius: 50%;
     background: var(--pink-400); margin-top: -6px;
-    box-shadow: 0 2px 6px rgba(150, 60, 120, .3);
+    box-shadow: 0 2px 6px rgba(150, 60, 120.3);
     cursor: pointer;
   }
 
@@ -99,9 +99,9 @@
   /* Big, finger-friendly slider (font size, spacing, opacity...) */
   input[type=range].big-range{ height: 44px; flex: 1; min-width: 0; margin: 0; touch-action: pan-y; }
   input[type=range].big-range::-webkit-slider-runnable-track{ height: 8px; border-radius: 8px; background: var(--pink-200); }
-  input[type=range].big-range::-webkit-slider-thumb{ height: 30px; width: 30px; margin-top: -11px; background: var(--pink-500); border: 3px solid white; box-shadow: 0 2px 8px rgba(150,60,120,.4); }
+  input[type=range].big-range::-webkit-slider-thumb{ height: 30px; width: 30px; margin-top: -11px; background: var(--pink-500); border: 3px solid white; box-shadow: 0 2px 8px rgba(150,60,120.4); }
   input[type=range].big-range::-moz-range-track{ height: 8px; border-radius: 8px; background: var(--pink-200); }
-  input[type=range].big-range::-moz-range-thumb{ height: 24px; width: 24px; background: var(--pink-500); border: 3px solid white; box-shadow: 0 2px 8px rgba(150,60,120,.4); }
+  input[type=range].big-range::-moz-range-thumb{ height: 24px; width: 24px; background: var(--pink-500); border: 3px solid white; box-shadow: 0 2px 8px rgba(150,60,120.4); }
 
   /* color input reset */
   input[type=color]{
@@ -190,7 +190,7 @@
     position: absolute; width: 22px; height: 22px;
     background: white; border: 1.5px solid var(--pink-500);
     border-radius: 2px; box-sizing: border-box;
-    box-shadow: 0 1px 3px rgba(0,0,0,.15);
+    box-shadow: 0 1px 3px rgba(0,0,0.15);
     z-index: 3;
   }
   .handle::after { content: ''; position: absolute; inset: -6px; }
@@ -199,7 +199,7 @@
     position: absolute; width: 14px; height: 14px;
     background: var(--pink-500); border: 2px solid white;
     border-radius: 50%; cursor: grab;
-    box-shadow: 0 2px 6px rgba(0,0,0,.2);
+    box-shadow: 0 2px 6px rgba(0,0,0.2);
   }
   .snap-guide {
     position: absolute; background: var(--pink-500);
@@ -221,7 +221,7 @@
 
   /* modal */
   .modal-back {
-    position: fixed; inset: 0; background: rgba(42, 31, 42, .3);
+    position: fixed; inset: 0; background: rgba(42, 31, 42.3);
     backdrop-filter: blur(4px); z-index: 500;
     display: flex; align-items: center; justify-content: center;
   }
@@ -232,7 +232,7 @@
 
   /* Bottom sheet */
   .sheet-back {
-    position: fixed; inset: 0; background: rgba(42, 31, 42, .35);
+    position: fixed; inset: 0; background: rgba(42, 31, 42.35);
     backdrop-filter: blur(4px); z-index: 500;
     display: flex; align-items: flex-end;
     animation: fadeIn .18s ease-out;
@@ -240,9 +240,9 @@
   .sheet {
     background: white; width: 100%;
     border-top-left-radius: 20px; border-top-right-radius: 20px;
-    box-shadow: 0 -8px 32px rgba(150, 60, 120, .15);
+    box-shadow: 0 -8px 32px rgba(150, 60, 120.15);
     max-height: 85vh; display: flex; flex-direction: column;
-    animation: slideUp .22s cubic-bezier(.4, 0, .2, 1);
+    animation: slideUp .22s cubic-bezier(.4, 0.2, 1);
   }
   .sheet-handle {
     width: 44px; height: 4px; background: var(--line-2);
@@ -274,7 +274,7 @@
     /* Hide desktop-only elements */
     .desktop-only { display: none !important; }
 
-    /* Mobile-parity overrides — shared home components were built for wide layouts.
+    /* Mobile-parity overrides, shared home components were built for wide layouts.
        When they render on the mobile home, collapse internal grids and reduce padding. */
     .wpr-brand-kit-section { padding: 8px 16px 20px !important; }
     .wpr-brand-kit-section > div:last-child {
@@ -328,7 +328,7 @@
   .mobile-page-art { width: 100%; max-width: 220px; overflow: hidden; }
   .mobile-page-art svg { display: block; width: 100%; height: 100%; }
   .mobile-page-caption { display: flex; align-items: center; justify-content: space-between; padding-left: 5px; }
-  .mobile-page-caption button, .mobile-pages-overview header button { min-width: 44px; min-height: 44px; }
+  .mobile-page-caption button.mobile-pages-overview header button { min-width: 44px; min-height: 44px; }
   .mobile-page-actions { display: grid; background: white; border: 1px solid var(--line); border-radius: 9px; }
   .mobile-page-actions button { min-height: 44px; padding: 8px; text-align: left; }
   .mobile-page-actions button:disabled { opacity: .45; }
@@ -381,12 +381,12 @@
     bottom: 100%;
     background: #fff;
     border-top: 1px solid var(--line);
-    box-shadow: 0 -4px 12px rgba(42, 31, 42, .08);
+    box-shadow: 0 -4px 12px rgba(42, 31, 42.08);
   }
   .mobile-ribbon {
     display: flex;
     align-items: center;
-    height: 58px;
+    height: 50px;
     padding-inline: 4px;
     gap: 2px;
   }
@@ -409,20 +409,7 @@
   .mobile-ribbon-divider { flex: 0 0 1px; height: 26px; background: var(--line); margin-inline: 4px; }
   .mobile-ribbon-icon-group { display: flex; gap: 3px; }
   .mobile-ribbon-tool.mobile-ribbon-icon { width: 44px; padding: 0; }
-  .mobile-position-values {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(76px, 1.25fr);
-    gap: 8px;
-    margin-top: 8px;
-  }
-  .mobile-position-values label {
-    display: grid;
-    gap: 4px;
-    font-size: 10px;
-    color: var(--ink-3);
-  }
-  .mobile-position-values select { width: 100%; min-width: 0; }
-  .mobile-ribbon-tool, .mobile-ribbon-pin {
+  .mobile-ribbon-tool.mobile-ribbon-pin {
     display: inline-flex;
     flex: 0 0 auto;
     align-items: center;
@@ -438,7 +425,7 @@
     font-weight: 600;
     white-space: nowrap;
   }
-  .mobile-ribbon-tool[aria-pressed="true"], .mobile-ribbon-tool[aria-expanded="true"] {
+  .mobile-ribbon-tool[aria-pressed="true"].mobile-ribbon-tool[aria-expanded="true"] {
     background: var(--pink-100);
     color: var(--pink-600);
   }
@@ -449,9 +436,10 @@
     gap: 3px;
     font-size: 10px;
   }
-  .mobile-ribbon-arrow { color: var(--ink-2); border-left: 1px solid var(--line); border-radius: 0; }
-  .mobile-ribbon-arrow:disabled { display: none; }
-  .mobile-ribbon-done { background: var(--pink-100); color: var(--pink-600); }
+  .mobile-ribbon-menu { color: var(--ink-2); border-left: 1px solid var(--line); border-radius: 0; }
+  .mobile-ribbon-fixed-actions { display:flex;flex:0 0 auto;align-items:center;gap:2px;padding-left:4px;border-left:1px solid var(--line);background:white; }
+  .mobile-ribbon-done { width:44px;padding:0;background:var(--pink-600);color:white;box-shadow:0 1px 4px rgba(120,38,95.22); }
+  .mobile-ribbon-done:focus-visible { outline:3px solid var(--pink-400);outline-offset:1px; }
   .mobile-ribbon-swatch { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--line); }
   .mobile-ribbon-panel {
     position: absolute;
@@ -463,7 +451,7 @@
     background: #fff;
     border: 1px solid var(--line);
     border-radius: 14px;
-    box-shadow: 0 6px 24px rgba(80, 30, 70, .18);
+    box-shadow: 0 6px 24px rgba(80, 30, 70.18);
     overflow: hidden;
   }
   .mobile-ribbon-panel header {
@@ -518,7 +506,7 @@
     // ONE version number for every app file. Change it each time you upload new files,
     // so phones and browsers fetch the fresh copies instead of reusing old ones.
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
-      const APP_VERSION = '2026-11-26-source-panel-colour-styles';
+      const APP_VERSION = '2026-11-26-compact-update-review';
     document.write('<link rel="stylesheet" href="content-workspace.css?v=' + APP_VERSION + '">');
     // Files load in this order. The data file is plain JavaScript; the rest are React (.jsx).
     const APP_FILES = [

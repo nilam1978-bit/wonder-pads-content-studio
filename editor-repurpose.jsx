@@ -243,7 +243,7 @@ function RepurposeScreen() {
       setActiveVariant({});  // reset all to variant 0
     } catch (e) {
       console.error(e);
-      toast(e.message || 'generation failed — try again');
+      toast(e.message || 'generation failed, try again');
       setOutputs({});
     }
     setLoading(false);
@@ -325,7 +325,7 @@ function RepurposeScreen() {
       setIdeas(list);
     } catch (e) {
       console.error(e);
-      toast('couldn\'t load ideas — try again');
+      toast('couldn\'t load ideas, try again');
       setShowIdeas(false);
     }
     setIdeasLoading(false);
@@ -497,7 +497,7 @@ function RepurposeScreen() {
                     </button>
                   ))}
                   {state.copyBlocks.length === 0 && (
-                    <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>No copy blocks yet — add them in Brand Kit.</div>
+                    <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>No copy blocks yet, add them in Brand Kit.</div>
                   )}
                 </div>
               </div>

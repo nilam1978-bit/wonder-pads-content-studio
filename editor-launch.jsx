@@ -6,7 +6,7 @@ const LAUNCH_PIECES = [
   { key: 'instagram_caption',  label: 'Instagram caption',  icon: 'instagram', hint: 'warm, chatty' },
   { key: 'carousel',           label: 'Instagram carousel', icon: 'carousel', hint: '6 slides', bridge: 'carousel' },
   { key: 'tiktok_hook',        label: 'TikTok hook',        icon: 'tiktok', hint: 'one killer line' },
-  { key: 'tiktok_script',      label: 'TikTok script',      icon: 'tiktok', hint: '30–45 sec spoken' },
+  { key: 'tiktok_script',      label: 'TikTok script',      icon: 'tiktok', hint: '30-45 sec spoken' },
   { key: 'facebook_post',      label: 'Facebook post',      icon: 'facebook', hint: 'longer, storytelling' },
   { key: 'story_frames',       label: 'Story frames',       icon: 'story', hint: '4 tap-through frames', bridge: 'carousel' },
   { key: 'website_blurb',      label: 'Website blurb',      icon: 'website', hint: 'shop page intro' },
@@ -138,7 +138,7 @@ function LaunchScreen() {
       setOutputs(results);
     } catch (e) {
       console.error(e);
-      toast('generation failed — try again');
+      toast('generation failed, try again');
       setOutputs(null);
     }
     setLoading(false);
@@ -268,7 +268,7 @@ function LaunchScreen() {
               Pick a product. <span style={{ fontStyle: 'italic', color: 'var(--pink-500)' }}>Get the whole pack.</span>
             </h1>
             <p style={{ margin: '10px 0 0', color: 'var(--ink-2)', fontSize: 15, maxWidth: 560, lineHeight: 1.5 }}>
-              8 pieces of copy in your voice — announcement, IG caption, carousel, TikTok, Facebook, story frames + more.
+              8 pieces of copy in your voice, announcement, IG caption, carousel, TikTok, Facebook, story frames + more.
             </p>
           </div>
 
@@ -306,7 +306,7 @@ function LaunchScreen() {
                 </div>
               ) : (
                 <div style={{ fontSize: 13, color: 'var(--ink-3)', padding: 12, background: 'var(--pink-50)', borderRadius: 10 }}>
-                  No products yet — add some in Brand Kit → Products.
+                  No products yet, add some in Brand Kit → Products.
                 </div>
               )}
             </div>
@@ -338,7 +338,7 @@ function LaunchScreen() {
             {/* Hero fact */}
             <div>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-                Hero fact <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--ink-3)', textTransform: 'none', letterSpacing: 0 }}>(optional — the "lead with this" thing)</span>
+                Hero fact <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--ink-3)', textTransform: 'none', letterSpacing: 0 }}>(optional, the "lead with this" thing)</span>
               </label>
               <input
                 type="text" value={heroFact} onChange={e => setHeroFact(e.target.value)}

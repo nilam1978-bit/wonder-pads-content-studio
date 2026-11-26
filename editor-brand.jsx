@@ -377,7 +377,7 @@ function BrandPanel() {
 
       <div style={{ marginTop: 14, padding: 10, background: 'var(--pink-50)', borderRadius: 10, fontSize: 11, color: 'var(--ink-3)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
         <Icon name="brand_kit" size={14} style={{ flexShrink: 0, marginTop: 1, color: 'var(--pink-500)' }} />
-        <span>Edit your brand kit on the studio home page — logo, name, tagline, handles and colors flow through here.</span>
+        <span>Edit your brand kit on the studio home page, logo, name, tagline, handles and colors flow through here.</span>
       </div>
     </>
   );
@@ -459,7 +459,7 @@ function BrandArrangements({ canvas, brand, dispatch }) {
           border: '1px dashed var(--line-2)',
         }}>
           <b>Add or select branding elements first.</b> Use the buttons above (logo, shop name,
-          handles or a placement preset) to add branding to this canvas — arrangements only
+          handles or a placement preset) to add branding to this canvas, arrangements only
           capture elements from the branding system.
         </div>
       )}
@@ -505,7 +505,7 @@ function BrandKitSection({ onOpenEditor }) {
             Brand kit
           </h2>
           <p style={{ margin: '2px 0 0', color: 'var(--ink-3)', fontSize: 13 }}>
-            Your logo, handles and colors — reused across every design
+            Your logo, handles and colors, reused across every design
           </p>
         </div>
         <button className="btn btn-tonal" onClick={() => setOpen(true)}>
@@ -605,6 +605,9 @@ function BrandKitModal({ onClose }) {
   const brand = state.brand;
   const fileRef = bR(null);
   const fontRequests = bR({});
+  const [logoTab,setLogoTab]=React.useState('presets');
+  const [logoSizeDraft,setLogoSizeDraft]=React.useState(String(brand.coverLogoSize||88));
+  React.useEffect(()=>setLogoSizeDraft(String(brand.coverLogoSize||88)),[brand.coverLogoSize]);
 
   const update = (patch) => dispatch({ type: 'update-brand', patch });
   const handleLogoUpload = (e) => {
@@ -656,6 +659,12 @@ function BrandKitModal({ onClose }) {
           </div>
         </ModalSection>
 
+        <ModalSection label="Cover logo size">
+          <div role="tablist" aria-label="Cover logo sizing" style={{display:'flex',gap:8,marginBottom:10}}>{[['presets','Presets'],['custom','Custom size']].map(([id,label])=><button key={id} role="tab" aria-selected={logoTab===id} className={'btn '+(logoTab===id?'btn-primary':'btn-tonal')} onClick={()=>setLogoTab(id)}>{label}</button>)}</div>
+          {logoTab==='presets'?<div style={{display:'flex',gap:8}}>{[[64,'Small'],[88,'Medium'],[140,'Large']].map(([size,label])=><button key={size} className="btn btn-tonal" aria-pressed={(brand.coverLogoSize||88)===size} onClick={()=>update({coverLogoSize:size})}>{label}</button>)}</div>:<label style={{display:'grid',gap:6,fontSize:12}}>Logo size on a 1080px slide (48 to 180px)<input aria-label="Cover logo size" className="text-input" type="number" min="48" max="180" value={logoSizeDraft} onChange={e=>setLogoSizeDraft(e.target.value)} onBlur={()=>{const n=Math.max(48,Math.min(180,Number(logoSizeDraft)||88));setLogoSizeDraft(String(n));update({coverLogoSize:n});}} /></label>}
+          <p style={{fontSize:12,color:'var(--ink-3)'}}>Applies to editable cover logos in previews and saved designs. Logos built into floral artwork keep their original size.</p>
+        </ModalSection>
+
         {/* Text */}
         <ModalSection label="Shop name">
           <input className="text-input" value={brand.shopName}
@@ -701,7 +710,8 @@ function BrandKitModal({ onClose }) {
                 <option value="">Use template font</option>
                 {ALL_FONT_OPTIONS.map(f=><option key={f.family} value={f.family}>{f.label}</option>)}
               </select>
-              <span style={{fontFamily:brand[key]||'inherit',fontSize:key==='slideFontHeading'?23:18}}>Your flow. Your comfort.</span>
+              <div role="group" aria-label={label+' style'} style={{display:'flex',flexWrap:'wrap',gap:8}}>{[['bold','Bold'],['italic','Italic'],['underline','Underline']].map(([style,name])=><button type="button" key={style} className={"btn "+(brand[key+'Style']?.[style]?'btn-primary':'btn-tonal')} aria-label={label+' '+name} aria-pressed={!!brand[key+'Style']?.[style]} onClick={e=>{e.preventDefault();update({[key+'Style']:{...brand[key+'Style'],[style]:!brand[key+'Style']?.[style]}});}}>{name}</button>)}<button type="button" className="btn btn-ghost" onClick={e=>{e.preventDefault();update({[key+'Style']:{}});}}>Reset style</button></div>
+              <span style={{fontFamily:brand[key]||'inherit',fontSize:key==='slideFontHeading'?23:18,fontWeight:brand[key+'Style']?.bold?700:400,fontStyle:brand[key+'Style']?.italic?'italic':'normal',textDecoration:brand[key+'Style']?.underline?'underline':'none'}}>Your flow. Your comfort.</span>
             </label>)}
           </div>
         </ModalSection>
@@ -777,7 +787,7 @@ function BrandKitModal({ onClose }) {
           </button>
         }>
           <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 12, lineHeight: 1.5 }}>
-            Paste 2–5 real posts you've written and love. The AI will match this tone more strongly than any rule — cadence, quirks, sentence length, everything.
+            Paste 2-5 real posts you've written and love. The AI will match this tone more strongly than any rule, cadence, quirks, sentence length, everything.
           </div>
           <div style={{ display: 'grid', gap: 10 }}>
             {(brand.voiceExamples || []).map((ex, idx) => (
@@ -804,7 +814,7 @@ function BrandKitModal({ onClose }) {
                 <textarea
                   value={ex.text}
                   onChange={e => dispatch({ type: 'update-voice-example', id: ex.id, patch: { text: e.target.value } })}
-                  placeholder="paste a real post here — caption, TikTok script, whatever you've actually written and love"
+                  placeholder="paste a real post here, caption, TikTok script, whatever you've actually written and love"
                   rows={4}
                   style={{
                     width: '100%', boxSizing: 'border-box', padding: 10,
@@ -824,7 +834,7 @@ function BrandKitModal({ onClose }) {
                 border: '1px dashed var(--line-2)',
                 color: 'var(--ink-3)', fontSize: 13,
               }}>
-                No examples yet. Click "Add a post" — even one or two will noticeably improve the AI's voice.
+                No examples yet. Click "Add a post", even one or two will noticeably improve the AI's voice.
               </div>
             )}
           </div>

@@ -35,7 +35,7 @@ const BIG_TEXT_STARTERS = [
       {type:'text',patch:{text:'“',fontFamily:'DM Serif Display',fontSize:400,color:'#D98BC6',x:80,y:60,w:300,h:400,align:'left'}},
       {type:'text',patch:{text:'your words or\na kind message\ngo here.',fontFamily:'DM Serif Display',fontSize:84,color:'#2A1F2A',x:100,y:340,w:880,h:460,italic:true,align:'left',lineHeight:1.2}},
       {type:'rect',patch:{fill:'#7d2960',x:100,y:840,w:60,h:3,radius:2}},
-      {type:'text',patch:{text:'— name, or a Wonder Pads customer',fontFamily:'Instrument Sans',fontSize:24,color:'#56454F',x:100,y:870,w:600,h:40,align:'left',letterSpacing:3}},
+      {type:'text',patch:{text:'name, or a Wonder Pads customer',fontFamily:'Instrument Sans',fontSize:24,color:'#56454F',x:100,y:870,w:600,h:40,align:'left',letterSpacing:3}},
       {type:'text',patch:{text:'thank you.',fontFamily:'Caveat',fontSize:64,color:'#C260A8',x:700,y:850,w:280,h:80,align:'right',italic:true}},
     ]},
   // Sage pop-up announcement
