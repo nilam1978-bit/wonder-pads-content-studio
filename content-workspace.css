@@ -81,6 +81,72 @@
 @media(max-width:639px){.cw-template-strip .cw-look{flex-basis:80px}.cw-look>div{max-width:60px}.cw-thumbnails button.cw-slide-arrow{flex-basis:36px;min-width:36px}}
 
 .cw-shell .cw-template-note{font-size:11px;line-height:1.4;margin:2px 0 6px;color:#705c6b}
+/* Focused first step: one writing surface and one post-options sheet. */
+.cw-entry-shell{background:#fcf6fa}
+.cw-entry-main{flex:1;min-height:0;display:flex;overflow:hidden}
+.cw-entry-paper{width:100%;max-width:920px;margin:0 auto;background:#fff;display:flex;flex-direction:column;min-height:0}
+.cw-entry-tabs{display:flex;gap:6px;margin:18px 24px 10px;padding:4px;border:1px solid #ead1e2;background:#fdf7fb;border-radius:12px;flex:none;align-self:flex-start}
+.cw-entry-tabs button{border:0;background:transparent;min-width:140px;font-size:13px;font-weight:600}
+.cw-entry-tabs button[aria-pressed=true]{background:#f1cfea;color:#78265f}
+.cw-entry-writing{min-height:0;flex:1;display:flex;flex-direction:column}
+.cw-entry-markers{display:flex;align-items:center;gap:8px;padding:8px 24px;background:white;flex:none}
+.cw-entry-markers button{min-height:40px;padding:7px 12px;background:#fcf3fa;font-size:13px;color:#893773}
+.cw-entry-markers .cw-entry-help{margin-left:auto;border-radius:50%;min-width:34px;width:34px;min-height:34px;padding:0;background:transparent}
+.cw-entry-shell .cw-entry-marker-help{margin:0;padding:2px 24px 10px;color:#776371;font-size:12px;flex:none}
+.cw-entry-field{position:relative;flex:1;min-height:0;display:flex}
+.cw-entry-shell textarea.cw-source{flex:1;min-height:0;height:100%;resize:none;overflow:auto;margin:0;border:0;border-radius:0;background:white;padding:20px 28px;font:16px/1.7 Montserrat,sans-serif;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.cw-entry-shell textarea.cw-source:focus-visible{outline:2px solid #893773;outline-offset:-4px}
+.cw-entry-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;text-align:center;pointer-events:none;overflow:auto}
+.cw-entry-empty>*{flex-shrink:0}.cw-entry-empty button{pointer-events:auto}
+.cw-entry-empty h2{max-width:310px;margin:0;font-size:26px}
+.cw-entry-shell .cw-entry-empty p{margin:0;color:#776371;font-size:14px}
+.cw-entry-empty-icon{width:44px;height:44px;border:1px solid #ead1e2;border-radius:14px;display:grid;place-items:center;background:#fdf7fb;color:#893773}
+.cw-entry-wordbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;margin:0 24px;border-top:1px solid #eadbe6;flex:none;min-height:50px;color:#776371;font-size:12px}
+.cw-entry-wordbar>div{display:flex;gap:10px;align-items:center}
+.cw-entry-shell .cw-entry-link{background:transparent;border:0;padding:6px 4px;font-size:12px;color:#893773}
+.cw-entry-shell .cw-entry-clear-notice{margin:0;padding:0 24px 8px;font-size:12px;color:#776371}
+.cw-entry-footer{flex:none;padding:12px 24px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid #eadbe6;background:#fff}
+.cw-entry-footer-inner{max-width:872px;margin:auto;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.cw-entry-shell .cw-entry-options{display:flex;align-items:center;justify-content:center;gap:8px;background:#fcf3fa;color:#893773;font-size:13px;max-width:100%;white-space:normal;text-align:left}
+.cw-entry-options>span:first-of-type{min-width:0;overflow-wrap:anywhere}
+.cw-entry-actions{display:flex;gap:8px;margin-left:auto}
+.cw-entry-actions button{display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;min-height:44px}
+.cw-entry-shell .cw-entry-footer p{width:100%;text-align:center;color:#776371;font-size:11px;line-height:1.4;margin:0}
+.cw-entry-examples{flex:1;min-height:0;overflow:auto;padding:32px 28px;display:flex;flex-direction:column;align-items:flex-start;gap:16px}
+.cw-entry-examples small{font-size:11px;letter-spacing:.1em;color:#776371}.cw-entry-examples h2,.cw-entry-examples p{margin:0}
+.cw-entry-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.cw-entry-dialog{width:min(440px,calc(100% - 24px));max-height:calc(var(--studio-viewport-height,100dvh) - 24px);padding:0;border:1px solid #decbd9;border-radius:20px;color:#2a1f2a;background:white;font:14px/1.5 Montserrat,sans-serif;overflow:auto;overscroll-behavior:contain}
+.cw-entry-dialog::backdrop{background:#2a1f2a70}
+.cw-entry-dialog form{display:flex;flex-direction:column;max-height:calc(var(--studio-viewport-height,100dvh) - 26px)}
+.cw-entry-dialog header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px 14px;border-bottom:1px solid #eadbe6;flex:none}
+.cw-entry-dialog header h2{font:23px 'DM Serif Display',serif;margin:0}
+.cw-entry-dialog header button{border:0;border-radius:50%;width:40px;min-height:40px;padding:0;background:#f7e1f0;font-size:23px}
+.cw-entry-dialog-content{overflow:auto;min-height:0;padding:18px 20px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.cw-entry-dialog fieldset{border:0;padding:0;margin:0 0 18px;min-width:0}
+.cw-entry-dialog legend{font-weight:600;margin-bottom:8px;font-size:13px}
+.cw-entry-choices{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cw-entry-choices button{display:flex;align-items:center;justify-content:center;gap:8px;background:#fdf9fc;font-size:13px;padding:12px 8px}
+.cw-entry-ratio{display:block;width:18px;height:23px;border:1.5px solid currentColor;border-radius:3px;flex:none}
+.cw-entry-ratio.post{width:23px}
+.cw-entry-dialog .cw-split-options p,.cw-entry-dialog .cw-entry-total{font-size:12px;color:#776371;line-height:1.5;margin:12px 0}
+.cw-entry-dialog .cw-entry-total{color:#78265f;font-weight:600}
+.cw-entry-dialog footer{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid #eadbe6;flex:none;background:white}
+.cw-entry-dialog footer button{min-height:44px}.cw-entry-dialog footer .cw-primary{flex:1}
+.cw-entry-dialog input:focus-visible,.cw-entry-dialog textarea:focus-visible,.cw-entry-dialog select:focus-visible{outline:2px solid #893773;outline-offset:2px}
+@media(max-width:639px){
+  .cw-entry-tabs{margin:12px 16px 8px;align-self:stretch}.cw-entry-tabs button{min-width:0;flex:1;font-size:12px}
+  .cw-entry-markers{padding:6px 16px}.cw-entry-markers button{min-height:44px;font-size:12px}
+  .cw-entry-markers .cw-entry-help{width:44px;min-height:44px}
+  .cw-entry-shell textarea.cw-source{padding:16px 20px}
+  .cw-entry-empty h2{font-size:24px}.cw-entry-empty{gap:12px;padding:16px}
+  .cw-entry-wordbar{margin:0 16px;min-height:46px;font-size:11px}
+  .cw-entry-footer{padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px))}
+  .cw-entry-footer-inner{gap:9px}.cw-entry-actions{width:100%;margin-left:0}.cw-entry-actions button{flex:1;min-width:0;font-size:12px;padding:10px 8px}
+  .cw-entry-shell .cw-entry-options{min-height:44px;font-size:12px}.cw-entry-shell .cw-entry-footer p{font-size:11px}
+  .cw-entry-dialog{margin:auto auto max(12px,env(safe-area-inset-bottom,0px));border-radius:18px}
+  .cw-entry-dialog-content{padding:16px}.cw-entry-dialog header{padding:14px 16px}.cw-entry-dialog footer{padding-inline:16px}
+}
+@media(max-height:620px){.cw-entry-empty{gap:8px;justify-content:flex-start}.cw-entry-empty-icon{display:none}.cw-entry-empty h2{font-size:21px}.cw-entry-shell .cw-entry-empty p{font-size:12px}}
 /* A phone has one vertical workspace scroller. Preview/strip gestures may chain to it. */
 @media(max-width:639px){
   .cw-body{overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:auto;-webkit-overflow-scrolling:touch}

@@ -141,6 +141,14 @@ function openContentWords(state,dispatch,source) {
   dispatch({type:'start-content-draft',draft:contentDraftNew(source)});
 }
 
+function contentMarkedLine(text,start,end,marker) {
+  const lineStart=text.slice(0,start).lastIndexOf('\n')+1;
+  const line=text.slice(lineStart),indent=line.match(/^[\t ]*/)[0];
+  const previous=line.slice(indent.length).match(/^#{1,2}(?:[\t ]+|(?=\n|$))/)?.[0]||'';
+  const prefix=indent+marker,removed=indent.length+previous.length;
+  const offset=prefix.length-removed;
+  return {text:text.slice(0,lineStart)+prefix+line.slice(removed),start:Math.max(lineStart+prefix.length,start+offset),end:Math.max(lineStart+prefix.length,end+offset)};
+}
 function ContentWorkspace() {
   const {state,dispatch}=useStore(),mobile=useIsMobile();
   const draft=state.contentDraft;
@@ -172,14 +180,25 @@ function ContentWorkspace() {
   const previewSplit=()=>{try{const next=contentSplitSlide(slide);setReview({slides:[...draft.slides.slice(0,index),...next,...draft.slides.slice(index+1)],label:'Review split into two slides'});}catch(e){setError(e.message);}};
   const back=()=>{if(draft.projectId)dispatch({type:'open-project',id:draft.projectId});else dispatch({type:'set-view',view:draft.returnView||'home'});};
   const proceed=async()=>{setBusy(true);try{await loadCarouselFonts(state.brand);const pages=draft.slides.map(s=>renderContentSlide(s,settings,state.brand));const original=state.projects.find(p=>p.id===draft.projectId);const project={...(original||{}),id:original?.id||uid(),name:draft.name||draft.slides[0]?.blocks[0]?.text?.slice(0,65)||'My design',createdAt:original?.createdAt||now(),updatedAt:now(),canvases:pages,activeCanvasId:pages[index].id,projectType:pages.length===1?'post':'carousel',caption:draft.caption,captionDetached:true,contentWorkspaceSettings:settings,generatedSourceText:draft.appliedSource??draft.source,sourceText:original?.sourceText??draft.source,sourceDraft:draft.source,contentEntryId:draft.contentEntryId||original?.contentEntryId,thumbnail:null};dispatch({type:'finish-content-draft',project});try{sessionStorage.removeItem('wpr-social-create-draft');}catch{}}catch(e){setError(e.message);}finally{setBusy(false);}};
+  const previewAi=async()=>{
+    setBusy(true);setError('');
+    try{
+      const result=await aiRepurposeAll({brand:state.brand,vocab:state.vocab,input:draft.source,platforms:['instagram-carousel'],counts:{'instagram-carousel':Number(settings.count)||4},provider:'gemini'});
+      const text=result['instagram-carousel'];
+      if(!text?.trim())throw new Error('AI returned no words. Your original text is kept.');
+      setReview({source:text,slides:prepareContentSlides(text,settings).map(s=>({...s,look:'gentle'})),label:'Review AI wording'});
+    }catch(e){setError(e.message);}finally{setBusy(false);}
+  };
+  const contentReview=review&&<ContentReview review={review} original={review.original??draft.source} onCancel={()=>{patch({sourceReview:null});setReview(null);}} onApply={()=>{patch({slides:review.slides,index:Math.min(index,review.slides.length-1),sourceReview:null,appliedSource:review.source??draft.source,...(review.source?{source:review.source}:{})},true);setReview(null);setTab('design');}}/>;
+  if(!slide)return <ContentEntryScreen key={draft.id} draft={draft} onChange={patch} onBack={back} onPrepare={prepare} onAi={previewAi} busy={busy} error={error}>{contentReview}</ContentEntryScreen>;
   const moreOptions=<details className="cw-more-options"><summary>More options</summary>
     {slide&&!slide.standardCta&&<>
     <button onClick={()=>patch({slides:draft.slides.map((s,i)=>i===index?{...s,originalCanvas:null,blocks:[...s.blocks,contentBlock('sub','')]}:s)},true)}>Add subheading</button></>}
     <label>{single?'Post ratio':'Slide ratio · whole carousel'}<select value={settings.size} onChange={e=>changeSetting('size',e.target.value)}><option value="portrait">Portrait · 4:5</option><option value="post">Square · 1:1</option></select></label>
   </details>;
-  const textPanel=<section className="cw-words"><h2>{slide?'Your slide text':'Your words'}</h2>{!slide?<><label htmlFor="cw-source">Paste your text</label><textarea id="cw-source" className="cw-source" value={draft.source} onChange={e=>patch({source:e.target.value})} placeholder="Paste your story, article or notes. Use # for a new slide and ## for a subheading."/><button onClick={()=>patch({source:getExampleText()})}>Try example</button></>:<>{slide.blocks.map((b,i)=><label key={b.id}>{b.role==='heading'?'Heading':b.role==='sub'?'Subheading':'Body text'}<ContentTextField role={b.role} label={`Slide ${index+1} ${b.role} ${i+1}`} value={b.text} onChange={text=>updateBlock(b.id,text)}/></label>)}</>}
+  const textPanel=<section className="cw-words"><h2>Your slide text</h2>{slide.blocks.map((b,i)=><label key={b.id}>{b.role==='heading'?'Heading':b.role==='sub'?'Subheading':'Body text'}<ContentTextField role={b.role} label={`Slide ${index+1} ${b.role} ${i+1}`} value={b.text} onChange={text=>updateBlock(b.id,text)}/></label>)}
     {moreOptions}
-    {slide?<details><summary>Source & splitting</summary><label>Source text<textarea aria-label="Workspace source text" value={draft.source} onChange={e=>patch({source:e.target.value})}/></label><ContentSplitOptions settings={settings} source={draft.source} onChange={changeSetting}/><button className="cw-primary" disabled={!draft.source.trim()} onClick={prepare}>Preview updated slides</button><p>Your source draft saves automatically. Preview and apply it to update the slides; saving alone keeps the existing slides.</p></details>:<><ContentSplitOptions settings={settings} source={draft.source} onChange={changeSetting}/><button className="cw-primary" onClick={prepare} disabled={!draft.source.trim()}>Prepare slides</button><details><summary>Improve with AI · optional</summary><p>This changes your words only when you choose it. Template switching never uses AI.</p><button disabled={busy||!draft.source.trim()} onClick={async()=>{setBusy(true);try{const r=await aiRepurposeAll({brand:state.brand,vocab:state.vocab,input:draft.source,platforms:['instagram-carousel'],counts:{'instagram-carousel':Number(settings.count)||4},provider:'gemini'});const text=r['instagram-carousel'];if(!text?.trim())throw new Error('AI returned no words. Your original text is kept.');setReview({source:text,slides:prepareContentSlides(text,settings).map(s=>({...s,look:'gentle'})),label:'Review AI wording'});}catch(e){setError(e.message);}finally{setBusy(false);}}}>{busy?'Preparing…':'Preview AI version'}</button></details></>}
+    <details><summary>Source & splitting</summary><label>Source text<textarea aria-label="Workspace source text" value={draft.source} onChange={e=>patch({source:e.target.value})}/></label><ContentSplitOptions settings={settings} source={draft.source} onChange={changeSetting}/><button className="cw-primary" disabled={!draft.source.trim()} onClick={prepare}>Preview updated slides</button><p>Your source draft saves automatically. Preview and apply it to update the slides; saving alone keeps the existing slides.</p></details>
     <details><summary>Caption & hashtags</summary><textarea aria-label="Caption and hashtags" value={draft.caption} onChange={e=>patch({caption:e.target.value})}/></details>
   </section>;
   return <div className="cw-shell"><SimpleStudioStyles/><header className="cw-header"><button onClick={back}>Back</button><div><small>WONDER PADS · CONTENT STUDIO</small><h1>Find your look</h1></div><SaveIndicator/></header><nav className="cw-mobile-tabs" aria-label="Text workspace sections">{['text','design'].map(t=><button key={t} aria-pressed={tab===t} onClick={()=>setTab(t)}>{t==='text'?'Text':'Design'}</button>)}</nav>
@@ -193,7 +212,7 @@ function ContentWorkspace() {
       <div className="cw-template-strip" aria-label="Template preview strip">{CONTENT_LOOKS.filter(l=>family==='All'||l.family===family).map(l=><button key={l.id} className="cw-look" aria-pressed={(single?slide:coverSlide).look===l.id} onClick={()=>patch(contentWithLook(draft,l.id),true)}><MiniPreview canvas={renderContentSlide(single?slide:coverSlide,settings,state.brand,{look:l.id,force:true})} maxW={mobile?60:78} maxH={mobile?75:98}/><span>{l.name}</span></button>)}</div></section>
     </>:<div className="cw-empty"><h2>Your words, your look.</h2><p>Prepare your slides once. Then tap the template strip to compare designs using your own text.</p>{mobile&&<button onClick={()=>setTab('text')}>Enter your text</button>}</div>}</main></div></div>
     {error&&<p className="cw-error" role="alert">{error}</p>}<SaveErrorBanner/><footer className="cw-footer"><span>{canvases.length?`${single?'Single post':canvases.length+' slides'}${overflow.length?` · check ${overflow.length} for overflow`:''}`:'Start with your words'}</span><button className="cw-primary" disabled={busy||!canvas} onClick={proceed}>{busy?'Preparing…':'Continue editing'}</button></footer>
-    {review&&<ContentReview review={review} original={review.original??draft.source} onCancel={()=>{patch({sourceReview:null});setReview(null);}} onApply={()=>{patch({slides:review.slides,index:Math.min(index,review.slides.length-1),sourceReview:null,appliedSource:review.source??draft.source,...(review.source?{source:review.source}:{})},true);setReview(null);setTab('design');}}/>}
+    {contentReview}
   </div>;
 }
 function ContentTextField({role,label,value,onChange}) {
@@ -201,8 +220,85 @@ function ContentTextField({role,label,value,onChange}) {
   React.useLayoutEffect(()=>{const field=ref.current;if(!field)return;field.style.height='auto';field.style.height=field.scrollHeight+2+'px';},[value]);
   return <textarea ref={ref} className={role==='heading'?'cw-text-heading':'cw-text-body'} aria-label={label} value={value} rows={role==='heading'?2:5} onChange={e=>onChange(e.target.value)}/>;
 }
-function ContentSplitOptions({settings,source,onChange}) {
-  return <div className="cw-split-options"><label>Make a<select value={settings.format} onChange={e=>onChange('format',e.target.value)}><option value="carousel">Carousel</option><option value="post">Single post</option></select></label>{settings.format!=='post'&&<><label>Split by<select value={settings.split} onChange={e=>onChange('split',e.target.value)}><option value="markers">My slide markers (#)</option><option value="paragraphs">Paragraphs</option><option value="balanced">Balanced length</option></select></label><label>Source slides<input type="number" min="2" max="30" value={settings.count} disabled={hasSlideMarks(source)||settings.split!=='balanced'} onChange={e=>onChange('count',Math.min(30,Math.max(2,Number(e.target.value)||2)))}/></label><p>{hasSlideMarks(source)?'Your # markers set the source slide count. ## stays inside its slide.':'Count applies to balanced splitting; paragraphs and markers keep your own breaks.'} A standard CTA is added after your words and matches the cover colours.</p><label className="cw-check"><input type="checkbox" checked={settings.cover} onChange={e=>onChange('cover',e.target.checked)}/>First slide is a cover</label></>}</div>;
+function ContentEntryScreen({draft,onChange,onBack,onPrepare,onAi,busy,error,children}) {
+  const field=React.useRef(null),selection=React.useRef({start:0,end:0}),pendingSelection=React.useRef(null);
+  const [entry,setEntry]=React.useState('write'),[focused,setFocused]=React.useState(false),[options,setOptions]=React.useState(false),[cleared,setCleared]=React.useState(null),[help,setHelp]=React.useState(false);
+  const source=draft.source,settings=draft.settings;
+  React.useLayoutEffect(()=>{
+    const range=pendingSelection.current;
+    if(!range||!field.current)return;
+    pendingSelection.current=null;field.current.focus();field.current.setSelectionRange(range.start,range.end);
+    if(range.scrollTop!==undefined)field.current.scrollTop=range.scrollTop;
+  });
+  const words=source.trim()?source.trim().split(/\s+/).length:0;
+  const splitLabel=hasSlideMarks(source)?'My breaks':settings.split==='balanced'?`${settings.count} + closing`:settings.split==='paragraphs'?'Paragraphs':'My breaks';
+  const changeSource=text=>{setCleared(null);onChange({source:text});};
+  const rememberSelection=()=>{if(field.current)selection.current={start:field.current.selectionStart,end:field.current.selectionEnd};};
+  const focusSource=(range=selection.current)=>{
+    if(!field.current)return;
+    field.current.focus();field.current.setSelectionRange(range.start,range.end);
+  };
+  const mark=marker=>{
+    const next=contentMarkedLine(source,selection.current.start,selection.current.end,marker);
+    selection.current={start:next.start,end:next.end};pendingSelection.current=selection.current;changeSource(next.text);
+  };
+  const example=()=>{const text=getExampleText();changeSource(text);setEntry('write');selection.current={start:0,end:0};};
+  const clear=()=>{setCleared({source,...selection.current,scrollTop:field.current?.scrollTop||0});onChange({source:''});selection.current={start:0,end:0};};
+  const restore=()=>{const saved=cleared;selection.current={start:saved.start,end:saved.end};pendingSelection.current={...selection.current,scrollTop:saved.scrollTop};onChange({source:saved.source});setCleared(null);};
+  return <div className="cw-shell cw-entry-shell"><SimpleStudioStyles/>
+    <header className="cw-header"><button onClick={onBack} disabled={busy}>‹ Back</button><div><small>WONDER PADS · CONTENT STUDIO</small><h1>Your words</h1></div><SaveIndicator/></header>
+    <main className="cw-entry-main"><div className="cw-entry-paper">
+      <nav className="cw-entry-tabs" aria-label="Writing sources"><button aria-pressed={entry==='write'} onClick={()=>setEntry('write')}>Write / Paste</button><button aria-pressed={entry==='examples'} onClick={()=>setEntry('examples')}>Examples</button></nav>
+      <div className="cw-entry-examples" hidden={entry!=='examples'}><small>TRY IT WITH A SAMPLE</small><h2>Start with a few words.</h2><p>Try a ready-to-edit example with slide breaks and subheadings.</p><button className="cw-primary" onClick={example} disabled={busy}>Use example text</button></div>
+      <div className="cw-entry-writing" hidden={entry!=='write'}>
+        <div className="cw-entry-markers" role="toolbar" aria-label="Mark slides"><button onMouseDown={e=>e.preventDefault()} onClick={()=>mark('# ')} disabled={busy}>+ Slide</button><button onMouseDown={e=>e.preventDefault()} onClick={()=>mark('## ')} disabled={busy}>+ Subheading</button><button className="cw-entry-help" aria-label="Help with slide markers" aria-expanded={help} onClick={()=>setHelp(!help)}>?</button></div>
+        {help&&<p className="cw-entry-marker-help">Tap a line, then + Slide to add # or + Subheading to add ##. Blank lines stay inside the slide.</p>}
+        <div className="cw-entry-field"><label className="cw-entry-sr" htmlFor="cw-source">Your source text</label><textarea ref={field} id="cw-source" className="cw-source" value={source} readOnly={busy} onSelect={rememberSelection} onChange={e=>{selection.current={start:e.target.selectionStart,end:e.target.selectionEnd};changeSource(e.target.value);}} onFocus={()=>setFocused(true)} onBlur={()=>{rememberSelection();setFocused(false);}} placeholder={focused?'Paste your story, article or notes here…':''}/>
+          {!source&&!focused&&<div className="cw-entry-empty"><span className="cw-entry-empty-icon"><Icon name="text" size={24}/></span><h2>Every post starts with your words.</h2><p>Paste your text or start typing.<br/>We’ll help you turn it into slides.</p><button className="cw-primary" onClick={()=>focusSource()}>Start writing</button><button className="cw-entry-link" onClick={example} disabled={busy}>Try an example</button></div>}
+        </div>
+      </div>
+      <div className="cw-entry-wordbar"><span>{words} words · {source.length} characters</span><div>{cleared&&<button className="cw-entry-link" onClick={restore}>Undo clear</button>}<button className="cw-entry-link" disabled={!source||busy} onClick={clear}>Clear</button></div></div>
+      {cleared&&<p className="cw-entry-clear-notice" role="status">Text cleared. Your post options are kept.</p>}
+    </div></main>
+    {error&&<p className="cw-error" role="alert">{error}</p>}<SaveErrorBanner/>
+    <footer className="cw-entry-footer"><div className="cw-entry-footer-inner"><button className="cw-entry-options" aria-haspopup="dialog" aria-expanded={options} onClick={()=>setOptions(true)} disabled={busy}><Icon name="menu" size={16}/><span>{settings.format==='post'?'Single post':'Carousel'} · {settings.size==='post'?'1:1':'4:5'}{settings.format!=='post'&&` · ${splitLabel}`}</span><span aria-hidden="true">⌄</span></button>
+      <div className="cw-entry-actions"><button disabled={busy||!source.trim()} onClick={onPrepare}>{settings.format==='post'?'Prepare post':'Prepare slides'} <span aria-hidden="true">→</span></button><button className="cw-primary" disabled={busy||!source.trim()} onClick={onAi}><Icon name="sparkles" size={16}/>{busy?'Preparing…':'Improve with AI'}</button></div><p>Your words stay as written when you prepare {settings.format==='post'?'a post':'slides'}.</p>
+    </div></footer>
+    {options&&<ContentEntryOptions settings={settings} caption={draft.caption} source={source} onClose={()=>setOptions(false)} onApply={(next,caption)=>{onChange({settings:next,caption},true);setOptions(false);}}/>}{children}
+  </div>;
+}
+function ContentEntryOptions({settings,caption,source,onClose,onApply}) {
+  const ref=React.useRef(null),[next,setNext]=React.useState({...settings}),[nextCaption,setNextCaption]=React.useState(caption);
+  React.useEffect(()=>{ref.current.showModal();},[]);
+  const set=(key,value)=>setNext(previous=>({...previous,[key]:value}));
+  let count=1;
+  if(source.trim()&&next.format!=='post'){
+    if(hasSlideMarks(source))count=markedChunks(source).length;
+    else if(next.split==='paragraphs')count=source.trim().split(/\n\s*\n/).filter(s=>s.trim()).length;
+    else if(next.split==='balanced')count=Number(next.count)||4;
+  }
+  const summary=next.format==='post'?'One single post.':source.trim()?`${count} source slide${count===1?'':'s'} + closing = ${count+1} total.`:'Your slide count will appear after you add your words.';
+  return <dialog ref={ref} className="cw-entry-dialog" aria-labelledby="cw-entry-options-title" onCancel={e=>{e.preventDefault();onClose();}} onClick={e=>{if(e.target!==e.currentTarget)return;const box=e.currentTarget.getBoundingClientRect();if(e.clientX<box.left||e.clientX>box.right||e.clientY<box.top||e.clientY>box.bottom)onClose();}}>
+    <form onSubmit={e=>{e.preventDefault();onApply(next,nextCaption);}}><header><h2 id="cw-entry-options-title">Post options</h2><button type="button" aria-label="Cancel options" onClick={onClose}>×</button></header>
+      <div className="cw-entry-dialog-content"><fieldset><legend>Make a</legend><div className="cw-entry-choices">{[['carousel','Carousel','copy'],['post','Single post','templates']].map(([id,label,icon])=><button type="button" key={id} aria-pressed={next.format===id} onClick={()=>set('format',id)}><Icon name={icon} size={18}/>{label}</button>)}</div></fieldset>
+      <fieldset><legend>Ratio</legend><div className="cw-entry-choices">{[['portrait','Portrait · 4:5'],['post','Square · 1:1']].map(([id,label])=><button type="button" key={id} aria-pressed={next.size===id} onClick={()=>set('size',id)}><span className={'cw-entry-ratio '+id} aria-hidden="true"/>{label}</button>)}</div></fieldset>
+      <ContentSplitOptions settings={next} source={source} showFormat={false} onChange={set}/><p className="cw-entry-total" role="status">{summary}</p>
+      <details><summary>Caption & hashtags</summary><label htmlFor="cw-entry-caption">Caption & hashtags</label><textarea id="cw-entry-caption" value={nextCaption} onChange={e=>setNextCaption(e.target.value)}/></details></div>
+      <footer><button type="button" onClick={onClose}>Cancel</button><button className="cw-primary" type="submit">Apply options</button></footer>
+    </form>
+  </dialog>;
+}
+function ContentSplitOptions({settings,source,onChange,showFormat=true}) {
+  const id=React.useId();
+  return <div className="cw-split-options">
+    {showFormat&&<><label htmlFor={id+'-format'}>Make a</label><select id={id+'-format'} value={settings.format} onChange={e=>onChange('format',e.target.value)}><option value="carousel">Carousel</option><option value="post">Single post</option></select></>}
+    {settings.format!=='post'&&<>
+      <label htmlFor={id+'-split'}>Split by</label><select id={id+'-split'} value={settings.split} onChange={e=>onChange('split',e.target.value)}><option value="markers">My slide markers (#)</option><option value="paragraphs">Paragraphs</option><option value="balanced">Balanced length</option></select>
+      <label htmlFor={id+'-count'}>Source slides</label><input id={id+'-count'} type="number" min="2" max="30" value={settings.count} disabled={hasSlideMarks(source)||settings.split!=='balanced'} onChange={e=>onChange('count',Math.min(30,Math.max(2,Number(e.target.value)||2)))}/>
+      <p>{hasSlideMarks(source)?'Your # markers set the source slide count. ## stays inside its slide.':'Count applies to balanced splitting; paragraphs and markers keep your own breaks.'} A standard CTA is added after your words and matches the cover colours.</p>
+      <label className="cw-check"><input type="checkbox" checked={settings.cover} onChange={e=>onChange('cover',e.target.checked)}/>First slide is a cover</label>
+    </>}
+  </div>;
 }
 function ContentReview({review,original,onCancel,onApply}) {
   const ref=React.useRef(null);React.useEffect(()=>{ref.current.showModal();},[]);
