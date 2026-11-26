@@ -95,7 +95,7 @@ function renderContentSlide(slide,settings,brand,options={}) {
   const middle=slide.kind==='content'&&!standard&&(options.slideNumber??((slide.sourceIndex??1)+1))>1,floralBackground=!!look.background&&!standard&&!middle;
   const background=middle&&look.id==='informative'?['#FFF9FC','#FCF8F2','#F5F8F3'][slide.contentTone||0]:look.bg;
   const c={id:slide.id,name:slide.kind==='hook'?'Cover':slide.kind==='cta'?'Closing slide':'Slide',slideKind:slide.kind,standardCta:standard,contentLook:look.id,contentTone:slide.contentTone||0,w:W,h:H,bg:{type:'color',value:background},elements:[]};
-  const els=c.elements,m=86,top=standard?100:slide.kind==='content'?130:180,bottom=floralBackground?H*1153/1350-34:H-(standard?380:210);
+  const els=c.elements,m=86,top=standard?100:slide.kind==='content'?130:floralBackground?180:Math.max(180,102+Math.max(48,Math.min(180,Number(brand.coverLogoSize)||88))),bottom=floralBackground?H*1153/1350-34:H-(standard?380:210);
   if(floralBackground){
     // Fit the complete uploaded artwork, including its footer, in either ratio.
     const width=H*1080/1350;

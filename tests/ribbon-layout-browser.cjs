@@ -19,11 +19,21 @@ async function main(){
  const element=id=>page.locator(`[data-el-id="${id}"]`);
  const tools=()=>page.getByRole('toolbar',{name:'Selected element tools',exact:true});
  try{
-  await page.goto('http://127.0.0.1:8770/');await page.getByRole('button',{name:/Start creating/}).click({timeout:60000});await page.getByRole('button',{name:/Start with your words/}).click();await page.locator('#cw-source').fill(sourceText);await page.getByRole('button',{name:'Prepare slides',exact:true}).click();await page.getByRole('heading',{name:'Find your look',exact:true}).waitFor();
+  await page.goto('http://127.0.0.1:8770/');
+  await page.getByRole('button',{name:'Brand Kit',exact:true}).click({timeout:60000});await page.getByRole('button',{name:'Edit brand kit',exact:true}).click();
+  await page.getByRole('tab',{name:'Custom size',exact:true}).click();await page.getByRole('spinbutton',{name:'Cover logo size',exact:true}).fill('160');await page.getByRole('spinbutton',{name:'Cover logo size',exact:true}).press('Tab');
+  await page.getByRole('button',{name:'# Heading Bold',exact:true}).click();await page.getByRole('button',{name:'# Heading Italic',exact:true}).click();await page.getByRole('button',{name:'## Subheading Underline',exact:true}).click();
+  await poll(s=>s.brand?.coverLogoSize===160&&s.brand.slideFontHeadingStyle?.bold&&s.brand.slideFontHeadingStyle?.italic&&s.brand.slideFontSubheadingStyle?.underline);
+  assert.equal(await page.locator('.modal').evaluate(el=>el.scrollWidth>el.clientWidth),false,'Brand controls fit mobile width');
+  await page.screenshot({path:path.join(outputs,'brand-type-options-mobile.png')});
+  await page.locator('.modal .icon-btn').first().click();await page.getByRole('button',{name:'Home',exact:true}).click();
+  await page.getByRole('button',{name:/Start creating/}).click();await page.getByRole('button',{name:/Start with your words/}).click();await page.locator('#cw-source').fill(sourceText+'\nNo long dash — in this sentence.');await page.getByRole('button',{name:'Prepare slides',exact:true}).click();await page.getByRole('heading',{name:'Find your look',exact:true}).waitFor();
   await page.getByRole('button',{name:'Slide 2',exact:true}).click();await page.screenshot({path:path.join(outputs,'plain-middle-mobile.png')});
   await page.getByRole('button',{name:'Slide 5',exact:true}).click();await page.screenshot({path:path.join(outputs,'closing-mobile.png')});
   await page.getByRole('button',{name:'Slide 1',exact:true}).click();await page.getByRole('button',{name:'Continue editing',exact:true}).click();await page.getByRole('toolbar',{name:'Page tools',exact:true}).waitFor();
   const state=await poll(s=>s.projects?.[0]?.canvases.length===5),project=state.projects[0],cover=project.canvases[0],heading=cover.elements.find(e=>e.__role==='heading');
+  assert.equal(cover.elements.find(e=>e.brandSlot==='logo').w,160);assert.equal(heading.fontWeight,700);assert(heading.italic);assert(cover.elements.find(e=>e.__role==='sub').underline);
+  assert(!project.canvases.some(c=>c.elements.some(e=>e.type==='text'&&/[\u2013\u2014]/.test(e.text))));
   await element(heading.id).tap();await tools().waitFor();
   for(const width of [390,320]){
    await page.setViewportSize({width,height:844});const ribbon=tools(),fixed=ribbon.getByRole('group',{name:'Selected element actions',exact:true});

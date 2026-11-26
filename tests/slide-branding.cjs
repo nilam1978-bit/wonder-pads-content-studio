@@ -45,3 +45,21 @@ for(const size of ['portrait','post'])for(const look of ctx.looks){
  const untouched={...draft.slides[1],originalCanvas:middle[0]};assert.equal(ctx.renderContentSlide(untouched,settings,brand),middle[0],'Saved manual layouts stay intact');
 }
 console.log('PASS: all styles in portrait/square; plain varied middle slides; compact handle footer; clear cover logo; non-overlapping closing branding/socials inside border; resize reflow and saved layout preservation.');
+for(const size of [48,88,140,180]){
+ const settings={format:'carousel',split:'markers',count:4,cover:true,size:'portrait'};
+ const slide=ctx.prepareContentSlides(text,settings)[0],page=ctx.renderContentSlide(slide,settings,{...brand,coverLogoSize:size});
+ const logo=page.elements.find(e=>e.brandSlot==='logo');assert.equal(logo.w,size);assert.equal(logo.h,size);
+ for(const e of page.elements.filter(ctx.isContentText))assert(!overlaps(bounds(logo),bounds(e)),'Custom cover logo clears all text');
+}
+const closing=ctx.brandBackgroundElements('content-closing',{w:1080,h:1350},brand);
+assert.equal(closing.find(e=>e.brandSlot==='instagram').y,closing.find(e=>e.brandSlot==='website').y);
+const grouped=ctx.ctaEngagementElements({w:1080,h:1350});assert.equal(grouped.length,1);assert(grouped[0].ctaGroup);
+const vector=decodeURIComponent(grouped[0].src.split(',').slice(1).join(','));for(const label of ['Save','Comment','Follow'])assert(vector.includes('>'+label+'</text>'));
+const styled=ctx.applyBrandSlideFonts({elements:[{id:'h',type:'text',__role:'heading',fontFamily:'Montserrat',fontWeight:400,italic:false,underline:false}]},{slideFontHeadingStyle:{bold:true,italic:true,underline:true}});
+assert.equal(styled.elements[0].fontWeight,700);assert(styled.elements[0].italic);assert(styled.elements[0].underline);
+const reset=ctx.applyBrandSlideFonts(styled,{});assert.equal(reset.elements[0].fontWeight,400);assert.equal(reset.elements[0].italic,false);
+vm.runInContext(utils.slice(utils.indexOf('function normalizeLongDashes'),utils.indexOf('function reducer')),ctx);
+assert.equal(ctx.normalizeLongDashes('Hello — world, 3–5 days.'),'Hello, world, 3-5 days.');
+const cleaned=ctx.normalizeAppProse({source:'A — B',appliedSource:'A — B',elements:[{text:'C – D',src:'data:image/svg+xml,A—B',id:'A—B'}]});
+assert.equal(cleaned.source,cleaned.appliedSource);assert.equal(cleaned.elements[0].text,'C, D');assert.equal(cleaned.elements[0].src,'data:image/svg+xml,A—B');assert.equal(cleaned.elements[0].id,'A—B');
+console.log('PASS: cover-logo sizes clear text, contacts share a row, scalable Save/Comment/Follow block, heading emphasis/reset, prose normalization preserves assets and identifiers.');

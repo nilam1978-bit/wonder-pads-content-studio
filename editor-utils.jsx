@@ -60,7 +60,7 @@ function resizeSlideToFit(canvas, { w, h }) {
   return { ...canvas, w, h, elements };
 }
 
-const isIllustration = el => el.type === 'icon' || !!el.stickerId;
+const isIllustration = el => el.type === 'icon' || !!el.stickerId || !!el.ctaGroup;
 
 const isBrandLogo = el => el.type === 'image' && (el.role === 'logo' || el.brandSlot === 'logo');
 const hasBrandLogoMask = el => isBrandLogo(el) && el.src === 'assets/wpr-logo.png';
@@ -154,7 +154,7 @@ function brandBackgroundElements(kind, canvas, brand = defaultBrand()) {
     text('website',website,x+col+gap,y+45*s,col,'left',tone);
     for(const el of els.filter(e=>e.type==='text'))el.h=50*s;
   };
-  if(kind==='content-cover'){image(W-174*s,70*s,88*s);return els;}
+  if(kind==='content-cover'){const size=Math.max(48,Math.min(180,Number(brand.coverLogoSize)||88))*s;image(W-86*s-size,70*s,size);return els;}
   if(kind==='content-footer'){
     text('instagram',social,86*s,H-112*s,W-172*s,'left',ink);
     for(const el of els){el.fontSize=28*s;el.h=48*s;}
@@ -163,8 +163,9 @@ function brandBackgroundElements(kind, canvas, brand = defaultBrand()) {
   if(kind==='content-closing'){
     image(86*s,H-170*s,80*s);
     const x=brand.logo?190*s:86*s,w=W-x-86*s;
-    text('instagram',social,x,H-182*s,w,'left',ink);
-    text('website',website,x,H-124*s,w,'left',ink);
+    const gap=24*s,col=(w-gap)/2;
+    text('instagram',social,x,H-148*s,col,'left',ink);
+    text('website',website,x+col+gap,H-148*s,col,'left',ink);
     for(const el of els.filter(e=>e.type==='text')){
       el.fontSize=28*s;el.h=48*s;
       if(typeof textLayout==='function')while(el.fontSize>18*s&&textLayout(el).height>48*s)el.fontSize-=s;
@@ -254,12 +255,12 @@ const SLIDE_TEXT_STYLES = {
   handle:{label:'Contact details',fontFamily:'Montserrat',fontSize:32,fontWeight:500,lineHeight:1.3},
 };
 function ctaEngagementElements(canvas,color='#2A1F2A') {
-  const scale=Math.min(canvas.w,canvas.h)/1080,y=canvas.h-310*scale;
-  return [['save','bookmark','Save'],['share','share','Share'],['follow','user_plus','Follow']].flatMap(([action,name,label],i)=>{
-    const x=canvas.w*(.22+i*.28);
-    return [newElement('icon',{name,x:x-27*scale,y,w:54*scale,h:54*scale,color,strokeWidth:1.8,__role:'engagementIcon',engagementAction:action}),
-      newElement('text',{...SLIDE_TEXT_STYLES.label,text:label,x:x-80*scale,y:y+68*scale,w:160*scale,h:42*scale,fontSize:30*scale,color,align:'center',textStyle:'label',__role:'engagementLabel',engagementAction:action})];
-  });
+  const scale=Math.min(canvas.w,canvas.h)/1080;
+  const ink=String(color).replace(/[^#a-zA-Z0-9(),.% -]/g,'');
+  // A vector block is one selectable, movable, duplicatable and resizable object.
+  const paths=['<path d="M8 4h16v25l-8-5-8 5z"/>','<path d="M4 5h24v18H14l-8 6v-6H4z"/>','<circle cx="12" cy="10" r="6"/><path d="M2 29v-4c0-9 20-9 20 0v4M27 9v12m-6-6h12"/>'];
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="900" height="115" viewBox="0 0 900 115">'+['Save','Comment','Follow'].map((label,i)=>'<g transform="translate('+(150+i*300)+',0)" fill="none" stroke="'+ink+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(-27,0) scale(1.7)">'+paths[i]+'</g><text x="0" y="105" text-anchor="middle" fill="'+ink+'" stroke="none" font-family="Arial,sans-serif" font-size="30">'+label+'</text></g>').join('')+'</svg>';
+  return [newElement('image',{src:'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg),x:(canvas.w-900*scale)/2,y:canvas.h-310*scale,w:900*scale,h:115*scale,ctaGroup:true,engagementAction:'group',__role:'engagementGroup',alt:'Save, Comment, Follow'})];
 }
 function starterBackgroundElements(template, canvas, brand = defaultBrand()) {
   const els=brandBackgroundElements(template.brandLayout,canvas,brand);
@@ -280,19 +281,26 @@ function starterBackgroundElements(template, canvas, brand = defaultBrand()) {
 function applyBrandSlideFonts(canvas, brand = {}) {
   let changed=false;
   const elements=canvas.elements.map(el=>{
+    if(el.brandLayout==='content-cover'&&el.brandSlot==='logo'&&brand.coverLogoSize){
+      const size=Math.max(48,Math.min(180,Number(brand.coverLogoSize)||88))*Math.min(canvas.w,canvas.h)/1080;
+      if(el.w===size&&el.h===size)return el;
+      changed=true;return {...el,x:el.x+el.w-size,w:size,h:size};
+    }
     if(el.type!=='text'||el.fromBrand||el.brandSlot||el.engagementAction||el.endpointDecoration)return el;
     const role=el.__role||el.role;
     const key=role==='heading'?'slideFontHeading':role==='sub'?'slideFontSubheading':null;
     if(!key)return el;
-    const family=brand[key],base=el.brandFontBase;
-    if(!family&&!base)return el;
-    const original=base||{fontFamily:el.fontFamily,fontWeight:el.fontWeight};
-    const weight=family&&typeof nearestWeight==='function'?nearestWeight(family,original.fontWeight):original.fontWeight;
-    if(family&&el.fontFamily===family&&el.fontWeight===weight&&base)return el;
-    changed=true;
-    const next={...el,fontFamily:family||original.fontFamily,fontWeight:weight};
-    if(family)next.brandFontBase=original;else delete next.brandFontBase;
-    return next;
+    const family=brand[key],style=brand[key+'Style']||{},base=el.brandFontBase;
+    const custom=!!family||Object.keys(style).length>0;
+    if(!custom&&!base)return el;
+    const original=base||{fontFamily:el.fontFamily,fontWeight:el.fontWeight,italic:el.italic,underline:el.underline};
+    const font=family||original.fontFamily;
+    const target=style.bold===undefined?original.fontWeight:style.bold?700:400;
+    const weight=style.bold!==undefined?target:typeof nearestWeight==='function'?nearestWeight(font,target):target;
+    const next={...el,fontFamily:font,fontWeight:weight,italic:style.italic??original.italic,underline:style.underline??original.underline};
+    if(custom)next.brandFontBase=original;else delete next.brandFontBase;
+    if(['fontFamily','fontWeight','italic','underline'].every(k=>next[k]===el[k])&&JSON.stringify(next.brandFontBase)===JSON.stringify(base))return el;
+    changed=true;return next;
   });
   return changed?{...canvas,elements}:canvas;
 }
@@ -355,7 +363,18 @@ const newProject = (name, preset = SIZE_PRESETS[0], seedElements = []) => {
 // -------------- Reducer with history --------------
 const HISTORY_LIMIT = 60;
 
+function normalizeLongDashes(value) {
+  return String(value).replace(/(^|\n)[ \t]*[\u2013\u2014][ \t]*/g,'$1').replace(/(\d)[\u2013\u2014](?=\d)/g,'$1-').replace(/[ \t]*[\u2013\u2014][ \t]*/g,', ').replace(/,\s*([,.!?;:])/g,'$1');
+}
+function normalizeAppProse(value,key='') {
+  if(typeof value==='string')return !/(^id$|Id$|^ids$|Ids$|^src$|^logo$|^uploads$|url$|uri$|fontFamily|^fontHeading$|^fontBody$|^slideFont|apiKey|token|password|secret)/i.test(key)&&! /^(https?:|data:|assets\/)/.test(value)?normalizeLongDashes(value):value;
+  if(Array.isArray(value))return value.map(v=>normalizeAppProse(v,key));
+  if(!value||Object.prototype.toString.call(value)!=='[object Object]')return value;
+  const result={};for(const [k,v] of Object.entries(value))result[k]=normalizeAppProse(v,k);return result;
+}
+
 function reducer(state, action) {
+  action=normalizeAppProse(action);
   // History is per active project. We mutate state.projects, then push snapshot to state.past.
   const activeProjectMutate = (mutator, opts = {}) => {
     const idx = state.projects.findIndex(p => p.id === state.activeProjectId);
@@ -687,7 +706,7 @@ function reducer(state, action) {
     // ---------- Brand ----------
     case 'update-brand': {
       const brand={...state.brand,...action.patch};
-      return ['slideFontHeading','slideFontSubheading'].some(key=>key in action.patch)
+      return ['slideFontHeading','slideFontSubheading','slideFontHeadingStyle','slideFontSubheadingStyle','coverLogoSize'].some(key=>key in action.patch)
         ?applyBrandFontsToState(state,brand):{...state,brand};
     }
     case 'add-brand-handle':
@@ -1050,6 +1069,7 @@ function StoreProvider({ children }) {
         migrate.current = !!saved;
       }
       if (saved) {
+        saved=normalizeAppProse(saved);
         // Backfill brand + carousel if missing (older data)
         if (!saved.brand) saved.brand = defaultBrand();
         else saved.brand = { ...defaultBrand(), ...saved.brand };

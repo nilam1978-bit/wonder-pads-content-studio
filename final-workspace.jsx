@@ -16,7 +16,7 @@ function ResizeCopyDialog({ project, onClose, onCreate }) {
     }));
     const timestamp = now();
     onCreate({
-      ...project, id: uid(), name: project.name + ' — ' + preset.name,
+      ...project, id: uid(), name: project.name + ', ' + preset.name,
       createdAt: timestamp, updatedAt: timestamp, thumbnail: null,
       finished: false, finishedAt: null, contentEntryId: null,
       canvases, activeCanvasId: canvases[index].id,
@@ -179,7 +179,7 @@ function FinalProjectWorkspace({isMobile}){
     }}/>}
     <style>{`.posting-tools{width:100%;max-width:680px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px}.posting-copy-buttons{display:flex;gap:10px;flex-wrap:wrap}.posting-copy-buttons button{flex:1 1 220px}.posting-tools textarea{display:block;width:100%;box-sizing:border-box;min-height:180px;font:16px/1.6 Montserrat,sans-serif}`}</style>
     {crowded.length>0&&dismissedCheck!==crowded.join(',')&&(isMobile
-      ?<div role="status" style={{display:'flex',alignItems:'center',gap:6,padding:'2px 4px 2px 12px',background:'#fff3d6',fontSize:12}}><button style={{flex:1,textAlign:'left',padding:'8px 0',background:'transparent',color:'inherit',fontSize:12}} onClick={()=>go(crowded[0]-1)}>⚠ Check slide{crowded.length>1?'s':''} {crowded.join(', ')} — text is tiny or off the page. Tap to open.</button><button aria-label="Dismiss this notice" style={{width:40,height:36,background:'transparent',fontSize:16,color:'inherit'}} onClick={()=>setDismissedCheck(crowded.join(','))}>✕</button></div>
+      ?<div role="status" style={{display:'flex',alignItems:'center',gap:6,padding:'2px 4px 2px 12px',background:'#fff3d6',fontSize:12}}><button style={{flex:1,textAlign:'left',padding:'8px 0',background:'transparent',color:'inherit',fontSize:12}} onClick={()=>go(crowded[0]-1)}>⚠ Check slide{crowded.length>1?'s':''} {crowded.join(', ')}, text is tiny or off the page. Tap to open.</button><button aria-label="Dismiss this notice" style={{width:40,height:36,background:'transparent',fontSize:16,color:'inherit'}} onClick={()=>setDismissedCheck(crowded.join(','))}>✕</button></div>
       :<div role="status" style={{padding:'6px 12px',background:'#fff3d6',fontSize:12}}>Check slides {crowded.join(', ')}: some text is very small or extends outside the page. Resize it or use Fit text.</div>)}
     {project.aiError&&<p role="alert" style={{margin:0,padding:'8px 12px',background:'#fff3d6',fontSize:13}}>{project.aiError}</p>}
     {step==='design'&&!isMobile&&slideActions}
@@ -208,7 +208,7 @@ function FinalProjectWorkspace({isMobile}){
         {copyNotice&&<p role="status" aria-live="polite" style={{margin:0}}>{copyNotice}</p>}
         {copyFallback&&<div><label>{copyFallback.label}<textarea ref={fallbackRef} aria-label={`${copyFallback.label} to copy`} readOnly value={copyFallback.words} onFocus={e=>e.target.select()} /></label><button onClick={()=>{fallbackRef.current?.focus();fallbackRef.current?.select();}}>Select all</button><button onClick={()=>{setCopyFallback(null);setCopyNotice('');}}>Close copy text</button></div>}
         {Object.entries(project.socialCopies||{}).map(([key,words])=><div key={key}><h3>{key==='facebook-post'?'Facebook post':'TikTok hook & script'}</h3><textarea aria-label={key==='facebook-post'?'Facebook post text':'TikTok script text'} value={words} onChange={e=>dispatch({type:'update-project',id:project.id,patch:{socialCopies:{...project.socialCopies,[key]:e.target.value}}})}/><button className="simple-action simple-secondary" onClick={()=>copyForPosting(key)}>Copy {key==='facebook-post'?'Facebook post':'TikTok script'}</button></div>)}
-        <button className="sc-link" onClick={()=>exportProjectFile(project)}>Save editable backup</button><p className="simple-muted">Download the images, then select them in order when making your Instagram post. Other social versions are copyable text—not automatically published posts or videos.</p>{error&&<p role="alert">{error}</p>}
+        <button className="sc-link" onClick={()=>exportProjectFile(project)}>Save editable backup</button><p className="simple-muted">Download the images, then select them in order when making your Instagram post. Other social versions are copyable text, not automatically published posts or videos.</p>{error&&<p role="alert">{error}</p>}
       </section>
     </div></main></>}
   </div>;

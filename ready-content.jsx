@@ -306,11 +306,11 @@ function ContentUpload({existing,onImport,onClose}){
     {error&&<p role="alert">{error}</p>}
     {result.errors.length>0&&<div role="alert">{result.errors.map((e,i)=><p key={i}>{e}</p>)}</div>}
     <p role="status">{rows.length} posts found · {rows.filter(r=>r.duplicate).length} duplicates skipped · {chosen.length} selected</p>
-    {rows.map(({post,key,duplicate,i})=><details key={i} style={{padding:'12px 0',borderTop:'1px solid var(--line)'}}><summary>{post.title}{duplicate?' — already imported or repeated':''}</summary>
+    {rows.map(({post,key,duplicate,i})=><details key={i} style={{padding:'12px 0',borderTop:'1px solid var(--line)'}}><summary>{post.title}{duplicate?', already imported or repeated':''}</summary>
       <label><input type="checkbox" disabled={duplicate} checked={!duplicate&&!excluded.includes(i)} onChange={e=>setExcluded(xs=>e.target.checked?xs.filter(x=>x!==i):[...xs,i])}/> Add this post</label>
       <h3>On the image</h3><strong style={{display:'block',whiteSpace:'pre-wrap'}}>{post.headline}</strong><p style={{whiteSpace:'pre-wrap'}}>{post.body||'No body text'}</p>
       {(post.headline.length>100||post.body.length>500)&&<p role="status">Long image text: review before creating. The design builder will flag text that cannot fit legibly; no words are cut.</p>}
-      <h3>Caption — not on the image</h3><p style={{whiteSpace:'pre-wrap'}}>{post.caption||'No caption'}</p>
+      <h3>Caption, not on the image</h3><p style={{whiteSpace:'pre-wrap'}}>{post.caption||'No caption'}</p>
       <h3>Hashtags</h3><p style={{whiteSpace:'pre-wrap'}}>{post.hashtags||'No hashtags'}</p>
     </details>)}
     <button className="simple-action" disabled={!chosen.length||!!result.errors.length} onClick={()=>onImport(chosen.map(r=>({...r.post,uploadKey:r.key})))}>Add {chosen.length} posts to library</button>

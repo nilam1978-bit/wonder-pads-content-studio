@@ -205,7 +205,7 @@ const TEMPLATES = [
       { type: 'rect', patch: { fill: '#F1CFEA', x: 0, y: 0, w: 1080, h: 360, radius: 0 } },
       { type: 'text', patch: { text: 'Cycle care', fontFamily: 'Instrument Serif', fontSize: 100, color: '#2A1F2A', x: 100, y: 130, w: 880, h: 140, italic: true, align: 'left' } },
       { type: 'text', patch: { text: '01', fontFamily: 'DM Serif Display', fontSize: 320, color: '#F1CFEA', x: 80, y: 500, w: 500, h: 400, align: 'center' } },
-      { type: 'text', patch: { text: 'A softer approach to your monthly rhythm — reusable, radiant, real.', fontFamily: 'Instrument Sans', fontSize: 34, color: '#56454F', x: 540, y: 580, w: 460, h: 240, align: 'left', lineHeight: 1.4 } },
+      { type: 'text', patch: { text: 'A softer approach to your monthly rhythm, reusable, radiant, real.', fontFamily: 'Instrument Sans', fontSize: 34, color: '#56454F', x: 540, y: 580, w: 460, h: 240, align: 'left', lineHeight: 1.4 } },
     ],
   },
   { name: 'Sale',   bg: '#D98BC6', accent: '#2A1F2A',
@@ -219,7 +219,7 @@ const TEMPLATES = [
     els: [
       { type: 'text', patch: { text: '"', fontFamily: 'DM Serif Display', fontSize: 400, color: '#D98BC6', x: 60, y: 40, w: 300, h: 400, align: 'left' } },
       { type: 'text', patch: { text: 'Nature does not\nhurry, yet\neverything is\naccomplished.', fontFamily: 'Instrument Serif', fontSize: 72, color: '#2A1F2A', x: 100, y: 320, w: 880, h: 500, align: 'left', italic: true, lineHeight: 1.3 } },
-      { type: 'text', patch: { text: '— LAO TZU', fontFamily: 'Instrument Sans', fontSize: 24, color: '#56454F', x: 100, y: 880, w: 300, h: 40, align: 'left', letterSpacing: 4 } },
+      { type: 'text', patch: { text: 'LAO TZU', fontFamily: 'Instrument Sans', fontSize: 24, color: '#56454F', x: 100, y: 880, w: 300, h: 40, align: 'left', letterSpacing: 4 } },
     ],
   },
 ];
@@ -446,7 +446,7 @@ function BlankPagesGrid({ dispatch }) {
                   }}
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--pink-100)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'var(--pink-50)'}
-                  title={`${p.name} — ${p.w}×${p.h}`}>
+                  title={`${p.name}, ${p.w}×${p.h}`}>
                   {/* Aspect-ratio-accurate thumbnail — you see instantly if it's square, portrait, or wide */}
                   <div style={{
                     width: MAX, height: MAX,
@@ -738,7 +738,7 @@ function ImagesPanel() {
         ))}
         {!uploads.length && (
           <div style={{ gridColumn: 'span 3', padding: 20, textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>
-            No uploads yet — drop images to begin
+            No uploads yet, drop images to begin
           </div>
         )}
       </div>
@@ -1105,7 +1105,7 @@ function BackgroundPanel() {
           <Icon name="save" size={11} /> Save bg only
         </button>
         <button className="btn btn-primary" onClick={handleSaveComplete}
-          title="Freeze the entire canvas — bg, shapes, text, logos, images — as a reusable snapshot"
+          title="Freeze the entire canvas, bg, shapes, text, logos, images, as a reusable snapshot"
           style={{ padding: '8px 10px', fontSize: 11, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
           <Icon name="templates" size={11} /> Save complete canvas
         </button>
@@ -1117,14 +1117,14 @@ function BackgroundPanel() {
           border: '1px dashed var(--line-2)', lineHeight: 1.5,
         }}>
           <b style={{ color: 'var(--ink-2)' }}>Save bg only</b> keeps just the colour/gradient/image.<br/>
-          <b style={{ color: 'var(--ink-2)' }}>Save complete canvas</b> freezes the whole design — shapes, text, logos and all — so later edits to the source never change it.
+          <b style={{ color: 'var(--ink-2)' }}>Save complete canvas</b> freezes the whole design, shapes, text, logos and all, so later edits to the source never change it.
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
           {saved.map(bg => (
             <div key={bg.id} style={{ position: 'relative' }}>
               <button onClick={() => setPreviewBg(bg)}
-                title={`${bg.name}${bg.kind === 'complete' ? ' — complete canvas snapshot' : ' — background only'}`}
+                title={`${bg.name}${bg.kind === 'complete' ? ', complete canvas snapshot' : ', background only'}`}
                 style={{
                   width: '100%', aspectRatio: '1', border: `1px solid ${previewBg?.id === bg.id ? 'var(--pink-500)' : 'var(--line)'}`,
                   borderRadius: 8, padding: 0, overflow: 'hidden', cursor: 'pointer', position: 'relative',
@@ -1247,9 +1247,9 @@ function CanvasProperties() {
           if (p) dispatch({ type: 'update-canvas', id: canvas.id, patch: { w: p.w, h: p.h } });
         }}>
         {SIZE_PRESETS.map(p => (
-          <option key={p.id} value={p.id}>{p.name} — {p.w}×{p.h}</option>
+          <option key={p.id} value={p.id}>{p.name}, {p.w}×{p.h}</option>
         ))}
-        {!preset && <option value="custom">Custom — {canvas.w}×{canvas.h}</option>}
+        {!preset && <option value="custom">Custom, {canvas.w}×{canvas.h}</option>}
       </select>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>

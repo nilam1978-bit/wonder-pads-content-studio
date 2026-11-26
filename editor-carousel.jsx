@@ -251,7 +251,7 @@ function templateTestimonial(slide, W, H, brand, isCover, isOutro) {
   })));
   if (slide.body) {
     els.push(R('body', newElement('text', {
-      text: '— ' + slide.body, fontFamily: brand.fontBody, fontSize: Math.round(W*0.026),
+      text: ', ' + slide.body, fontFamily: brand.fontBody, fontSize: Math.round(W*0.026),
       color: '#56454F', align: 'left',
       x: W*0.08, y: H*0.76, w: W*0.84, h: Math.round(W*0.08),
       letterSpacing: 2, fontWeight: 500,
@@ -499,11 +499,11 @@ Everything you need to know before your first cycle with reusables. Simple, gent
 
 TIP 01: Start with your usual flow
 
-Track a single cycle with the pads you already own. Notice heavy days vs light days — that's what you'll pack for.
+Track a single cycle with the pads you already own. Notice heavy days vs light days, that's what you'll pack for.
 
 TIP 02: Build a rotation of three
 
-Two absorbencies, one liner. That's the whole starter kit. Wash, rotate, repeat — no landfill guilt.
+Two absorbencies, one liner. That's the whole starter kit. Wash, rotate, repeat, no landfill guilt.
 
 TIP 03: Rinse cold, then wash warm
 
