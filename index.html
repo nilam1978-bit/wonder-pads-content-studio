@@ -416,6 +416,17 @@
   .mobile-ribbon-panel header .mobile-ribbon-pin{min-width:44px;min-height:44px;width:44px;height:44px;padding:0;border-radius:50%;background:var(--pink-50);}
   .mobile-ribbon-panel-body{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:12px 14px 14px;}
   .mobile-ribbon-panel .mobile-ribbon{padding:0;height:48px;}
+  .mobile-ribbon-dock>.mobile-ribbon{height:54px;padding-inline:4px;gap:0;}
+  .mobile-ribbon-dock>.mobile-ribbon>.mobile-ribbon-scroll{overflow:hidden;}
+  .mobile-ribbon-dock>.mobile-ribbon .mobile-ribbon-items{width:100%;gap:0;justify-content:space-between;}
+  .mobile-ribbon-dock .mobile-ribbon-page-tool{flex:1 1 0;min-width:0;padding:3px 0;font-size:9px;height:46px;gap:3px;border-radius:11px;}
+  .mobile-ribbon-context>.mobile-ribbon{height:54px;padding-inline:6px;}
+  .mobile-ribbon-context .mobile-ribbon-tool{padding-inline:10px;}
+  .mobile-ribbon-panel-body{padding:8px 10px;}
+  .mobile-ribbon-tool>span:empty{display:none;}
+  .mobile-ribbon-tool:has(>svg):not(:has(>span)){width:44px;padding:0;}
+  .mobile-ai{display:grid;gap:10px;font-size:13px;}
+  .mobile-ai pre{white-space:pre-wrap;font:inherit;line-height:1.5;margin:0;padding:10px;background:var(--pink-50);border-radius:10px;}
   .studio-resize-dialog {
     width: min(440px, calc(100vw - 28px));
     max-height: calc(100dvh - 28px);
@@ -453,7 +464,7 @@
     // ONE version number for every app file. Change it each time you upload new files,
     // so phones and browsers fetch the fresh copies instead of reusing old ones.
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
-      const APP_VERSION = '2026-11-26-polished-ribbon-controls';
+      const APP_VERSION = '2026-11-26-seven-selection-tools';
     document.write('<link rel="stylesheet" href="content-workspace.css?v=' + APP_VERSION + '">');
     // Files load in this order. The data file is plain JavaScript; the rest are React (.jsx).
     const APP_FILES = [

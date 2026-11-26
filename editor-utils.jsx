@@ -65,7 +65,7 @@ const isIllustration = el => el.type === 'icon' || !!el.stickerId || !!el.ctaGro
 const isBrandLogo = el => el.type === 'image' && (el.role === 'logo' || el.brandSlot === 'logo');
 const hasBrandLogoMask = el => isBrandLogo(el) && el.src === 'assets/wpr-logo.png';
 const keepsAspectOnResize = el => isIllustration(el) || isBrandLogo(el);
-const fitsWholeImage = el => isBrandLogo(el) || isIllustration(el);
+const fitsWholeImage = el => el.imageFit?el.imageFit==='contain':isBrandLogo(el)||isIllustration(el);
 const brandLogoSize = el => Math.min(el.w, el.h);
 
 function illustrationAspect(el) {
