@@ -43,7 +43,7 @@ async function main(){
   await page.setViewportSize({width:1280,height:900});await source.waitFor();assert.equal(await source.inputValue(),initial);
   assert.equal(await page.locator('.cw-workspace .cw-entry-options').count(),0);
   assert.equal(await page.getByRole('button',{name:'Edit source text',exact:true}).count(),0);
-  assert(await page.getByRole('button',{name:'Update slides',exact:true}).isDisabled());
+  assert.equal(await page.getByRole('button',{name:'Update slides',exact:true}).count(),0);
   const middleBefore=JSON.stringify((await snapshot()).contentDraft.slides.slice(1,-1));
   await page.getByRole('button',{name:'Slide 2',exact:true}).click();
   await page.getByRole('button',{name:'Deep plum',exact:true}).click();await poll(s=>s.contentDraft?.slides[0].look==='floral-deep-plum');
@@ -68,9 +68,18 @@ async function main(){
   await source.fill(revised);await poll(s=>s.contentDraft?.source===revised);assert.equal(JSON.stringify((await snapshot()).contentDraft.slides),oldSlides);
   assert(await page.getByRole('button',{name:'Update slides',exact:true}).isEnabled());
   await page.getByRole('button',{name:'Caption & hashtags',exact:true}).click();await page.getByRole('textbox',{name:'Caption & hashtags',exact:true}).fill('A retained caption #wonderpads');await page.getByRole('button',{name:'Save changes',exact:true}).click();
-  await page.getByRole('button',{name:'Design',exact:true}).click();assert(await page.getByRole('button',{name:'Continue with current slides',exact:true}).isVisible());
-  await page.getByRole('button',{name:'Text',exact:true}).click();await page.getByRole('button',{name:'Update slides',exact:true}).click();await page.getByRole('heading',{name:'Review updated slides',exact:true}).waitFor();await page.getByRole('button',{name:'Keep current slides',exact:true}).click();assert.equal(JSON.stringify((await snapshot()).contentDraft.slides),oldSlides);assert(await source.isVisible());
-  await page.getByRole('button',{name:'Update slides',exact:true}).click();await page.getByRole('button',{name:'Apply this version',exact:true}).click();await poll(s=>s.contentDraft?.slides.length===5);
+  await page.getByRole('button',{name:'Design',exact:true}).click();assert(await page.getByRole('button',{name:'Keep current',exact:true}).isVisible());const choice=page.getByRole('group',{name:'Apply source changes',exact:true}),keepBox=await choice.getByRole('button',{name:'Keep current',exact:true}).boundingBox(),updateBox=await choice.getByRole('button',{name:'Update slides',exact:true}).boundingBox();assert.equal(keepBox.y,updateBox.y);assert.equal(await page.locator('.cw-source-footer .cw-primary').count(),0);
+  await page.getByRole('button',{name:'Text',exact:true}).click();await page.getByRole('button',{name:'Update slides',exact:true}).click();await page.getByRole('heading',{name:'Review updated slides',exact:true}).waitFor();
+  for(const width of [320,390]){
+    await page.setViewportSize({width,height:844});const dialog=page.getByRole('dialog',{name:'Review updated slides',exact:true}),buttons=dialog.locator('.cw-review-footer button');
+    const a=await buttons.nth(0).boundingBox(),b=await buttons.nth(1).boundingBox();assert.equal(a.y,b.y);assert(a.x+a.width<=b.x);assert(b.x+b.width<=width);assert(a.height>=44&&b.height>=44);
+    const header=await dialog.locator('header').boundingBox(),footer=await dialog.locator('footer').boundingBox();await dialog.locator('.cw-review-body').evaluate(el=>el.scrollTop=el.scrollHeight);
+    assert.equal((await dialog.locator('header').boundingBox()).y,header.y);assert.equal((await dialog.locator('footer').boundingBox()).y,footer.y);assert(footer.y+footer.height<=844);
+    await page.screenshot({path:path.join(outputs,'source-review-'+width+'.png')});
+  }
+  await page.setViewportSize({width:390,height:844});
+  await page.getByRole('dialog',{name:'Review updated slides',exact:true}).getByRole('button',{name:'Keep current',exact:true}).click();assert.equal(JSON.stringify((await snapshot()).contentDraft.slides),oldSlides);assert(await source.isVisible());
+  await page.getByRole('button',{name:'Update slides',exact:true}).click();await page.getByRole('button',{name:'Apply update',exact:true}).click();await poll(s=>s.contentDraft?.slides.length===5);
   const updated=(await snapshot()).contentDraft;assert.equal(updated.slides[3].blocks[0].text,'One more step');assert.equal(updated.slides[0].blocks[1].role,'sub');assert(updated.slides.every(s=>!s.blocks.some(b=>/^# /m.test(b.text))));assert.equal(updated.appliedSource,revised);assert.equal(updated.slides[0].look,'floral-peach');
   await page.getByRole('button',{name:'Undo',exact:true}).click();await poll(s=>s.contentDraft?.slides.length===4);assert.equal(JSON.stringify((await snapshot()).contentDraft.slides),oldSlides);
   await page.getByRole('button',{name:'Text',exact:true}).click();assert(await page.getByRole('button',{name:'Update slides',exact:true}).isEnabled());
@@ -80,12 +89,12 @@ async function main(){
   await page.screenshot({path:path.join(outputs,'source-style-workspace-keyboard.png'),clip:{x:0,y:0,width:390,height:380}});
   await page.getByRole('button',{name:'Done',exact:true}).tap();await page.evaluate(()=>{delete visualViewport.height;visualViewport.dispatchEvent(new Event('resize'));});
   const pendingSource=await source.inputValue();await poll(s=>s.contentDraft?.source===pendingSource);await page.reload();await page.getByRole('button',{name:/Continue with your words/}).click({timeout:60000});await page.getByRole('button',{name:'Text',exact:true}).click();assert.equal(await source.inputValue(),pendingSource);assert.equal(JSON.stringify((await snapshot()).contentDraft.slides),oldSlides);
-  await page.getByRole('button',{name:'Continue with current slides',exact:true}).click();await poll(s=>s.projects?.length===1);assert.equal((await snapshot()).projects[0].sourceDraft,pendingSource);
+  await page.getByRole('button',{name:'Keep current',exact:true}).click();await poll(s=>s.projects?.length===1);assert.equal((await snapshot()).projects[0].sourceDraft,pendingSource);
   await page.getByRole('button',{name:'Back to studio',exact:true}).click();await page.getByRole('button',{name:/Start with your words/}).click();
   await source.fill('A first sentence with several useful words. A second point also has enough words for balanced slides. A final sentence completes this small example.');
   await page.locator('.cw-entry-options').click();await page.getByRole('combobox',{name:'Split by',exact:true}).selectOption('balanced');await page.getByRole('spinbutton',{name:'Source slides',exact:true}).fill('2');await page.getByRole('button',{name:'Apply options',exact:true}).click();await page.getByRole('button',{name:'Prepare slides',exact:true}).click();await page.getByRole('button',{name:'Text',exact:true}).click();
   await page.getByRole('button',{name:'Slide breaks: Balanced · Change',exact:true}).click();assert.equal(await page.getByRole('button',{name:'Square · 1:1',exact:true}).count(),0);await page.getByRole('spinbutton',{name:'Source slides',exact:true}).fill('3');await page.getByRole('button',{name:'Save changes',exact:true}).click();await poll(s=>s.contentDraft?.sourceSettings?.count===3);assert.equal((await snapshot()).contentDraft.settings.count,2);
-  await page.getByRole('button',{name:'Update slides',exact:true}).click();await page.getByRole('button',{name:'Apply this version',exact:true}).click();await poll(s=>s.contentDraft?.slides.length===4&&s.contentDraft.settings.count===3);
+  await page.getByRole('button',{name:'Update slides',exact:true}).click();await page.getByRole('button',{name:'Apply update',exact:true}).click();await poll(s=>s.contentDraft?.slides.length===4&&s.contentDraft.settings.count===3);
   assert.deepEqual(errors,[]);console.log('PASS: keyboard layouts; persistent raw source and caret/slide retention; compact scrollable colour cards with larger canvas; no repeated post settings; review/cancel/apply/Undo; caption, pending draft and reload preservation; splitting-only options for balanced designs.');
  }catch(e){await page.screenshot({path:path.join(outputs,'source-mobile-failure.png')});console.error(errors);throw e;}finally{await browser.close();}
 }
