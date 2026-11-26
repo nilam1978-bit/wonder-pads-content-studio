@@ -136,3 +136,22 @@ const noHookDraft={...draft,settings:noHookSettings,slides:ctx.prepareContentSli
 const noHookChanged=ctx.contentWithLook(noHookDraft,'floral-lavender');
 assert(ctx.renderContentSlide(noHookChanged.slides[0],noHookSettings,fontBrand).elements.some(el=>el.src===floralLooks[0].background));
 assert.equal(noHookChanged.slides[1],noHookDraft.slides[1]);
+
+// Reopening reflects canvas wording edits while retaining an unapplied source draft.
+const syncSource='# Original cover\nCover body.\n# Original detail\n## A subheading\nDetail body.';
+const syncSettings={...settings,split:'markers'};
+const syncSlides=ctx.prepareContentSlides(syncSource,syncSettings);
+const syncPages=syncSlides.map(s=>ctx.renderContentSlide(s,syncSettings,brand));
+const syncProject={id:'sync',name:'Sync',canvases:syncPages,activeCanvasId:syncPages[0].id,contentWorkspaceSettings:syncSettings,sourceText:syncSource,generatedSourceText:syncSource,sourceDraft:syncSource};
+assert.equal(ctx.contentDraftFromProject(syncProject).source,syncSource);
+syncPages[0].elements.find(e=>e.__role==='heading').text='Latest canvas heading';
+const synced=ctx.contentDraftFromProject(syncProject);
+assert(synced.source.startsWith('# Latest canvas heading'));
+assert(synced.source.includes('## A subheading'));
+assert.equal(synced.source,synced.appliedSource);
+assert.equal(synced.source.split(/^# /m).length-1,2,'Automatic closing slide stays out of the authored source');
+const pending=ctx.contentDraftFromProject({...syncProject,sourceDraft:'# My pending source\nDo not replace this draft.'});
+assert.equal(pending.source,'# My pending source\nDo not replace this draft.');
+assert(pending.appliedSource.includes('Latest canvas heading'));
+assert.equal(ctx.contentSlidesSource(synced.slides,synced.settings),synced.source);
+console.log('PASS: latest canvas wording reaches raw source; subheadings survive; automatic CTA excluded; unapplied source drafts preserved.');

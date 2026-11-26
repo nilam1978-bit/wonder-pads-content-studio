@@ -92,6 +92,7 @@
 .cw-entry-markers{display:flex;align-items:center;gap:8px;padding:8px 24px;background:white;flex:none}
 .cw-entry-markers button{min-height:40px;padding:7px 12px;background:#fcf3fa;font-size:13px;color:#893773}
 .cw-entry-markers .cw-entry-help{margin-left:auto;border-radius:50%;min-width:34px;width:34px;min-height:34px;padding:0;background:transparent}
+.cw-entry-markers .cw-entry-keyboard-done{display:none}
 .cw-entry-shell .cw-entry-marker-help{margin:0;padding:2px 24px 10px;color:#776371;font-size:12px;flex:none}
 .cw-entry-field{position:relative;flex:1;min-height:0;display:flex}
 .cw-entry-shell textarea.cw-source{flex:1;min-height:0;height:100%;resize:none;overflow:auto;margin:0;border:0;border-radius:0;background:white;padding:20px 28px;font:16px/1.7 Montserrat,sans-serif;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
@@ -146,6 +147,12 @@
   .cw-entry-dialog{margin:auto auto max(12px,env(safe-area-inset-bottom,0px));border-radius:18px}
   .cw-entry-dialog-content{padding:16px}.cw-entry-dialog header{padding:14px 16px}.cw-entry-dialog footer{padding-inline:16px}
 }
+/* ResizeObserver follows the actual visual viewport, including an iPhone keyboard. */
+.cw-entry-typing .cw-header,.cw-entry-typing .cw-entry-tabs,.cw-entry-typing .cw-entry-footer,.cw-entry-typing .cw-entry-marker-help{display:none}
+.cw-entry-typing .cw-entry-markers .cw-entry-help{display:none}
+.cw-entry-typing .cw-entry-markers .cw-entry-keyboard-done{display:block;margin-left:auto;background:#893773;color:white;border-color:#893773}
+.cw-entry-typing .cw-entry-markers{padding-block:6px;border-bottom:1px solid #eadbe6}
+.cw-entry-typing .cw-entry-wordbar{min-height:44px}
 @media(max-height:620px){.cw-entry-empty{gap:8px;justify-content:flex-start}.cw-entry-empty-icon{display:none}.cw-entry-empty h2{font-size:21px}.cw-entry-shell .cw-entry-empty p{font-size:12px}}
 /* A phone has one vertical workspace scroller. Preview/strip gestures may chain to it. */
 @media(max-width:639px){
@@ -174,4 +181,56 @@
   .cw-apply>span{padding:0 6px}
   .cw-shell .cw-apply button{background:transparent;border-color:transparent}
   .cw-shell .cw-apply button[aria-pressed=true]{background:#fff;border-color:#dfcbd9}
+}
+
+/* Keep the raw source alongside the preview; style cards reserve a single short row. */
+.cw-workspace .cw-columns{height:100%;min-height:0;grid-template-columns:minmax(300px,365px) minmax(0,1fr)}
+.cw-workspace .cw-body{overflow:hidden}
+.cw-workspace .cw-source-column{height:100%;min-height:0;overflow:hidden;border-right:1px solid #eadbe6}
+.cw-source-panel{height:100%;min-height:0;display:flex;flex-direction:column;background:white}
+.cw-source-panel .cw-entry-paper{max-width:none}
+.cw-source-panel .cw-source-title{flex:none;font-size:23px;margin:0;padding:18px 20px 4px}
+.cw-source-panel .cw-entry-markers{padding:6px 16px}
+.cw-source-panel .cw-entry-markers button{font-size:12px;padding:7px 9px}
+.cw-source-panel textarea.cw-source{padding:14px 20px;font-size:16px}
+.cw-source-panel .cw-entry-wordbar{margin-inline:16px;font-size:11px}
+.cw-source-panel .cw-entry-wordbar>div{gap:6px}
+.cw-source-panel .cw-entry-footer{padding:10px 16px}
+.cw-source-controls{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.cw-source-panel .cw-source-controls .cw-entry-link{min-height:36px;font-size:12px;padding-inline:0;text-align:left}
+.cw-source-panel .cw-source-footer p{margin:3px 0 9px;font-size:11px;color:#776371;line-height:1.5}
+.cw-source-panel .cw-source-footer>.cw-primary{width:100%;min-height:44px}
+.cw-workspace .cw-design{height:100%;min-height:0;overflow:auto;padding-top:10px}
+.cw-workspace .cw-preview-stage{flex:1 1 0;height:auto;min-height:180px;overflow:hidden}
+.cw-workspace .cw-preview-stage[data-zoomed=true]{overflow:auto}
+.cw-style-heading{display:flex;gap:8px;align-items:center;min-height:36px;font-size:13px;color:#56454f}
+.cw-shell .cw-style-filter{margin:0 0 0 auto;font-size:12px}
+.cw-shell .cw-style-filter select{width:auto;min-width:100px;font-size:12px;padding:5px 8px;margin:0;border:0;background:transparent}
+.cw-shell .cw-style-info{position:relative;margin:0}
+.cw-style-info summary{display:grid;place-items:center;list-style:none;width:36px;min-height:36px;color:#893773}
+.cw-style-info summary::-webkit-details-marker{display:none}
+.cw-style-info p{position:absolute;right:0;bottom:100%;z-index:10;width:240px;max-width:calc(100vw - 40px);padding:12px;border:1px solid #dfcbd9;border-radius:10px;background:white;box-shadow:0 4px 16px #78265f20;font-size:12px!important;line-height:1.5;margin:0}
+.cw-workspace .cw-color-styles{gap:8px;padding:3px 3px 7px;scroll-padding:3px;min-height:54px}
+.cw-shell .cw-color-styles .cw-look{flex:0 0 146px;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:9px 12px;border:1px solid #d9c4d2;border-radius:9px;box-shadow:none}
+.cw-shell .cw-color-styles .cw-look[aria-pressed=true]{outline:2px solid #893773;outline-offset:0;border-color:transparent}
+.cw-color-styles .cw-look span{font-size:12px;white-space:nowrap;line-height:1.25}
+.cw-workspace-typing>.cw-header,.cw-workspace-typing>.cw-mobile-tabs,.cw-workspace-typing>.cw-footer{display:none}
+.cw-entry-typing .cw-source-title{display:none}
+@media(max-width:1000px) and (min-width:640px){.cw-workspace .cw-columns{grid-template-columns:minmax(270px,320px) minmax(0,1fr)}}
+@media(max-width:639px){
+  .cw-workspace .cw-columns{display:block;min-height:0}
+  .cw-workspace .cw-source-column{border:0}
+  .cw-source-panel .cw-source-title{display:none}
+  .cw-source-panel .cw-entry-markers{padding-top:6px}
+  .cw-source-panel .cw-entry-footer{padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+  .cw-source-panel .cw-source-controls .cw-entry-link{min-height:40px}
+  .cw-workspace .cw-design{padding:6px 12px 2px}
+  .cw-workspace .cw-preview-stage{min-height:140px}
+  .cw-workspace .cw-preview-heading{margin-bottom:2px}
+  .cw-workspace .cw-style-heading{min-height:36px;font-size:12px}
+  .cw-shell .cw-color-styles .cw-look{flex-basis:142px}
+  .cw-workspace .cw-template-browser{padding-top:4px}
+  .cw-workspace .cw-thumbnails{margin-bottom:0}
+  .cw-workspace-typing .cw-source-panel .cw-entry-footer{display:none}
+  .cw-workspace-typing .cw-source-panel .cw-entry-main{min-height:0}
 }
