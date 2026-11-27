@@ -1019,11 +1019,11 @@ function MobileFontLibrary({el,onClose,onPick}){
   return <><MobileLibraryStrip title="Font" onExpand={()=>setOpen(true)} onClose={onClose}>{ALL_FONT_OPTIONS.map(button)}</MobileLibraryStrip>{open&&<MobileLibraryDrawer title="Font library" onDismiss={onClose} onClose={()=>setOpen(false)}><div className="mobile-library-search"><input className="text-input" aria-label="Search fonts" placeholder="Search fonts" value={search} onChange={e=>setSearch(e.target.value)}/><select className="pk-select" aria-label="Font category" value={category} onChange={e=>setCategory(e.target.value)}><option value="all">All fonts</option>{FONT_GROUPS.map(g=><option key={g.kind} value={g.kind}>{g.label}</option>)}</select></div><div className="mobile-font-library-grid">{choices.map(button)}</div>{!choices.length&&<p>No matching fonts.</p>}{error&&<p role="alert">{error}</p>}</MobileLibraryDrawer>}</>;
 }
 
-function MobileColourLibrary({el,onClose,onPick}){
-  const {state,dispatch}=useStore(),[open,setOpen]=meS(false),original=meR(el.color);
-  const colors=[...new Set([...(state.brand.colors||BRAND_PALETTE),...NEUTRAL_PALETTE,...COMPLEMENT_PALETTE,original.current,el.color])].filter(Boolean);
-  const change=color=>{if(onPick){onPick(color);return;}if(!el.locked)dispatch({type:'update-element',id:el.id,patch:{color}});};
-  return <><MobileLibraryStrip title="Colour" onExpand={()=>setOpen(true)} onClose={onClose}><button className="mobile-library-custom" aria-label="Custom text colour" onClick={()=>setOpen(true)}>+</button>{colors.map(color=><button key={color} className="mobile-library-swatch" style={{background:color}} aria-label={'Text colour '+color} aria-pressed={el.color?.toLowerCase()===color.toLowerCase()} disabled={el.locked} onClick={()=>change(color)}/>)}</MobileLibraryStrip>{open&&<MobileLibraryDrawer title="Colour library" onDismiss={onClose} onClose={()=>setOpen(false)}><ColorPicker value={el.color} onChange={change}/></MobileLibraryDrawer>}</>;
+function MobileColourLibrary({el,onClose,onPick,field='color',title='Colour'}){
+  const {state,dispatch}=useStore(),[open,setOpen]=meS(false),original=meR(el[field]);
+  const colors=[...new Set([...(state.brand.colors||BRAND_PALETTE),...NEUTRAL_PALETTE,...COMPLEMENT_PALETTE,...(field==='stroke'||field==='iconAccent'?['transparent']:[]),original.current,el[field]])].filter(Boolean);
+  const change=color=>{if(onPick){onPick(color);return;}if(!el.locked)dispatch({type:'update-element',id:el.id,patch:{[field]:color}});};
+  return <><MobileLibraryStrip title={title} onExpand={()=>setOpen(true)} onClose={onClose}><button className="mobile-library-custom" aria-label="Custom text colour" onClick={()=>setOpen(true)}>+</button>{colors.map(color=><button key={color} className="mobile-library-swatch" style={{background:color}} aria-label={(el.type==='text'?'Text colour':title)+' '+color} aria-pressed={el[field]?.toLowerCase()===color.toLowerCase()} disabled={el.locked} onClick={()=>change(color)}/>)}</MobileLibraryStrip>{open&&<MobileLibraryDrawer title="Colour library" onDismiss={onClose} onClose={()=>setOpen(false)}><ColorPicker value={el[field]||'#000000'} onChange={change}/></MobileLibraryDrawer>}</>;
 }
 
 function MobileBackgroundLibrary({mode,onClose}){
@@ -1091,11 +1091,11 @@ const SHAPE_TYPES = ['rect', 'circle', 'triangle', 'star', 'heart', 'diamond', '
 function trayToolsFor(el) {
   if (el.type === 'text') return ['font', 'size', 'colour', 'styles', 'format', 'opacity', 'position'];
   if (el.type === 'image') return ['size','flip','fit','replace-artwork','adjust','opacity','position'];
-  if (el.type === 'icon') return ['colour', 'size', 'flip', 'replace-icon', 'opacity', 'position'];
+  if (el.type === 'icon') return ['colour','shape',...(CARE_ICON_LIBRARY.some(i=>i.id===el.name)?['accent']:[]), 'size', 'flip', 'replace-icon', 'opacity', 'position'];
   if (el.type === 'frame') return ['size', 'frame', 'opacity', 'position'];
-  return ['colour', 'size', 'opacity', 'position'];
+  return ['colour',...(SHAPE_TYPES.includes(el.type)?['outline','shape']:['shape']), 'size', 'opacity', 'position'];
 }
-const TRAY_LABELS = { styles: 'Text styles', font: 'Font', size: 'Size', colour: 'Colour', format: 'Spacing', opacity: 'Opacity', position: 'Position', flip: 'Flip', adjust: 'Adjust image', frame: 'Frame', fit:'Crop / fit', 'replace-icon': 'Change icon', 'replace-artwork': 'Replace artwork' };
+const TRAY_LABELS = { styles: 'Text styles', font: 'Font', size: 'Size', colour: 'Colour', format: 'Spacing', opacity: 'Opacity', position: 'Position', flip: 'Flip', adjust: 'Adjust image', frame: 'Frame', fit:'Crop / fit', shape:'Shape settings',outline:'Outline',accent:'Soft fill', 'replace-icon': 'Change icon', 'replace-artwork': 'Replace artwork' };
 // The property that holds this item's main colour.
 function colourKey(el) {
   if (el.type === 'text' || el.type === 'icon') return 'color';
@@ -1131,7 +1131,7 @@ function MobileSelectionTools({ el, activeTool, onTool, onSelectMultiple }) {
   const locked = !!el.locked;
   const change=patch=>{if(!locked&&patch)dispatch({type:'update-element',id:el.id,patch});};
   const chip = 'mobile-ribbon-tool';
-  const toolIcons={words:'edit',size:'resize',flip:'flip_horizontal',adjust:'sliders',position:'move_element',opacity:'opacity',styles:'text',format:'sliders','replace-artwork':'images','replace-icon':'icons',frame:'frames',fit:'fit'};
+  const toolIcons={words:'edit',size:'resize',flip:'flip_horizontal',adjust:'sliders',position:'move_element',opacity:'opacity',styles:'text',format:'sliders','replace-artwork':'images','replace-icon':'icons',frame:'frames',fit:'fit',shape:'sliders',outline:'circle',accent:'bg'};
   const tool=(label,key,content=label)=><button className={chip} aria-label={label} aria-expanded={key === 'words' ? undefined : activeTool===key} disabled={locked&&key!=='position'} onClick={()=>onTool(key)}>{toolIcons[key]&&<Icon name={toolIcons[key]} size={17}/>}{(key==='font'||key==='size'||!toolIcons[key])&&<span>{content}</span>}{key==='font'&&<Icon name="chevron_d" size={13}/>}</button>;
   const update = patch => dispatch({ type: 'update-element', id: el.id, patch });
   return <>
@@ -1150,6 +1150,7 @@ function MobileSelectionTools({ el, activeTool, onTool, onSelectMultiple }) {
     </>:<>
       {(isIllustration(el)||el.type==='image') && tool('Flip','flip')}
       {tool('Size','size')}
+      {trayToolsFor(el).includes('outline')&&tool('Outline colour','outline')}{trayToolsFor(el).includes('shape')&&tool('Shape settings','shape')}{trayToolsFor(el).includes('accent')&&tool('Soft fill','accent')}
       {trayToolsFor(el).includes('colour') && tool('Colour','colour',<><span className="mobile-ribbon-swatch" style={{background:el[colourKey(el)]}}/>Colour</>)}
       {el.type==='image' && tool('Crop / fit','fit')}
       {el.type==='image' && tool('Adjust image','adjust','Adjust')}
@@ -1164,7 +1165,7 @@ function MobileSelectionTools({ el, activeTool, onTool, onSelectMultiple }) {
   </>;
 }
 
-function MobileToolTray({ el, tool, onClose }) {
+function MobileLegacyToolTray({ el, tool, onClose }) {
   const {dispatch}=useStore();
   const update = patch => dispatch({type:'update-element',id:el.id,patch});
   const label = TRAY_LABELS[tool];
@@ -1186,6 +1187,7 @@ function MobileToolTray({ el, tool, onClose }) {
         {tool === 'font' && <FontPicker el={el} maxHeight={Math.round((window.visualViewport?.height || window.innerHeight) * 0.27)} />}
         {tool === 'size' && <SizeTool el={el} />}
         {tool === 'colour' && <ColourTool el={el} />}
+        {tool==='shape'&&(el.type==='icon'?<IconProps el={el} update={update} showFlip={false} showLibrary={false}/>:SHAPE_TYPES.includes(el.type)?<ShapeProps el={el} update={update}/>:<LineProps el={el} update={update}/>)}
         {tool === 'format' && <FormatTool el={el} />}
         {tool === 'opacity' && <OpacityTool el={el} />}
         {tool === 'position' && <PositionTool el={el} />}

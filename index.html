@@ -517,6 +517,23 @@
   .mobile-layer-name>span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .mobile-layer-preview{display:grid;place-items:center;width:28px;height:28px;flex:none;background:#FAF0F5;border-radius:5px;overflow:hidden;}.mobile-layer-preview img{width:100%;height:100%;object-fit:contain;}
   @media(max-width:359px){.mobile-ribbon-dock .mobile-ribbon-page-tool{padding-inline:2px;}}
+
+  .mobile-control-card{flex:none;width:220px;min-width:0;display:flex;flex-direction:column;gap:4px;font-size:11px;color:#6E495E;}
+  .mobile-control-card>label{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .mobile-control-card input[type=number]{width:60px;padding:3px;font:600 12px monospace;border:1px solid #E8C5D8;border-radius:6px;}
+  .mobile-control-card input[type=range]{width:100%;min-width:0;margin:0;}
+  .mobile-control-slider{display:flex;align-items:center;gap:4px;}.mobile-control-slider>input{flex:1;min-width:30px;}.mobile-control-slider>button{width:28px;height:28px;flex:none;background:#FAF0F5;border:1px solid #E8C5D8;border-radius:8px;color:#7A2359;}
+  .mobile-legacy-details>.mobile-ribbon-panel{position:static;max-height:none;box-shadow:none;border:0;padding:0;}
+  .mobile-legacy-details>.mobile-ribbon-panel>header{display:none;}
+  .mobile-horizontal-weights>div{flex-wrap:nowrap!important;}
+  .mobile-multi-panel-body{display:flex;gap:8px;align-items:center;overflow-x:auto;min-width:0;}
+  .mobile-multi-panel-body>label{flex:none;min-width:180px;}.mobile-multi-panel-body>div{display:flex;gap:8px;}.mobile-multi-panel-body>div>label{flex:none;min-width:170px;}.mobile-multi-panel-body input[type=number]{max-width:70px;}
+  .mobile-context-frame{display:flex;align-items:center;gap:6px;flex:none;}
+  .mobile-context-frame>div:not(:has(button)),.mobile-context-frame>input{display:none;}
+  .mobile-context-frame>div:has(button){display:flex!important;gap:6px!important;}
+  .mobile-context-frame button{flex:none!important;width:auto!important;min-width:60px;height:36px;padding:6px 10px!important;font-size:11px;}
+  .mobile-legacy-details .mobile-ribbon-panel-body{overflow:visible;}
+  .mobile-ribbon-dock button,.mobile-library-drawer button{-webkit-tap-highlight-color:transparent;}
   .studio-resize-dialog {
     width: min(440px, calc(100vw - 28px));
     max-height: calc(100dvh - 28px);
@@ -554,7 +571,7 @@
     // ONE version number for every app file. Change it each time you upload new files,
     // so phones and browsers fetch the fresh copies instead of reusing old ones.
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
-      const APP_VERSION = '2026-11-27-mobile-selection-layers';
+      const APP_VERSION = '2026-11-27-contextual-audit';
     document.write('<link rel="stylesheet" href="content-workspace.css?v=' + APP_VERSION + '">');
     // Files load in this order. The data file is plain JavaScript; the rest are React (.jsx).
     const APP_FILES = [
@@ -573,6 +590,7 @@
       'editor-history.jsx',
       'editor-calendar.jsx',
       'editor-home.jsx',
+      'editor-mobile-context.jsx',
       'editor-mobile-editor.jsx',
       'editor-mobile-multi.jsx',
       'final-carousel.jsx',
