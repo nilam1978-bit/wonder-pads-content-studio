@@ -454,6 +454,28 @@
   .mobile-font-library-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;}
   .mobile-font-library-grid .mobile-font-choice{width:100%;max-width:100%;text-align:left;}
   .mobile-library-grid{display:flex;gap:8px;flex-wrap:wrap;padding:3px;margin-top:8px;}
+
+  .mobile-insert-preview{display:flex;gap:6px;align-items:center;flex:none;width:max-content;}
+  .mobile-insert-preview>*{display:none!important;}
+  .mobile-insert-preview>div:has(>button){display:flex!important;gap:6px!important;width:max-content;}
+  .mobile-insert-preview>p[role=alert]{display:block!important;max-width:180px;}
+  .mobile-insert-preview>div:has(>button)>button,.mobile-insert-upload{flex:0 0 86px!important;width:86px!important;height:76px!important;min-height:44px;aspect-ratio:auto!important;padding:6px!important;box-sizing:border-box;overflow:hidden;border-radius:10px;font-size:13px!important;white-space:nowrap;text-overflow:ellipsis;}
+  .mobile-insert-preview img,.mobile-insert-preview svg{max-width:100%;height:46px!important;object-fit:contain;}
+  .mobile-insert-preview button>span{font-size:9px!important;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mobile-insert-upload{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:var(--pink-50);border:1px solid var(--line);color:var(--pink-600);}
+  .mobile-insert-preview input[type=file]{display:none;}
+  .mobile-image-size-row{display:flex;align-items:center;gap:6px;min-width:0;}
+  .mobile-image-size-row>input[type=range]{flex:1;min-width:40px;width:0;margin:0;}
+  .mobile-image-size-stepper{display:flex;flex:none;align-items:center;border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  .mobile-image-size-stepper button{width:32px;height:44px;min-width:32px;padding:0;background:var(--pink-50);font-size:18px;}
+  .mobile-image-size-stepper input{width:54px;min-width:0;border:0;padding:4px;text-align:center;font:600 13px monospace;background:white;color:var(--ink);}
+  .mobile-pages-overview{top:auto;bottom:0;height:calc(var(--studio-viewport-height,100dvh)*.5);max-height:calc(var(--studio-viewport-height,100dvh)*.5);border-radius:18px 18px 0 0;}
+  .mobile-slide-library-choice{flex:none;width:56px;min-height:70px;padding:4px;background:white;border:1px solid var(--line);border-radius:8px;display:flex;align-items:center;flex-direction:column;font-size:10px;}
+  .mobile-slide-library-choice[aria-pressed=true]{border-color:var(--pink-600);background:var(--pink-100);}
+  .mobile-insert-full>div:has(>h3){display:none;}
+  .mobile-insert-full[data-tool=icons]>div:has(>button),.mobile-insert-full[data-tool=frames]>div:has(>button){grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important;}
+  .mobile-insert-full img,.mobile-insert-full svg{max-height:72px;}
+  .mobile-insert-full>label{font-size:12px;}
   .studio-resize-dialog {
     width: min(440px, calc(100vw - 28px));
     max-height: calc(100dvh - 28px);
@@ -491,7 +513,7 @@
     // ONE version number for every app file. Change it each time you upload new files,
     // so phones and browsers fetch the fresh copies instead of reusing old ones.
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
-      const APP_VERSION = '2026-11-27-horizontal-libraries';
+      const APP_VERSION = '2026-11-27-insertion-strips-image-size';
     document.write('<link rel="stylesheet" href="content-workspace.css?v=' + APP_VERSION + '">');
     // Files load in this order. The data file is plain JavaScript; the rest are React (.jsx).
     const APP_FILES = [
