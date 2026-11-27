@@ -661,6 +661,10 @@ function reducer(state, action) {
       return { ...nextState, selection: newIds };
     }
 
+    case 'reorder-elements':
+      return activeProjectMutate(proj=>{const c=proj.canvases.find(c=>c.id===proj.activeCanvasId),ids=action.ids||[];
+        if(ids.length!==c.elements.length||new Set(ids).size!==ids.length||ids.some(id=>!c.elements.some(e=>e.id===id))||ids.every((id,i)=>id===c.elements[i].id))return proj;
+        const map=new Map(c.elements.map(e=>[e.id,e]));return patchCanvas(proj,c.id,{elements:ids.map(id=>map.get(id))});});
     case 'reorder-element':
       return activeProjectMutate(proj => {
         const c = proj.canvases.find(c => c.id === proj.activeCanvasId);
@@ -829,9 +833,9 @@ function reducer(state, action) {
         const cId = proj.activeCanvasId;
         return patchCanvas(proj, cId, {
           elements: proj.canvases.find(c => c.id === cId).elements
-            .map(e => patchMap.has(e.id) ? deepMerge(e, patchMap.get(e.id)) : e),
+            .map(e => {if(!patchMap.has(e.id)||e.locked)return e;const next=deepMerge(e,patchMap.get(e.id));if(next.type==='text')next.h=textLayout(next).height;return next;}),
         });
-      });
+      }, {transient:action.transient});
     }
 
     // ---------- Carousel ----------
