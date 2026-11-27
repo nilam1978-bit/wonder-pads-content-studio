@@ -12,6 +12,8 @@ const Icon = ({ name, size = 20, stroke = 1.5, accent = 'none', style, className
 };
 
 const ICONS = {
+  multi_select: '<rect x="3" y="3" width="12" height="12" rx="2"/><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M12 15l2 2 4-5"/>',
+  drag_handle: '<path d="M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01" stroke-width="3"/>',
   opacity: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 010 18z" fill="currentColor"/>',
   sliders: '<path d="M4 7h4m6 0h6M4 17h10m6 0h0"/><circle cx="11" cy="7" r="3"/><circle cx="17" cy="17" r="3"/>',
   resize: '<path d="M4 10V4h6M14 4h6v6M20 14v6h-6M10 20H4v-6M4 4l6 6m4 4 6 6"/>',

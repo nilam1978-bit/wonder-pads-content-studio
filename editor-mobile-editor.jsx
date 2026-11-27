@@ -114,6 +114,7 @@ function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBu
   const canvas = activeCanvas(state);
 
   const [openSheet, setOpenSheet] = meS(null);
+  const [multiSelecting,setMultiSelecting]=meS(false);
   // The active tool opens above the ribbon without changing the canvas layout.
   const [tray, setTray] = meS(null);
   const [backgroundSelected,setBackgroundSelected]=meS(false);
@@ -142,6 +143,10 @@ function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBu
   };
 
   const primaryEl = canvas ? canvas.elements.find(e => e.id === state.selection[0]) : null;
+  const toggleSelected=id=>{const el=canvas.elements.find(e=>e.id===id);if(!el||el.locked||el.hidden)return;dispatch({type:'set-selection',ids:state.selection.includes(id)?state.selection.filter(x=>x!==id):[...state.selection,id]});};
+  const startMultiple=()=>{setMultiSelecting(true);setTray(null);dispatch({type:'set-selection',ids:state.selection.filter(id=>canvas.elements.some(e=>e.id===id&&!e.locked&&!e.hidden))});};
+  meE(()=>setMultiSelecting(false),[canvas?.id]);
+  meE(()=>{if(state.selection.length>1)setMultiSelecting(true);},[state.selection.length]);
   // Stop typing if the selection moves to something else.
   meE(() => { if (editingId && (!primaryEl || primaryEl.id !== editingId)) endEdit(); }, [primaryEl?.id, editingId]);
 
@@ -185,7 +190,7 @@ function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBu
 
   const pickTool = (tool) => setTray(t => (t === tool ? null : tool));
   const clearSelection = () => {
-    setTray(null);setBackgroundSelected(false);
+    setTray(null);setBackgroundSelected(false);setMultiSelecting(false);
     dispatch({ type: 'set-selection', ids: [] });
   };
   const activeTray = primaryEl && (!primaryEl.locked || tray === 'position') && trayToolsFor(primaryEl).includes(tray) ? tray : null;
@@ -214,9 +219,9 @@ function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBu
       {/* Canvas area */}
       <div ref={canvasHost} style={{ flex: frozenCanvasHeight ? '0 0 '+frozenCanvasHeight+'px' : 1, minHeight: 0, position: 'relative' }}>
         <MobileCanvasArea editingId={editingId} setEditingId={setEditingId}
-          showTransformHandles={!activeTray && !openSheet}
+          showTransformHandles={!activeTray && !openSheet&&!multiSelecting&&state.selection.length<2} multiSelecting={multiSelecting} onToggleSelection={toggleSelected}
           onOverview={!openSheet && proj.canvases.length > 1 ? () => openTool('pages') : undefined}
-          onEditWords={(id) => beginEdit(id)} onBackground={()=>{dispatch({type:'set-selection',ids:[]});setTray(null);setBackgroundSelected(true);}} />
+          onEditWords={(id) => beginEdit(id)} onBackground={()=>{if(multiSelecting)return;dispatch({type:'set-selection',ids:[]});setTray(null);setBackgroundSelected(true);}} />
         {/* Undo / redo float in the empty space beside the slide while typing (replaces the old top stripe). */}
         {editingId && (() => {
           const fb = (enabled) => ({ width: 36, height: 36, borderRadius: '50%', border: 0, padding: 0, display: 'grid', placeItems: 'center',
@@ -253,19 +258,20 @@ function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBu
       </div>
 
       <div className="mobile-ribbon-dock">
-        {['text','images','icons','shapes','frames','pages'].includes(openSheet)&&<div className="mobile-ribbon-context">{openSheet==='pages'?<MobileSlideLibrary onClose={closeSheet}/>:<MobileInsertLibrary key={canvas.id+openSheet} tool={openSheet} onClose={closeSheet}/>}</div>}
-        {primaryEl && !['text','images','icons','shapes','frames','pages'].includes(openSheet) && (
+        {['text','images','icons','shapes','frames','pages'].includes(openSheet)&&<div className="mobile-ribbon-context">{openSheet==='pages'?<MobileSlideLibrary onActions={()=>openTool('more')} onClose={closeSheet}/>:<MobileInsertLibrary key={canvas.id+openSheet} tool={openSheet} onClose={closeSheet}/>}</div>}
+        {(multiSelecting||state.selection.length>1)&&!openSheet&&<div className="mobile-ribbon-context"><MobileMultiTools onDone={clearSelection}/></div>}
+        {primaryEl && !multiSelecting&&state.selection.length<2 && !['text','images','icons','shapes','frames','pages'].includes(openSheet) && (
           <div className="mobile-ribbon-context">
             {activeTray && !openSheet && !wordDraft && (
               <MobileToolTray key={primaryEl.id + activeTray} el={primaryEl} tool={activeTray} onClose={() => setTray(null)} />
             )}
             <MobileRibbon key={primaryEl.type} label="Selected element tools"
               end={<div className="mobile-ribbon-fixed-actions" role="group" aria-label="Selected element actions">
-                <MobileIconAction label="Duplicate element" icon="duplicate" onClick={()=>dispatch({type:'duplicate-elements',ids:[primaryEl.id]})}/>
+
                 <MobileIconAction label="Delete element" icon="trash" onClick={()=>dispatch({type:'delete-elements',ids:[primaryEl.id]})}/>
                 <button className="mobile-ribbon-pin mobile-ribbon-done" aria-label="Done selecting" title="Done" onClick={clearSelection}><Icon name="check" size={22}/></button>
               </div>}>
-              <MobileSelectionTools el={primaryEl} activeTool={activeTray}
+              <MobileSelectionTools onSelectMultiple={startMultiple} el={primaryEl} activeTool={activeTray}
                 onTool={tool => tool === 'words' ? beginEdit(primaryEl.id) : pickTool(tool)} />
             </MobileRibbon>
           </div>
@@ -311,8 +317,8 @@ function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBu
       </BottomSheet>
 
       {/* Layers sheet */}
-      <BottomSheet open={openSheet === 'layers'} onClose={closeSheet} title="Layers">
-        <LayersPanel onSelect={closeSheet} />
+      <BottomSheet open={openSheet === 'layers'} onClose={closeSheet} title="Layers" height="calc(var(--studio-viewport-height, 100dvh) * .5)">
+        <MobileLayersPanel multiSelecting={multiSelecting} onSelectMode={startMultiple} onToggle={toggleSelected} onClose={closeSheet}/>
       </BottomSheet>
 
       {/* Download */}
@@ -361,7 +367,7 @@ function MobileEditorTopBar({ proj, canvas, compact, onDone, onBack, onRename, o
       </button>
 
       <button className="icon-btn" aria-label="Redo" disabled={!canRedo} onClick={onRedo}><Icon name="redo" size={18} /></button>
-      <button className="icon-btn" aria-label="Design actions" onClick={onActions}><Icon name="more" size={20}/></button>
+      <button className="icon-btn" aria-label="Layers" onClick={onLayers}><Icon name="layer" size={20}/></button>
       <button className="icon-btn" aria-label="Preview and download" onClick={onDownload}
         style={{ background: 'var(--ink)', color: 'var(--cream)' }}>
         <Icon name="upload" size={16} style={{ transform: 'rotate(180deg)' }} />
@@ -428,10 +434,11 @@ function MobilePagesStrip({ proj, onOpen }) {
   );
 }
 
-function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId: setEditingIdProp, showTransformHandles = true, onOverview, onBackground }) {
+function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId: setEditingIdProp, showTransformHandles = true, onOverview, onBackground, multiSelecting=false, onToggleSelection }) {
   const { state, dispatch } = useStore();
   const canvas = activeCanvas(state);
   const stageRef = meR(null);
+  const multiTap = meR(null);
   const [pan, setPan] = meS({ x: 0, y: 0 });
   const [guides, setGuides] = meS([]);
   const [stageSize, setStageSize] = meS(null);
@@ -691,7 +698,7 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
 
   // Stage-level touch (pinch zoom, pan, tap-empty to deselect)
   const onStageTouchStart = (e) => {
-    if ((e.target.hasAttribute?.('data-canvas-bg') || e.target === e.currentTarget) && e.touches.length === 1) {
+    if (!multiSelecting&&(e.target.hasAttribute?.('data-canvas-bg') || e.target === e.currentTarget) && e.touches.length === 1) {
       dispatch({ type: 'set-selection', ids: [] });
     }
     if (e.touches.length === 2 && !gestureRef.current) {
@@ -765,6 +772,7 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
     <div ref={stageRef}
       onTouchStartCapture={e => {
         if (e.touches.length === 2) {
+          multiTap.current=null;
           onStageTouchStart(e);
           e.stopPropagation();
         }
@@ -794,6 +802,11 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
           }}>
           {canvas.elements.map(el => (
             <div key={el.id}
+              onPointerDownCapture={e=>{if(multiSelecting){e.stopPropagation();e.preventDefault();multiTap.current={id:el.id,pointer:e.pointerId,x:e.clientX,y:e.clientY};}}}
+              onPointerUpCapture={e=>{if(multiSelecting){e.stopPropagation();const tap=multiTap.current;multiTap.current=null;if(tap?.pointer===e.pointerId&&tap.id===el.id&&!gestureRef.current&&Math.hypot(e.clientX-tap.x,e.clientY-tap.y)<8)onToggleSelection(el.id);}}}
+              onPointerCancelCapture={()=>{multiTap.current=null;}}
+              onTouchStartCapture={e=>{if(multiSelecting&&e.touches.length===1)e.stopPropagation();}}
+              onClickCapture={e=>{if(multiSelecting){e.stopPropagation();e.preventDefault();}}}
               onTouchStart={(e) => { if (!el.locked) startElementDrag(e, el.id); }}
               onPointerDown={(e) => { if (e.pointerType !== 'touch' && !el.locked) startElementDrag(e, el.id); }}
 
@@ -835,8 +848,9 @@ function MobileCanvasArea({ onEditWords, editingId: editingIdProp, setEditingId:
           ))}
         </div>
 
+        {(multiSelecting||state.selection.length>1)&&<MobileMultiOverlay pan={pan} zoom={state.zoom}/>}
         {/* Selection overlay */}
-        {primary && !editingId && (
+        {primary && !multiSelecting&&state.selection.length<2 && !editingId && (
           <MobileSelectionOverlay el={primary} scale={state.zoom}
             onResize={(handle, e) => startResize(e, primary.id, handle)}
             onMove={(e) => startElementDrag(e, primary.id)} />
@@ -963,9 +977,9 @@ function MobileRibbon({ label, children, end }) {
   );
 }
 
-function MobileSlideLibrary({onClose}){
+function MobileSlideLibrary({onClose,onActions}){
   const {state,dispatch}=useStore(),project=activeProject(state),[open,setOpen]=meS(false);
-  return <>{open?<MobilePagesOverview onClose={()=>setOpen(false)}/>:<MobileLibraryStrip title="Slides" onExpand={()=>setOpen(true)} onClose={onClose}>{project.canvases.map((c,i)=><button className="mobile-slide-library-choice" key={c.id} aria-label={'Open slide '+(i+1)} aria-pressed={c.id===project.activeCanvasId} onClick={()=>{dispatch({type:'set-active-canvas',id:c.id});onClose();}}><MiniPreview canvas={c} maxW={40} maxH={48}/><span>{i+1}</span></button>)}<button className="mobile-insert-upload" onClick={()=>{dispatch({type:'add-canvas'});onClose();}} aria-label="Add slide"><Icon name="plus" size={20}/></button></MobileLibraryStrip>}</>;
+  return <>{open?<MobilePagesOverview onActions={onActions} onClose={()=>setOpen(false)}/>:<MobileLibraryStrip title="Slides" onExpand={()=>setOpen(true)} onClose={onClose}><button className="mobile-ribbon-pin" aria-label="Design actions" onClick={onActions}><Icon name="more" size={18}/></button>{project.canvases.map((c,i)=><button className="mobile-slide-library-choice" key={c.id} aria-label={'Open slide '+(i+1)} aria-pressed={c.id===project.activeCanvasId} onClick={()=>{dispatch({type:'set-active-canvas',id:c.id});onClose();}}><MiniPreview canvas={c} maxW={40} maxH={48}/><span>{i+1}</span></button>)}<button className="mobile-insert-upload" onClick={()=>{dispatch({type:'add-canvas'});onClose();}} aria-label="Add slide"><Icon name="plus" size={20}/></button></MobileLibraryStrip>}</>;
 }
 
 function MobileInsertLibrary({tool,onClose}){
@@ -996,19 +1010,19 @@ function MobileLibraryStrip({title,onExpand,onClose,children,extra}){
   return <section className="mobile-ribbon-panel mobile-library-strip" aria-label={title+' controls'}><div className="mobile-library-strip-row"><div className="mobile-library-scroll" aria-label={title+' choices'}>{children}</div><button className="mobile-ribbon-pin mobile-library-expand" aria-label={'Expand '+title+' library'} title="Full library" onClick={onExpand}><Icon name="chevron_u" size={20}/></button></div>{extra}</section>;
 }
 
-function MobileFontLibrary({el,onClose}){
+function MobileFontLibrary({el,onClose,onPick}){
   const {state,dispatch}=useStore(),[open,setOpen]=meS(false),[search,setSearch]=meS(''),[category,setCategory]=meS('all'),[error,setError]=meS(''),seq=meR(0),latest=meR(null);latest.current={state,el};
   meE(()=>()=>{seq.current++;latest.current=null;},[]);
-  const pick=async family=>{const request=++seq.current;setError('');try{const patch=await fontChangePatch(el,family),current=latest.current;if(request!==seq.current||!current)return;const live=activeCanvas(current.state)?.elements.find(e=>e.id===el.id);if(!live||live.locked)return;dispatch({type:'update-element',id:el.id,patch:{...patch,fontWeight:nearestWeight(family,live.fontWeight)}});}catch(e){if(latest.current&&request===seq.current)setError('Could not load this font. Try again.');}};
+  const pick=async family=>{if(onPick){try{await onPick(family);}catch(e){if(latest.current)setError('Could not load this font. Try again.');}return;}const request=++seq.current;setError('');try{const patch=await fontChangePatch(el,family),current=latest.current;if(request!==seq.current||!current)return;const live=activeCanvas(current.state)?.elements.find(e=>e.id===el.id);if(!live||live.locked)return;dispatch({type:'update-element',id:el.id,patch:{...patch,fontWeight:nearestWeight(family,live.fontWeight)}});}catch(e){if(latest.current&&request===seq.current)setError('Could not load this font. Try again.');}};
   const choices=ALL_FONT_OPTIONS.filter(f=>(category==='all'||f.kind===category)&&(f.family+' '+f.label).toLowerCase().includes(search.toLowerCase()));
   const button=f=><button key={f.family} className="mobile-font-choice" aria-label={'Use font '+f.family} aria-pressed={el.fontFamily===f.family} disabled={el.locked} style={{fontFamily:'"'+f.family+'", sans-serif'}} onClick={()=>pick(f.family)}>{f.label}</button>;
   return <><MobileLibraryStrip title="Font" onExpand={()=>setOpen(true)} onClose={onClose}>{ALL_FONT_OPTIONS.map(button)}</MobileLibraryStrip>{open&&<MobileLibraryDrawer title="Font library" onDismiss={onClose} onClose={()=>setOpen(false)}><div className="mobile-library-search"><input className="text-input" aria-label="Search fonts" placeholder="Search fonts" value={search} onChange={e=>setSearch(e.target.value)}/><select className="pk-select" aria-label="Font category" value={category} onChange={e=>setCategory(e.target.value)}><option value="all">All fonts</option>{FONT_GROUPS.map(g=><option key={g.kind} value={g.kind}>{g.label}</option>)}</select></div><div className="mobile-font-library-grid">{choices.map(button)}</div>{!choices.length&&<p>No matching fonts.</p>}{error&&<p role="alert">{error}</p>}</MobileLibraryDrawer>}</>;
 }
 
-function MobileColourLibrary({el,onClose}){
+function MobileColourLibrary({el,onClose,onPick}){
   const {state,dispatch}=useStore(),[open,setOpen]=meS(false),original=meR(el.color);
   const colors=[...new Set([...(state.brand.colors||BRAND_PALETTE),...NEUTRAL_PALETTE,...COMPLEMENT_PALETTE,original.current,el.color])].filter(Boolean);
-  const change=color=>{if(!el.locked)dispatch({type:'update-element',id:el.id,patch:{color}});};
+  const change=color=>{if(onPick){onPick(color);return;}if(!el.locked)dispatch({type:'update-element',id:el.id,patch:{color}});};
   return <><MobileLibraryStrip title="Colour" onExpand={()=>setOpen(true)} onClose={onClose}><button className="mobile-library-custom" aria-label="Custom text colour" onClick={()=>setOpen(true)}>+</button>{colors.map(color=><button key={color} className="mobile-library-swatch" style={{background:color}} aria-label={'Text colour '+color} aria-pressed={el.color?.toLowerCase()===color.toLowerCase()} disabled={el.locked} onClick={()=>change(color)}/>)}</MobileLibraryStrip>{open&&<MobileLibraryDrawer title="Colour library" onDismiss={onClose} onClose={()=>setOpen(false)}><ColorPicker value={el.color} onChange={change}/></MobileLibraryDrawer>}</>;
 }
 
@@ -1112,7 +1126,7 @@ function MobileIconAction({ label, icon, onClick, disabled, pressed, iconStyle }
   </button>;
 }
 
-function MobileSelectionTools({ el, activeTool, onTool }) {
+function MobileSelectionTools({ el, activeTool, onTool, onSelectMultiple }) {
   const {dispatch}=useStore();
   const locked = !!el.locked;
   const change=patch=>{if(!locked&&patch)dispatch({type:'update-element',id:el.id,patch});};
@@ -1121,6 +1135,7 @@ function MobileSelectionTools({ el, activeTool, onTool }) {
   const tool=(label,key,content=label)=><button className={chip} aria-label={label} aria-expanded={key === 'words' ? undefined : activeTool===key} disabled={locked&&key!=='position'} onClick={()=>onTool(key)}>{toolIcons[key]&&<Icon name={toolIcons[key]} size={17}/>}{(key==='font'||key==='size'||!toolIcons[key])&&<span>{content}</span>}{key==='font'&&<Icon name="chevron_d" size={13}/>}</button>;
   const update = patch => dispatch({ type: 'update-element', id: el.id, patch });
   return <>
+    <MobileIconAction label="Select multiple" icon="multi_select" onClick={onSelectMultiple}/><MobileIconAction label="Duplicate element" icon="duplicate" onClick={()=>dispatch({type:'duplicate-elements',ids:[el.id]})}/>
     {el.type==='text'?<>
       {tool('Edit words','words','Edit')}
       {tool('Font: '+el.fontFamily,'font',<span className="mobile-ribbon-font">{el.fontFamily}</span>)}
@@ -1160,7 +1175,7 @@ function MobileToolTray({ el, tool, onClose }) {
       <header>
         <strong>{label}</strong>
         <button className="mobile-ribbon-pin" aria-label={'Close ' + label + ' controls'} onClick={onClose}>
-          <Icon name="x" size={18} />
+          Done
         </button>
       </header>
       <div className="mobile-ribbon-panel-body">
@@ -1334,7 +1349,7 @@ function PositionTool({ el }) {
   </>;
 }
 
-function MobilePagesOverview({ onClose }) {
+function MobilePagesOverview({ onClose, onActions }) {
   const { state, dispatch } = useStore();
   const project = activeProject(state);
   const dialog = meR(null);
@@ -1355,7 +1370,7 @@ function MobilePagesOverview({ onClose }) {
   return <dialog ref={dialog} className="mobile-pages-overview" aria-labelledby="mobile-pages-title"
     onCancel={e => { e.preventDefault(); onClose(); }}>
     <header className="safe-top">
-      <h2 id="mobile-pages-title">Slides</h2>
+      <h2 id="mobile-pages-title">Slides</h2>{onActions&&<button className="icon-btn" aria-label="Design actions" onClick={onActions}><Icon name="more" size={18}/></button>}
       <button className="icon-btn" aria-label="Close slides" onClick={onClose}><Icon name="x" size={20} /></button>
     </header>
     <div className="mobile-pages-grid">
