@@ -1,6 +1,52 @@
-// Separate, locally saved preview of the simplified Wonder Pads workflow.
+// Wonder Pads studio navigation and shared section header.
+// Navigation remembers the entry screen; it never changes a content draft.
+function studioParent(view,fallback) {
+  const defaults={words:'home','ready-content':'words',repurpose:'words',history:'home',launch:'home',work:'home',brand:'home'};
+  const allowed=['home','words','ready-content','repurpose','history','launch','work','brand'];
+  let saved;try{saved=sessionStorage.getItem('wpr-back-'+view);}catch{}
+  return allowed.includes(saved)&&saved!==view?saved:(fallback||defaults[view]||'home');
+}
+function studioShow(dispatch,view) {
+  if(['home','work','brand'].includes(view)){
+    sessionStorage.setItem('wpr-simple-section',view);
+    dispatch({type:'set-view',view:'home'});
+  }else dispatch({type:'set-view',view});
+}
+function studioOpen(dispatch,view,from='home') {
+  // Revisiting the parent (e.g. History -> Repurposer) must not create a loop.
+  if(view!==from&&studioParent(from)!==view)sessionStorage.setItem('wpr-back-'+view,from);
+  studioShow(dispatch,view);
+}
+function studioBack(dispatch,view,fallback) {
+  studioShow(dispatch,studioParent(view,fallback));
+}
+function studioBackLabel(view,fallback) {
+  const labels={home:'studio home',words:'your words','ready-content':'ready-made posts',repurpose:'reuse my words',history:'history',work:'My Work',brand:'Brand Kit',launch:'Launch'};
+  return 'Back to '+(labels[studioParent(view,fallback)]||'studio home');
+}
+
+function StudioSectionHeader({title,subtitle,icon='text',onBack,backLabel='Back',actions,disabled=false,className=''}) {
+  return <><SimpleStudioStyles/><header className={'studio-section-header '+className}>
+    <button className="studio-section-back" type="button" onClick={onBack} disabled={disabled} aria-label={backLabel} title={backLabel}><Icon name="arrow_left" size={20}/><span>Back</span></button>
+    <span className="studio-section-icon" aria-hidden="true"><Icon name={icon} size={22}/></span>
+    <div className="studio-section-heading"><h1>{title}</h1>{subtitle&&<p>{subtitle}</p>}</div>
+    {actions&&<div className="studio-section-actions">{actions}</div>}
+  </header></>;
+}
+
 function SimpleStudioStyles() {
   return <style>{`
+
+    .studio-section-header{display:flex;align-items:center;gap:12px;padding:14px 24px;border-bottom:1px solid #eadbe6;background:rgba(255,255,255,.8);flex:none;min-width:0;color:#2a1f2a}
+    .studio-section-header .studio-section-back{display:flex;align-items:center;justify-content:center;gap:6px;flex:none;min-width:44px;min-height:44px;padding:8px;border:0;border-radius:10px;background:transparent;color:#65505f;font:14px Montserrat,sans-serif;cursor:pointer}
+    .studio-section-header .studio-section-icon{display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:12px;background:#f1cfea;color:#893773}
+    .studio-section-heading{min-width:0;flex:1}
+    .studio-section-header .studio-section-heading h1{font:24px/1.15 'DM Serif Display',serif;margin:0;overflow-wrap:anywhere;color:#2a1f2a}
+    .studio-section-header .studio-section-heading p{font:11px/1.4 Montserrat,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#826d7e;margin:4px 0 0}
+    .studio-section-actions{display:flex;align-items:center;gap:8px;flex:none}.studio-section-actions button{min-width:44px;min-height:44px}
+    .studio-section-header button:focus-visible{outline:2px solid #893773;outline-offset:2px}
+    @media(max-width:639px){.studio-section-header{gap:9px;padding:12px 16px}.studio-section-header .studio-section-back span{display:none}.studio-section-header .studio-section-heading h1{font-size:21px}.studio-section-header .studio-section-heading p{font-size:10px;letter-spacing:.04em}.studio-section-header .studio-section-icon{width:36px;height:36px}.studio-section-actions .desktop-only{display:none}}
+    @media(max-width:359px){.studio-section-header{gap:7px;padding-inline:10px}.studio-section-header .studio-section-icon{display:none}}
     .simple-shell{height:var(--studio-viewport-height,100dvh);display:flex;flex-direction:column;background:#fcf6fa;color:#2a1f2a;overflow:hidden}
     .simple-header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:white;border-bottom:1px solid #efdfeb;gap:12px;flex-shrink:0}
     .simple-header strong{font:24px 'DM Serif Display',serif}.simple-header small{display:block;color:#826d7e;font-size:12px;margin-top:4px}
@@ -81,7 +127,7 @@ function SimpleStudioHome() {
   const {state,dispatch}=useStore();
   const [section,setSection]=React.useState(()=>{
     const saved=sessionStorage.getItem('wpr-simple-section');
-    return ['home','create','work','brand'].includes(saved)?saved:'home';
+    return ['home','work','brand'].includes(saved)?saved:'home';
   });
   const [workTab,setWorkTab]=React.useState(()=>{
     const saved=sessionStorage.getItem('wpr-work-tab');
@@ -92,8 +138,10 @@ function SimpleStudioHome() {
     return ['all','progress','finished','archive'].includes(saved) ? saved : 'all';
   });
   const [query,setQuery]=React.useState(()=>sessionStorage.getItem('wpr-work-query') || '');
-  const go=view=>dispatch({type:'set-view',view});
+  const go=view=>studioOpen(dispatch,view==='carousel'?'words':view,section);
   const open=id=>dispatch({type:'open-project',id});
+  const openBrand=()=>{sessionStorage.setItem('wpr-back-brand',section);setSection('brand');};
+  const brandBack=['home','work'].includes(studioParent('brand'))?studioParent('brand'):'home';
   const allProjects=[...state.projects].sort((a,b)=>b.updatedAt-a.updatedAt);
   const projects=allProjects.filter(p=>!p.archived);
   const inProgress=projects.filter(p=>!p.finished),finishedList=projects.filter(p=>p.finished);
@@ -122,15 +170,15 @@ function SimpleStudioHome() {
     <ProjectMenu p={p} dispatch={dispatch}/>
   </div>;
   return <div className="simple-shell"><SimpleStudioStyles/>
-    <header className="simple-header">
+    {section==='home'?<header className="simple-header">
       <button className="brand-lockup" aria-label="Studio home" onClick={()=>setSection('home')} style={{background:'transparent',border:0,padding:0,textAlign:'left',color:'inherit'}}>
         <img src={state.brand?.logo||'assets/wpr-logo.png'} alt=""/><div><strong>Wonder Pads</strong><small>Content Studio</small></div>
       </button>
       <button className="simple-action simple-secondary studio-brand-kit" aria-current={section==='brand' ? 'page' : undefined}
-        onClick={()=>setSection('brand')}>Brand Kit</button>
-    </header>
+        onClick={openBrand}>Brand Kit</button>
+    </header>:<StudioSectionHeader title={section==='work'?'My Work':'Brand Kit'} subtitle={section==='work'?'Your saved designs and writing':'Your look, set once'} icon={section==='work'?'templates':'brand_kit'} onBack={()=>setSection(section==='brand'?brandBack:'home')} backLabel={section==='brand'?studioBackLabel('brand','home'):'Back to studio home'} actions={section!=='brand'&&<button className="simple-action simple-secondary studio-brand-kit" onClick={openBrand}>Brand Kit</button>}/>}
     {section!=='home'&&<nav className="simple-nav" aria-label="Main navigation">
-      {[['home','Home'],['create','Create'],['work','My Work']].map(([id,label])=><button key={id} aria-current={section===id} onClick={()=>setSection(id)}>{label}</button>)}
+      {[['home','Home'],['create','Create'],['work','My Work']].map(([id,label])=><button key={id} aria-current={section===id} onClick={()=>id==='create'?go('words'):setSection(id)}>{label}</button>)}
     </nav>}
     <main className="simple-content"><div className="simple-inner">
       {section==='home'&&<>
@@ -140,23 +188,13 @@ function SimpleStudioHome() {
           <button className="feature" onClick={()=>openWork()} style={{flexDirection:'column'}}><span style={{display:'flex',gap:14,alignItems:'flex-start',width:'100%'}}><span className="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span><span><small>My work</small><h3>Pick up where you left off</h3><p>{projects.length} {projects.length===1?'design':'designs'} · {inProgress.length} in progress · {finishedList.length} finished</p><span className="open">Open my work ›</span></span></span>
             {projects.length>0&&<span style={{display:'flex',gap:10,marginTop:12}}>{projects.slice(0,4).map(p=><span key={p.id} style={{width:58,aspectRatio:'4/5',background:'#f7e1f0',borderRadius:8,overflow:'hidden',display:'grid',placeItems:'center'}}>{p.thumbnail?<img src={p.thumbnail} alt="" style={{width:'100%',height:'100%',objectFit:'contain'}}/>:<MiniPreview canvas={p.canvases[0]} maxW={58} maxH={72}/>}</span>)}</span>}</button>
         </div>
+        {textDrafts.map(d=><button className="studio-draft-card" key={d.id} onClick={()=>dispatch({type:'resume-content-draft',id:d.id})}><strong>Continue with your words</strong><span>{d.name||d.source?.split('\n')[0]?.replace(/^#+\s*/,'')||'Untitled draft'}</span><span>{d.slides?.length?d.slides.length+' slides prepared':'Words saved'} · Edited {timeAgo(d.updatedAt)}</span></button>)}
         {(hasUnsavedDraft||inProgress.length>0)&&<button className="studio-strip" onClick={()=>hasUnsavedDraft?openCarouselDraft(state,dispatch):openWork('progress')}><span>{hasUnsavedDraft?'You have an unfinished carousel':`${inProgress.length} in progress`} · pick up where you left off</span><span>›</span></button>}</>}
-      {section==='create'&&<>{textDrafts.length>0&&<button className="studio-draft-card" onClick={()=>dispatch({type:'resume-content-draft',id:textDrafts[0].id})}><strong>Continue with your words</strong><span>{textDrafts[0].slides?.length||0} slides prepared · wording and template choices kept</span></button>}
-        <div className="studio-hero"><div><button className="studio-back" onClick={()=>setSection('home')}>‹ Studio home</button><span className="studio-eyebrow">Create</span><h1>Let's make something.</h1><p>Paste your words, pick a look, and post.</p></div><div className="hero-count"><b>{projects.length}</b>Designs</div></div>
-        <button className="studio-banner studio-create-card" onClick={()=>go('carousel')}><small>New · carousel or single post</small><h2>Start with your words</h2><p>Paste your text once, then choose a carousel or a single post. Add AI polish if you like.</p><span className="go">Add your words ›</span></button>
-        <div className="studio-row">
-          <button className="feature" onClick={()=>go('ready-content')}><span className="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span><span><small>Ready-made</small><h3>Ready-made posts</h3><p>Choose a topic with words already written. Edit it, create your slides, and download.</p><span className="open">Browse posts ›</span></span></button>
-          <button className="feature" onClick={()=>go('repurpose')}><span className="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg></span><span><small>Reuse</small><h3>Reuse my words</h3><p>Turn one piece of writing into a Facebook post or a TikTok script.</p><span className="open">Paste and reuse ›</span></span></button>
-        </div>
-        {(hasUnsavedDraft||inProgress.length>0)&&<><h2 className="studio-h2">Pick up where you left off</h2><div className="tile-grid">
-          {hasUnsavedDraft&&<div className="tile-wrap"><button className="tile" onClick={()=>openCarouselDraft(state,dispatch)}><div className="frame" style={{background:'#f7e1f0',padding:12,textAlign:'center',color:'#893773',fontWeight:600}}>Unfinished carousel<br/>{state.carousel.slides.length} slides</div><h3>Continue your carousel</h3><small>Tap to keep editing</small></button></div>}
-          {inProgress.slice(0,5).map(projectCard)}
-        </div>{inProgress.length>5&&<button className="simple-action simple-secondary" onClick={()=>openWork('progress')}>See all {inProgress.length} in My Work</button>}</>}</>}
-      {section==='work'&&<><div className="studio-hero"><div><button className="studio-back" onClick={()=>setSection('home')}>‹ Studio home</button><span className="studio-eyebrow">My work</span><h1>Everything you've made.</h1><p>Tap a design to open it. Use the ⋯ on a design to rename, finish, copy or delete.</p></div><div className="hero-count"><b>{projects.length}</b>Designs</div></div><nav className="simple-nav" aria-label="My Work sections" style={{padding:'0 0 12px'}}>{[['designs','Designs'],['writing','Saved writing'],['backup','Backup & restore']].map(([id,label])=><button key={id} aria-current={workTab===id} onClick={()=>setWorkTab(id)}>{label}</button>)}</nav>
+      {section==='work'&&<><div className="studio-hero"><div><span className="studio-eyebrow">My work</span><h1>Everything you've made.</h1><p>Tap a design to open it. Use the ⋯ on a design to rename, finish, copy or delete.</p></div><div className="hero-count"><b>{projects.length}</b>Designs</div></div><nav className="simple-nav" aria-label="My Work sections" style={{padding:'0 0 12px'}}>{[['designs','Designs'],['writing','Saved writing'],['backup','Backup & restore']].map(([id,label])=><button key={id} aria-current={workTab===id} onClick={()=>setWorkTab(id)}>{label}</button>)}</nav>
         {workTab==='designs'&&<><p className="simple-muted">{finishedList.length} finished · {inProgress.length} in progress. A design counts as finished once you download it. You can change that on any card.</p><nav className="simple-nav" aria-label="Filter designs" style={{padding:'0 0 12px'}}>{[['all','All'],['progress','In progress'],['finished','Finished'],['archive','Archive']].map(([id,label])=><button key={id} aria-current={workFilter===id} onClick={()=>setWorkFilter(id)}>{label}</button>)}</nav><label className="simple-muted studio-work-search">Find a design <input aria-label="Find a design" value={query} onChange={e=>setQuery(e.target.value)}/></label>{['all','progress'].includes(workFilter)&&textDrafts.filter(d=>(String(d.name||'')+d.source).toLowerCase().includes(query.toLowerCase())).map(d=><button className="studio-draft-card" key={d.id} onClick={()=>dispatch({type:'resume-content-draft',id:d.id})}><strong>Continue with your words</strong><span>{d.name||d.source?.split('\n')[0]?.replace(/^#+\s*/,'')||'Untitled draft'}</span><span>{d.slides?.length?`${d.slides.length} slides · `:''}Edited {timeAgo(d.updatedAt)}</span></button>)}<div className="tile-grid work-gallery">{shownProjects.map(projectCard)}</div>{!shownProjects.length&&<p>{projects.length?'Nothing matches here. Try another filter.':'No designs yet. Choose Create to start.'}</p>}</>}
         {workTab==='backup'&&<BackupRestoreCard/>}
         {workTab==='writing'&&<SavedWritingGallery/>}</>}
-      {section==='brand'&&<><div className="studio-hero"><div><button className="studio-back" onClick={()=>setSection('home')}>‹ Studio home</button><span className="studio-eyebrow">My brand</span><h1>Your look, set once.</h1><p>Your logo, colours and handles are reused on every design.</p></div></div><BrandKitSection/></>}
+      {section==='brand'&&<><div className="studio-hero"><div><span className="studio-eyebrow">My brand</span><h1>Your look, set once.</h1><p>Your logo, colours and handles are reused on every design.</p></div></div><BrandKitSection/></>}
       {section==='work' && workTab==='backup' && <p className="simple-muted">Your work saves automatically in this browser. Download an editable backup to keep a separate copy.</p>}
     </div></main>
   </div>;
@@ -164,10 +202,7 @@ function SimpleStudioHome() {
 
 function SimpleCalendarWorkspace() {
   const {dispatch}=useStore();
-  const openSection=(section)=>{
-    sessionStorage.setItem('wpr-simple-section',section);
-    dispatch({type:'set-view',view:'home'});
-  };
+  const openSection=section=>studioOpen(dispatch,section==='create'?'words':section,'home');
   return <div className="simple-shell"><SimpleStudioStyles/>
     <header className="simple-header"><div><strong>Wonder Pads Content Studio</strong><small>Calendar workspace · plan what you will share</small></div><span className="simple-muted">Calendar</span></header>
     <nav className="simple-nav" aria-label="Main navigation">
