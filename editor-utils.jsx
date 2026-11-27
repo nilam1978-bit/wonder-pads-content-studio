@@ -360,6 +360,12 @@ const newProject = (name, preset = SIZE_PRESETS[0], seedElements = []) => {
   };
 };
 
+function newBlankProject(size='portrait') {
+  const project=newProject('My blank post',{w:1080,h:size==='post'?1080:1350});
+  project.canvases[0]={...project.canvases[0],contentLook:'blank',bg:{type:'color',value:'transparent'}};
+  return {...project,projectType:'post',contentWorkspaceSettings:{size,format:'post',blank:true,cover:false,closing:false}};
+}
+
 // -------------- Reducer with history --------------
 const HISTORY_LIMIT = 60;
 
@@ -551,6 +557,12 @@ function reducer(state, action) {
       return activeProjectMutate(proj => {
         const size = action.preset || defaultNewPageSize(proj);
         const c = defaultCanvas(`Page ${proj.canvases.length + 1}`, size);
+        const current=proj.canvases.find(page=>page.id===proj.activeCanvasId)||proj.canvases[0];
+        if(current?.contentLook==='blank'){
+          c.contentLook='blank';c.bg={type:'color',value:'transparent'};
+          return {...proj,canvases:[...proj.canvases,c],activeCanvasId:c.id,projectType:'carousel',
+            contentWorkspaceSettings:{...proj.contentWorkspaceSettings,format:'carousel',blank:proj.canvases.every(page=>page.contentLook==='blank')}};
+        }
         return { ...proj, canvases: [...proj.canvases, c], activeCanvasId: c.id };
       });
 
@@ -1276,5 +1288,5 @@ function parseEditableProjectFile(text) {
   return state;
 }
 
-Object.assign(window, { uid, clamp, now, SIZE_PRESETS, defaultCanvas, newElement, newProject, defaultBrand, defaultCarousel, reducer, initialState, computeSnapGuides, brandBackgroundElements, reflowBrandBackground, SLIDE_TEXT_STYLES, slideTextRole, styleSlideText, cleanSlideSwipe, starterBackgroundElements, StoreCtx, useStore, StoreProvider, activeProject, activeCanvas, useMediaQuery, useIsMobile, alignElementsToPage, exportEditableProjectFile, parseEditableProjectFile, STORAGE_KEY });
+Object.assign(window, { uid, clamp, now, SIZE_PRESETS, defaultCanvas, newElement, newProject, newBlankProject, defaultBrand, defaultCarousel, reducer, initialState, computeSnapGuides, brandBackgroundElements, reflowBrandBackground, SLIDE_TEXT_STYLES, slideTextRole, styleSlideText, cleanSlideSwipe, starterBackgroundElements, StoreCtx, useStore, StoreProvider, activeProject, activeCanvas, useMediaQuery, useIsMobile, alignElementsToPage, exportEditableProjectFile, parseEditableProjectFile, STORAGE_KEY });
 
