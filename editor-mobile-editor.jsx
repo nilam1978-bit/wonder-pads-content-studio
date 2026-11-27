@@ -176,7 +176,7 @@ function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBu
     return () => clearTimeout(t);
   }, [thumbSig, proj?.id]);
 
-  meE(()=>{const outside=e=>{if(e.target.closest?.('.mobile-ribbon-dock,dialog,.sheet-back'))return;setTray(null);if(['text','images','icons','shapes','frames'].includes(openSheet))setOpenSheet(null);};document.addEventListener('pointerdown',outside,true);return()=>document.removeEventListener('pointerdown',outside,true);},[openSheet]);
+  meE(()=>{const outside=e=>{if(e.target.closest?.('.mobile-ribbon-dock,dialog,.sheet-back'))return;setTray(null);if(['text','images','icons','shapes','frames','ai'].includes(openSheet))setOpenSheet(null);};document.addEventListener('pointerdown',outside,true);return()=>document.removeEventListener('pointerdown',outside,true);},[openSheet]);
   if (!proj || !canvas) return null;
 
   const openTool = (tool) => {
@@ -258,9 +258,9 @@ function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBu
       </div>
 
       <div className="mobile-ribbon-dock">
-        {['text','images','icons','shapes','frames','pages'].includes(openSheet)&&<div className="mobile-ribbon-context">{openSheet==='pages'?<MobileSlideLibrary onActions={()=>openTool('more')} onClose={closeSheet}/>:<MobileInsertLibrary key={canvas.id+openSheet} tool={openSheet} onClose={closeSheet}/>}</div>}
+        {['text','images','icons','shapes','frames','pages','ai'].includes(openSheet)&&<div className="mobile-ribbon-context">{openSheet==='ai'?<MobileAiTools key={canvas.id} canvas={canvas} selected={primaryEl} onClose={closeSheet}/>:openSheet==='pages'?<MobileSlideLibrary onActions={()=>openTool('more')} onClose={closeSheet}/>:<MobileInsertLibrary key={canvas.id+openSheet} tool={openSheet} onClose={closeSheet}/>}</div>}
         {(multiSelecting||state.selection.length>1)&&!openSheet&&<div className="mobile-ribbon-context"><MobileMultiTools onDone={clearSelection}/></div>}
-        {primaryEl && !multiSelecting&&state.selection.length<2 && !['text','images','icons','shapes','frames','pages'].includes(openSheet) && (
+        {primaryEl && !multiSelecting&&state.selection.length<2 && !['text','images','icons','shapes','frames','pages','ai'].includes(openSheet) && (
           <div className="mobile-ribbon-context">
             {activeTray && !openSheet && !wordDraft && (
               <MobileToolTray key={primaryEl.id + activeTray} el={primaryEl} tool={activeTray} onClose={() => setTray(null)} />
@@ -271,12 +271,12 @@ function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBu
                 <MobileIconAction label="Delete element" icon="trash" onClick={()=>dispatch({type:'delete-elements',ids:[primaryEl.id]})}/>
                 <button className="mobile-ribbon-pin mobile-ribbon-done" aria-label="Done selecting" title="Done" onClick={clearSelection}><Icon name="check" size={22}/></button>
               </div>}>
-              <MobileSelectionTools onSelectMultiple={startMultiple} el={primaryEl} activeTool={activeTray}
+              <MobileSelectionTools el={primaryEl} activeTool={activeTray}
                 onTool={tool => tool === 'words' ? beginEdit(primaryEl.id) : pickTool(tool)} />
             </MobileRibbon>
           </div>
         )}
-        {backgroundSelected&&!primaryEl&&<div className="mobile-ribbon-context">{(tray==='bg-fill'||tray==='bg-images')&&<MobileBackgroundLibrary key={canvas.id+tray} mode={tray==='bg-images'?'images':'fill'} onClose={()=>setTray(null)}/>} <MobileRibbon label="Background tools" end={<button className="mobile-ribbon-pin mobile-ribbon-done" aria-label="Done selecting background" onClick={()=>setBackgroundSelected(false)}><Icon name="check" size={22}/></button>}><button className="mobile-ribbon-tool" aria-label="Background fill" aria-expanded={tray==='bg-fill'} onClick={()=>setTray(tray==='bg-fill'?null:'bg-fill')}><Icon name="bg" size={19}/></button><button className="mobile-ribbon-tool" aria-label="Background image" aria-expanded={tray==='bg-images'} onClick={()=>setTray(tray==='bg-images'?null:'bg-images')}><Icon name="images" size={19}/></button></MobileRibbon></div>}
+        {backgroundSelected&&!primaryEl&&!openSheet&&<div className="mobile-ribbon-context">{(tray==='bg-fill'||tray==='bg-images')&&<MobileBackgroundLibrary key={canvas.id+tray} mode={tray==='bg-images'?'images':'fill'} onClose={()=>setTray(null)}/>} <MobileRibbon label="Background tools" end={<button className="mobile-ribbon-pin mobile-ribbon-done" aria-label="Done selecting background" onClick={()=>setBackgroundSelected(false)}><Icon name="check" size={22}/></button>}><button className="mobile-ribbon-tool" aria-label="Background fill" aria-expanded={tray==='bg-fill'} onClick={()=>setTray(tray==='bg-fill'?null:'bg-fill')}><Icon name="bg" size={19}/></button><button className="mobile-ribbon-tool" aria-label="Background image" aria-expanded={tray==='bg-images'} onClick={()=>setTray(tray==='bg-images'?null:'bg-images')}><Icon name="images" size={19}/></button></MobileRibbon></div>}
         <MobileRibbon label="Page tools"><MobilePageTools activeTool={openSheet} onOpen={openTool} /></MobileRibbon>
       </div>
 
@@ -293,7 +293,6 @@ function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBu
         <BackgroundPanel />
       </BottomSheet>
 
-      <BottomSheet open={openSheet === 'ai'} onClose={closeSheet} title="AI" height="calc(var(--studio-viewport-height, 100dvh) * .5)"><MobileAiTools key={canvas.id} canvas={canvas} selected={primaryEl} onClose={closeSheet}/></BottomSheet>
 
       <BottomSheet open={openSheet === 'more'} onClose={closeSheet} title="Design actions" height="auto">
         <SheetAction icon="layer" label="Layers" onClick={() => openTool('layers')} />
@@ -987,27 +986,27 @@ function MobileInsertLibrary({tool,onClose}){
   const title={text:'Text',images:'Images',icons:'Illustrations',shapes:'Shapes',frames:'Frames'}[tool];
   const content=tool==='text'?<MobileTextPresets/>:tool==='images'?<ImagesPanel/>:tool==='icons'?<IconsPanel/>:tool==='shapes'?<ShapesPanel/>:<FramesPanel/>;
   const items=<div ref={host} className={open?'mobile-insert-full':'mobile-insert-preview'} data-tool={tool}>{content}</div>;
-  return open?<MobileLibraryDrawer title={title+' library'} onDismiss={onClose} onClose={()=>setOpen(false)}>{items}</MobileLibraryDrawer>:<MobileLibraryStrip title={title} onExpand={()=>setOpen(true)} onClose={onClose}>{['images','icons'].includes(tool)&&<button className="mobile-insert-upload" onClick={()=>host.current?.querySelector('input[type=file]')?.click()} aria-label={'Upload '+title.toLowerCase()}><Icon name="upload" size={22}/><span>Upload</span></button>}{items}</MobileLibraryStrip>;
+  return open?<MobileLibraryDrawer title={title+' library'} onDismiss={onClose} onClose={()=>setOpen(false)}>{items}</MobileLibraryDrawer>:<MobileLibraryStrip title={title} onExpand={['images','icons'].includes(tool)?()=>setOpen(true):undefined} onClose={onClose}>{['images','icons'].includes(tool)&&<button className="mobile-insert-upload" onClick={()=>host.current?.querySelector('input[type=file]')?.click()} aria-label={'Upload '+title.toLowerCase()}><Icon name="upload" size={22}/><span>Upload</span></button>}{items}</MobileLibraryStrip>;
 }
 
 function MobileImageSizeTool({el}){
-  const {state,dispatch}=useStore(),canvas=activeCanvas(state),{live,done}=useLiveElementEdit(el.id),[open,setOpen]=meS(false);
+  const {state,dispatch}=useStore(),canvas=activeCanvas(state),{live,done}=useLiveElementEdit(el.id);
   const logo=isBrandLogo(el),art=isIllustration(el),size=logo?brandLogoSize(el):art?illustrationSize(el):el.w,max=Math.max(Math.max(canvas.w,canvas.h)*1.2,size);
   const patch=v=>logo?brandLogoSizePatch(el,v):art?illustrationSizePatch(el,v):{w:v,h:v*el.h/el.w,x:el.x+(el.w-v)/2,y:el.y+(el.h-v*el.h/el.w)/2};
   const set=v=>dispatch({type:'update-element',id:el.id,patch:patch(clamp(v,10,max))});
-  const [draft,setDraft]=meS(String(Math.round(size)));meE(()=>setDraft(String(Math.round(size))),[size]);
-  return <><div className="mobile-image-size-row"><LiveSlider label="Image size" value={size} min={10} max={max} step={2} onLive={v=>live(patch(v))} onDone={done}/><div className="mobile-image-size-stepper"><button aria-label="Decrease image size" disabled={el.locked||size<=10} onClick={()=>set(size-2)}>−</button><input aria-label={logo?'Logo size':'Image size value'} type="number" value={draft} min={10} max={max} disabled={el.locked} onChange={e=>setDraft(e.target.value)} onBlur={()=>{if(draft!==''&&Number.isFinite(Number(draft)))set(Number(draft));else setDraft(String(Math.round(size)));}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/><button aria-label="Increase image size" disabled={el.locked||size>=max} onClick={()=>set(size+2)}>+</button></div><button className="mobile-ribbon-pin" aria-label="Expand image size settings" onClick={()=>setOpen(true)}><Icon name="chevron_u" size={18}/></button></div>{open&&<MobileLibraryDrawer title="Image size settings" onClose={()=>setOpen(false)}><SizeTool el={el} full/></MobileLibraryDrawer>}</>;
+  const reset=logo?brandLogoSizePatch(el):art?illustrationSizePatch(el):null;
+  return <div className="mobile-library-scroll"><MobileControlSlider label="Image size" valueLabel={logo?'Logo size':'Image size value'} value={size} min={10} max={max} step={2} onLive={v=>live(patch(v))} onDone={done} onSet={set}/>{reset&&(Math.abs(reset.w-el.w)>.01||Math.abs(reset.h-el.h)>.01)&&<button className="mobile-ribbon-tool" onClick={()=>dispatch({type:'update-element',id:el.id,patch:reset})}>Reset proportions</button>}</div>;
 }
 
 function MobileLibraryDrawer({title,onClose,onDismiss=onClose,children}){
   const viewport=()=>({height:window.visualViewport?.height||window.innerHeight,top:window.visualViewport?.offsetTop||0,width:window.visualViewport?.width||window.innerWidth,left:window.visualViewport?.offsetLeft||0});
   const ref=meR(null),id=React.useId(),[view,setView]=meS(viewport);
   meE(()=>{const resize=()=>setView(viewport());window.visualViewport?.addEventListener('resize',resize);window.visualViewport?.addEventListener('scroll',resize);window.addEventListener('resize',resize);const dialog=ref.current;dialog.showModal();return()=>{window.visualViewport?.removeEventListener('resize',resize);window.visualViewport?.removeEventListener('scroll',resize);window.removeEventListener('resize',resize);dialog.close();};},[]);
-  return <dialog ref={ref} aria-labelledby={id} className="mobile-library-drawer" onPointerDown={e=>{if(e.target!==e.currentTarget)return;const r=e.currentTarget.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)onDismiss();}} style={{top:view.top+view.height*.5,bottom:'auto',left:view.left+Math.max(0,(view.width-576)/2),right:'auto',width:Math.min(576,view.width),height:view.height*.5,maxHeight:view.height*.5}} onCancel={e=>{e.preventDefault();onClose();}}><header><h2 id={id}>{title}</h2><button className="mobile-ribbon-pin" aria-label={'Collapse '+title} onClick={onClose}><Icon name="chevron_dn" size={20}/></button></header><div className="mobile-library-drawer-body">{children}</div></dialog>;
+  return <dialog ref={ref} aria-labelledby={id} className="mobile-library-drawer" onPointerDown={e=>{if(e.target!==e.currentTarget)return;const r=e.currentTarget.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)onDismiss();}} style={{top:view.top+view.height,transform:'translateY(-100%)',bottom:'auto',left:view.left+Math.max(0,(view.width-576)/2),right:'auto',width:Math.min(576,view.width),height:'auto',maxHeight:view.height*.5}} onCancel={e=>{e.preventDefault();onClose();}}><header><h2 id={id}>{title}</h2><button className="mobile-ribbon-pin" aria-label={'Collapse '+title} onClick={onClose}><Icon name="chevron_dn" size={20}/></button></header><div className="mobile-library-drawer-body">{children}</div></dialog>;
 }
 
 function MobileLibraryStrip({title,onExpand,onClose,children,extra}){
-  return <section className="mobile-ribbon-panel mobile-library-strip" aria-label={title+' controls'}><div className="mobile-library-strip-row"><div className="mobile-library-scroll" aria-label={title+' choices'}>{children}</div><button className="mobile-ribbon-pin mobile-library-expand" aria-label={'Expand '+title+' library'} title="Full library" onClick={onExpand}><Icon name="chevron_u" size={20}/></button></div>{extra}</section>;
+  return <section className="mobile-ribbon-panel mobile-library-strip" aria-label={title+' controls'}><div className="mobile-library-strip-row"><div className="mobile-library-scroll" aria-label={title+' choices'}>{children}</div>{onExpand&&<button className="mobile-ribbon-pin mobile-library-expand" aria-label={'Expand '+title+' library'} title="Full library" onClick={onExpand}><Icon name="chevron_u" size={20}/></button>}</div>{extra}</section>;
 }
 
 function MobileFontLibrary({el,onClose,onPick}){
@@ -1023,7 +1022,7 @@ function MobileColourLibrary({el,onClose,onPick,field='color',title='Colour'}){
   const {state,dispatch}=useStore(),[open,setOpen]=meS(false),original=meR(el[field]);
   const colors=[...new Set([...(state.brand.colors||BRAND_PALETTE),...NEUTRAL_PALETTE,...COMPLEMENT_PALETTE,...(field==='stroke'||field==='iconAccent'?['transparent']:[]),original.current,el[field]])].filter(Boolean);
   const change=color=>{if(onPick){onPick(color);return;}if(!el.locked)dispatch({type:'update-element',id:el.id,patch:{[field]:color}});};
-  return <><MobileLibraryStrip title={title} onExpand={()=>setOpen(true)} onClose={onClose}><button className="mobile-library-custom" aria-label="Custom text colour" onClick={()=>setOpen(true)}>+</button>{colors.map(color=><button key={color} className="mobile-library-swatch" style={{background:color}} aria-label={(el.type==='text'?'Text colour':title)+' '+color} aria-pressed={el[field]?.toLowerCase()===color.toLowerCase()} disabled={el.locked} onClick={()=>change(color)}/>)}</MobileLibraryStrip>{open&&<MobileLibraryDrawer title="Colour library" onDismiss={onClose} onClose={()=>setOpen(false)}><ColorPicker value={el[field]||'#000000'} onChange={change}/></MobileLibraryDrawer>}</>;
+  return <><MobileLibraryStrip title={title} onExpand={()=>setOpen(true)} onClose={onClose}><button className="mobile-library-custom" aria-label={el.type==='text'?'Custom text colour':'Custom '+title.toLowerCase()+' colour'} onClick={()=>setOpen(true)}>+</button>{colors.map(color=><button key={color} className="mobile-library-swatch" style={{background:color}} aria-label={(el.type==='text'?'Text colour':title)+' '+color} aria-pressed={el[field]?.toLowerCase()===color.toLowerCase()} disabled={el.locked} onClick={()=>change(color)}/>)}</MobileLibraryStrip>{open&&<MobileLibraryDrawer title={title+' library'} onDismiss={onClose} onClose={()=>setOpen(false)}><ColorPicker value={el[field]||'#000000'} onChange={change}/></MobileLibraryDrawer>}</>;
 }
 
 function MobileBackgroundLibrary({mode,onClose}){
@@ -1059,7 +1058,8 @@ function MobileAiTools({canvas,selected,onClose}){
     catch(e){if(seq===request.current)setError(e.message||'Could not improve this text.');}finally{if(seq===request.current)setBusy(false);}
   };
   const apply=()=>{const current=activeCanvas(state).elements.find(e=>e.id===result.id);if(!current||current.locked||current.text!==result.original){setError('The text changed. Review a fresh suggestion before applying.');return;}dispatch({type:'update-element',id:result.id,patch:{text:result.text}});onClose();};
-  return <div className="mobile-ai"><label>Text to improve<select className="pk-select" aria-label="AI text target" value={target?.id||''} disabled={busy} onChange={e=>dispatch({type:'set-selection',ids:e.target.value?[e.target.value]:[]})}><option value="">Choose text</option>{canvas.elements.filter(e=>e.type==='text'&&!e.hidden).map(e=><option key={e.id} value={e.id}>{e.text.slice(0,65)||'Empty text'}</option>)}</select></label>{target&&<pre>{target.text}</pre>}<button className="btn btn-tonal" disabled={!target||target.locked||!target.text.trim()||busy} onClick={improve}>{busy?'Improving…':'Improve text'}</button>{result&&<><strong>Suggested wording</strong><pre>{result.text}</pre><div className="mobile-ribbon-icon-group"><button className="btn btn-tonal" onClick={()=>setResult(null)}>Keep current</button><button className="btn btn-primary" onClick={apply}>Apply wording</button></div></>}{error&&<p role="alert">{error}</p>}</div>;
+  return <><MobileLibraryStrip title="AI" onClose={onClose}><div className="mobile-ai-row"><select className="pk-select" aria-label="AI text target" value={target?.id||''} disabled={busy} onChange={e=>dispatch({type:'set-selection',ids:e.target.value?[e.target.value]:[]})}><option value="">Choose text</option>{canvas.elements.filter(e=>e.type==='text'&&!e.hidden).map(e=><option key={e.id} value={e.id}>{e.text.slice(0,65)||'Empty text'}</option>)}</select><button className="mobile-ribbon-tool" disabled={!target||target.locked||!target.text.trim()||busy} onClick={improve}><Icon name="sparkle" size={14}/><span>{busy?'Improving…':'Improve text'}</span></button></div></MobileLibraryStrip>{error&&<div className="mobile-ai-error" role="alert">{error}</div>}{result&&<MobileLibraryDrawer title="Review wording" onDismiss={()=>setResult(null)} onClose={()=>setResult(null)}><div className="mobile-ai-review"><details><summary>Current wording</summary><pre>{result.original}</pre></details><strong>Suggested wording</strong><pre>{result.text}</pre><div className="mobile-ai-review-actions"><button className="btn btn-tonal" onClick={()=>setResult(null)}>Keep current</button><button className="btn btn-primary" onClick={apply}>Apply wording</button></div>{error&&<p role="alert">{error}</p>}</div></MobileLibraryDrawer>}</>;
+
 }
 
 function MobilePageTools({ activeTool, onOpen }) {
@@ -1090,12 +1090,12 @@ const SHAPE_TYPES = ['rect', 'circle', 'triangle', 'star', 'heart', 'diamond', '
 // Which tray tools make sense for each kind of item.
 function trayToolsFor(el) {
   if (el.type === 'text') return ['font', 'size', 'colour', 'styles', 'format', 'opacity', 'position'];
-  if (el.type === 'image') return ['size','flip','fit','replace-artwork','adjust','opacity','position'];
+  if (el.type === 'image') return ['size','flip','fit','replace-artwork','adjust',...(!fitsWholeImage(el)?['corners']:[]),'opacity','position'];
   if (el.type === 'icon') return ['colour','shape',...(CARE_ICON_LIBRARY.some(i=>i.id===el.name)?['accent']:[]), 'size', 'flip', 'replace-icon', 'opacity', 'position'];
   if (el.type === 'frame') return ['size', 'frame', 'opacity', 'position'];
-  return ['colour',...(SHAPE_TYPES.includes(el.type)?['outline','shape']:['shape']), 'size', 'opacity', 'position'];
+  return ['colour',...(SHAPE_TYPES.includes(el.type)?['outline','shape']:['shape']),...(el.type==='rect'?['corners']:[]),...(el.type==='polygon'?['sides']:[]), 'size', 'opacity', 'position'];
 }
-const TRAY_LABELS = { styles: 'Text styles', font: 'Font', size: 'Size', colour: 'Colour', format: 'Spacing', opacity: 'Opacity', position: 'Position', flip: 'Flip', adjust: 'Adjust image', frame: 'Frame', fit:'Crop / fit', shape:'Shape settings',outline:'Outline',accent:'Soft fill', 'replace-icon': 'Change icon', 'replace-artwork': 'Replace artwork' };
+const TRAY_LABELS = { styles: 'Text styles', font: 'Font', size: 'Size', colour: 'Colour', format: 'Spacing', opacity: 'Opacity', position: 'Position', flip: 'Flip', adjust: 'Adjust image', frame: 'Frame', fit:'Crop / fit', shape:'Stroke',corners:'Corners',sides:'Sides',outline:'Stroke',accent:'Soft fill', 'replace-icon': 'Change icon', 'replace-artwork': 'Replace artwork' };
 // The property that holds this item's main colour.
 function colourKey(el) {
   if (el.type === 'text' || el.type === 'icon') return 'color';
@@ -1126,21 +1126,21 @@ function MobileIconAction({ label, icon, onClick, disabled, pressed, iconStyle }
   </button>;
 }
 
-function MobileSelectionTools({ el, activeTool, onTool, onSelectMultiple }) {
+function MobileSelectionTools({ el, activeTool, onTool }) {
   const {dispatch}=useStore();
   const locked = !!el.locked;
   const change=patch=>{if(!locked&&patch)dispatch({type:'update-element',id:el.id,patch});};
   const chip = 'mobile-ribbon-tool';
-  const toolIcons={words:'edit',size:'resize',flip:'flip_horizontal',adjust:'sliders',position:'move_element',opacity:'opacity',styles:'text',format:'sliders','replace-artwork':'images','replace-icon':'icons',frame:'frames',fit:'fit',shape:'sliders',outline:'circle',accent:'bg'};
+  const toolIcons={words:'edit',size:'resize',flip:'flip_horizontal',adjust:'sliders',position:'move_element',opacity:'opacity',styles:'text',format:'sliders','replace-artwork':'images','replace-icon':'icons',frame:'frames',fit:'fit',sides:'hexagon',accent:'bg'};
   const tool=(label,key,content=label)=><button className={chip} aria-label={label} aria-expanded={key === 'words' ? undefined : activeTool===key} disabled={locked&&key!=='position'} onClick={()=>onTool(key)}>{toolIcons[key]&&<Icon name={toolIcons[key]} size={17}/>}{(key==='font'||key==='size'||!toolIcons[key])&&<span>{content}</span>}{key==='font'&&<Icon name="chevron_d" size={13}/>}</button>;
   const update = patch => dispatch({ type: 'update-element', id: el.id, patch });
   return <>
-    <MobileIconAction label="Select multiple" icon="multi_select" onClick={onSelectMultiple}/><MobileIconAction label="Duplicate element" icon="duplicate" onClick={()=>dispatch({type:'duplicate-elements',ids:[el.id]})}/>
+    <MobileIconAction label="Duplicate element" icon="duplicate" onClick={()=>dispatch({type:'duplicate-elements',ids:[el.id]})}/>
     {el.type==='text'?<>
       {tool('Edit words','words','Edit')}
       {tool('Font: '+el.fontFamily,'font',<span className="mobile-ribbon-font">{el.fontFamily}</span>)}
-      <div className="mobile-ribbon-size" role="group" aria-label="Font size"><button className={chip} aria-label="Decrease font size" disabled={locked||el.fontSize<=6} onClick={()=>change({fontSize:clamp(Math.round(el.fontSize)-2,6,600)})}><Icon name="minus" size={16}/></button><button className={chip} aria-label="Font size" aria-expanded={activeTool==='size'} disabled={locked} onClick={()=>onTool('size')}>{Math.round(el.fontSize)}</button><button className={chip} aria-label="Increase font size" disabled={locked||el.fontSize>=600} onClick={()=>change({fontSize:clamp(Math.round(el.fontSize)+2,6,600)})}><Icon name="plus" size={16}/></button></div>
-      {tool('Text colour','colour',<><span className="mobile-ribbon-swatch" style={{background:el.color}}/></>)}
+      <button className={chip+' mobile-ribbon-icon'} aria-label="Font size" title="Font size" aria-expanded={activeTool==='size'} disabled={locked} onClick={()=>onTool('size')}><MobileTextSizeGlyph/></button>
+      <button className={chip+' mobile-ribbon-icon mobile-text-colour-tool'} aria-label="Text colour" aria-expanded={activeTool==='colour'} disabled={locked} onClick={()=>onTool('colour')}><MobileTextColourGlyph color={el.color}/></button>
       <button className={chip+' mobile-ribbon-icon'} aria-label="Bold" aria-pressed={isBoldText(el)} disabled={locked||!boldWeightFor(el.fontFamily)} onClick={()=>change(toggleBoldPatch(el))}><b>B</b></button>
       <button className={chip+' mobile-ribbon-icon'} aria-label="Italic" aria-pressed={!!el.italic} disabled={locked} onClick={()=>change({italic:!el.italic})}><i>I</i></button>
       <button className={chip+' mobile-ribbon-icon'} aria-label="Underline" aria-pressed={!!el.underline} disabled={locked} onClick={()=>change({underline:!el.underline})}><u>U</u></button>
@@ -1150,8 +1150,11 @@ function MobileSelectionTools({ el, activeTool, onTool, onSelectMultiple }) {
     </>:<>
       {(isIllustration(el)||el.type==='image') && tool('Flip','flip')}
       {tool('Size','size')}
-      {trayToolsFor(el).includes('outline')&&tool('Outline colour','outline')}{trayToolsFor(el).includes('shape')&&tool('Shape settings','shape')}{trayToolsFor(el).includes('accent')&&tool('Soft fill','accent')}
-      {trayToolsFor(el).includes('colour') && tool('Colour','colour',<><span className="mobile-ribbon-swatch" style={{background:el[colourKey(el)]}}/>Colour</>)}
+      {trayToolsFor(el).includes('outline')&&tool('Stroke colour','outline',<><span className="mobile-ribbon-swatch" style={{background:el.stroke}}/>Stroke</>)}
+      {trayToolsFor(el).includes('shape')&&<button className={chip+' mobile-ribbon-icon'} aria-label="Stroke width" aria-expanded={activeTool==='shape'} disabled={locked} onClick={()=>onTool('shape')}><MobileStrokeGlyph/></button>}
+      {trayToolsFor(el).includes('corners')&&<button className={chip+' mobile-ribbon-icon'} aria-label="Corner rounding" aria-expanded={activeTool==='corners'} disabled={locked} onClick={()=>onTool('corners')}><MobileCornerGlyph/></button>}
+      {trayToolsFor(el).includes('sides')&&tool('Polygon sides','sides')}{trayToolsFor(el).includes('accent')&&tool('Soft fill','accent',<><span className="mobile-ribbon-swatch" style={{background:el.iconAccent}}/>Fill</>)}
+      {trayToolsFor(el).includes('colour') && tool(colourKey(el)==='fill'?'Fill colour':colourKey(el)==='stroke'?'Stroke colour':'Colour','colour',<><span className="mobile-ribbon-swatch" style={{background:el[colourKey(el)]}}/>{colourKey(el)==='fill'?'Fill':colourKey(el)==='stroke'?'Stroke':'Colour'}</>)}
       {el.type==='image' && tool('Crop / fit','fit')}
       {el.type==='image' && tool('Adjust image','adjust','Adjust')}
       {el.type==='image' && tool('Replace artwork','replace-artwork','Replace')}
