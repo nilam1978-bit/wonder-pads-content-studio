@@ -229,8 +229,9 @@ function ContentWorkspace() {
   </div>;
 }
 function ContentEntryScreen({draft,hasSlides=false,embedded=false,dirty=false,onChange,onBack,onPrepare,onAi,onTypingChange,busy,error,children}) {
+  const {dispatch}=useStore();
   const field=React.useRef(null),selection=React.useRef({start:0,end:0}),pendingSelection=React.useRef(null),shell=React.useRef(null);
-  const [entry,setEntry]=React.useState('write'),[focused,setFocused]=React.useState(false),[options,setOptions]=React.useState(false),[cleared,setCleared]=React.useState(null),[help,setHelp]=React.useState(false);
+  const [focused,setFocused]=React.useState(false),[options,setOptions]=React.useState(false),[cleared,setCleared]=React.useState(null),[help,setHelp]=React.useState(false);
   const [shortViewport,setShortViewport]=React.useState(false);
   const source=draft.source,settings=draft.settings;
   React.useLayoutEffect(()=>{
@@ -258,19 +259,17 @@ function ContentEntryScreen({draft,hasSlides=false,embedded=false,dirty=false,on
     const next=contentMarkedLine(source,selection.current.start,selection.current.end,marker);
     selection.current={start:next.start,end:next.end};pendingSelection.current=selection.current;changeSource(next.text);
   };
-  const example=()=>{const text=getExampleText();changeSource(text);setEntry('write');selection.current={start:0,end:0};};
   const clear=()=>{setCleared({source,...selection.current,scrollTop:field.current?.scrollTop||0});onChange({source:''});selection.current={start:0,end:0};};
   const restore=()=>{const saved=cleared;selection.current={start:saved.start,end:saved.end};pendingSelection.current={...selection.current,scrollTop:saved.scrollTop};onChange({source:saved.source});setCleared(null);};
   return <div ref={shell} className={(embedded?'cw-source-panel':'cw-shell')+' cw-entry-shell'+(focused&&shortViewport?' cw-entry-typing':'')}>{!embedded&&<SimpleStudioStyles/>}
     {!embedded&&<header className="cw-header"><button onClick={onBack} disabled={busy}>‹ Back</button><div><small>WONDER PADS · CONTENT STUDIO</small><h1>Your words</h1></div><SaveIndicator/></header>}
     <main className="cw-entry-main"><div className="cw-entry-paper">
-      {embedded?<h2 className="cw-source-title">Your words</h2>:<nav className="cw-entry-tabs" aria-label="Writing sources"><button aria-pressed={entry==='write'} onClick={()=>setEntry('write')}>Write / Paste</button><button aria-pressed={entry==='examples'} onClick={()=>setEntry('examples')}>Examples</button></nav>}
-      <div className="cw-entry-examples" hidden={entry!=='examples'}><small>TRY IT WITH A SAMPLE</small><h2>Start with a few words.</h2><p>Try a ready-to-edit example with slide breaks and subheadings.</p><button className="cw-primary" onClick={example} disabled={busy}>Use example text</button></div>
-      <div className="cw-entry-writing" hidden={entry!=='write'}>
+      {embedded?<h2 className="cw-source-title">Your words</h2>:<nav className="cw-entry-tabs" aria-label="Writing sources"><button aria-pressed="true" disabled={busy}>Write / Paste</button><button aria-pressed="false" disabled={busy} onClick={()=>dispatch({type:'set-view',view:'ready-content'})}>Ready-made posts</button><button aria-pressed="false" disabled={busy} onClick={()=>dispatch({type:'set-view',view:'repurpose'})}>Reuse my words</button></nav>}
+      <div className="cw-entry-writing">
         <div className="cw-entry-markers" role="toolbar" aria-label="Mark slides"><button onMouseDown={e=>e.preventDefault()} onClick={()=>mark('# ')} disabled={busy}>+ Slide</button><button onMouseDown={e=>e.preventDefault()} onClick={()=>mark('## ')} disabled={busy}>+ Subheading</button><button className="cw-entry-help" aria-label="Help with slide markers" aria-expanded={help} onClick={()=>setHelp(!help)}>?</button><button className="cw-entry-keyboard-done" onClick={()=>field.current?.blur()}>Done</button></div>
         {help&&<p className="cw-entry-marker-help">Tap a line, then + Slide to add # or + Subheading to add ##. Blank lines stay inside the slide.</p>}
         <div className="cw-entry-field"><label className="cw-entry-sr" htmlFor="cw-source">Your source text</label><textarea ref={field} id="cw-source" className="cw-source" value={source} readOnly={busy} onSelect={rememberSelection} onChange={e=>{selection.current={start:e.target.selectionStart,end:e.target.selectionEnd};changeSource(e.target.value);}} onFocus={()=>setFocused(true)} onBlur={()=>{rememberSelection();setFocused(false);}} placeholder={focused?'Paste your story, article or notes here…':''}/>
-          {!source&&!focused&&!embedded&&<div className="cw-entry-empty"><span className="cw-entry-empty-icon"><Icon name="text" size={24}/></span><h2>Every post starts with your words.</h2><p>Paste your text or start typing.<br/>We’ll help you turn it into slides.</p><button className="cw-primary" onClick={()=>focusSource()}>Start writing</button><button className="cw-entry-link" onClick={example} disabled={busy}>Try an example</button></div>}
+          {!source&&!focused&&!embedded&&<div className="cw-entry-empty"><span className="cw-entry-empty-icon"><Icon name="text" size={24}/></span><h2>Every post starts with your words.</h2><p>Paste your text or start typing.<br/>We’ll help you turn it into slides.</p><button className="cw-primary" onClick={()=>focusSource()}>Start writing</button><button className="cw-entry-link" onClick={()=>dispatch({type:'set-view',view:'ready-content'})} disabled={busy}>Browse ready-made posts</button></div>}
         </div>
       </div>
       <div className="cw-entry-wordbar"><span>{words} words · {source.length} characters</span><div>{cleared&&<button className="cw-entry-link" onClick={restore}>Undo clear</button>}<button className="cw-entry-link" disabled={!source||busy} onClick={clear}>Clear</button></div></div>
