@@ -427,6 +427,33 @@
   .mobile-ribbon-tool:has(>svg):not(:has(>span)){width:44px;padding:0;}
   .mobile-ai{display:grid;gap:10px;font-size:13px;}
   .mobile-ai pre{white-space:pre-wrap;font:inherit;line-height:1.5;margin:0;padding:10px;background:var(--pink-50);border-radius:10px;}
+
+  .mobile-library-strip.mobile-ribbon-panel{padding:8px;max-height:none;}
+  .mobile-library-strip-row{display:flex;align-items:center;gap:6px;min-width:0;}
+  .mobile-library-scroll{display:flex;align-items:center;gap:8px;flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior-x:contain;padding:3px;}
+  .mobile-library-scroll::-webkit-scrollbar{display:none;}
+  .mobile-library-expand,.mobile-library-close{flex:none;}
+  .mobile-library-expand{background:var(--pink-50);color:var(--pink-600);}
+  .mobile-library-close{width:32px;min-width:32px;padding:0;border-color:transparent;box-shadow:none;}
+  .mobile-library-swatch,.mobile-library-custom{width:44px;min-width:44px;height:44px;flex:none;border:1px solid #dfcbd9;border-radius:50%;padding:0;box-sizing:border-box;cursor:pointer;}
+  .mobile-library-custom{font:24px Montserrat,sans-serif;background:conic-gradient(#ff8ca5,#ffd786,#b8e3d9,#b9cff1,#dab9f1,#ff8ca5);color:#361929;}
+  .mobile-library-swatch[aria-pressed=true]{outline:2px solid var(--pink-600);outline-offset:1px;}
+  .mobile-font-choice{flex:none;max-width:220px;min-height:44px;padding:8px 14px;border:1px solid var(--line);border-radius:10px;background:white;color:var(--ink);font-size:20px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
+  .mobile-font-choice[aria-pressed=true]{background:var(--pink-100);border-color:var(--pink-600);color:var(--pink-600);}
+  .mobile-library-drawer{position:fixed;inset:auto 0 0;margin:0 auto;width:min(576px,100%);max-width:100%;padding:0;border:1px solid var(--line);border-bottom:0;border-radius:18px 18px 0 0;background:white;color:var(--ink);box-sizing:border-box;overflow:hidden;}
+  .mobile-library-drawer[open]{display:flex;flex-direction:column;}
+  .mobile-library-drawer::backdrop{background:rgba(42,31,42,.18);}
+  .mobile-library-drawer>header{display:flex;flex:none;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;border-bottom:1px solid var(--line);}
+  .mobile-library-drawer h2{font:20px 'DM Serif Display',serif;margin:0;}
+  .mobile-library-drawer h3{font:600 12px Montserrat,sans-serif;margin:14px 0 8px;}
+  .mobile-library-drawer-body{flex:1;min-height:0;overflow:auto;padding:12px 12px calc(12px + env(safe-area-inset-bottom,0px));overscroll-behavior:contain;}
+  .mobile-library-search{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+  .mobile-library-search .text-input{flex:1;min-width:120px;}
+  .mobile-library-search select{max-width:100%;}
+  .mobile-library-drawer input[type=text],.mobile-library-drawer select{font-size:16px;}
+  .mobile-font-library-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;}
+  .mobile-font-library-grid .mobile-font-choice{width:100%;max-width:100%;text-align:left;}
+  .mobile-library-grid{display:flex;gap:8px;flex-wrap:wrap;padding:3px;margin-top:8px;}
   .studio-resize-dialog {
     width: min(440px, calc(100vw - 28px));
     max-height: calc(100dvh - 28px);
@@ -464,7 +491,7 @@
     // ONE version number for every app file. Change it each time you upload new files,
     // so phones and browsers fetch the fresh copies instead of reusing old ones.
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
-      const APP_VERSION = '2026-11-26-seven-selection-tools';
+      const APP_VERSION = '2026-11-27-horizontal-libraries';
     document.write('<link rel="stylesheet" href="content-workspace.css?v=' + APP_VERSION + '">');
     // Files load in this order. The data file is plain JavaScript; the rest are React (.jsx).
     const APP_FILES = [
