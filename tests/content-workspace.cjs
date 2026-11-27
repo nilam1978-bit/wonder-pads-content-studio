@@ -10,7 +10,7 @@ vm.runInContext(renderer.slice(renderer.indexOf('let textMeasureContext'),render
 vm.runInContext(old.slice(0,old.indexOf('const CAROUSEL_STYLE_PAIRS')),ctx);
 vm.runInContext(old.slice(old.indexOf('const CAROUSEL_CTA_CHOICES'),old.indexOf('function endpointSlide')),ctx);
 vm.runInContext(utils.slice(utils.indexOf('function ctaEngagementElements'),utils.indexOf('function starterBackgroundElements')),ctx);
-vm.runInContext(workspace.slice(0,workspace.indexOf('function ContentWorkspace()'))+'\nglobalThis.looks=CONTENT_LOOKS;',ctx);
+vm.runInContext(workspace.slice(0,workspace.indexOf('function ContentWorkspace('))+'\nglobalThis.looks=CONTENT_LOOKS.filter(look=>look.id!=="blank");',ctx);
 // Mark the current line without losing text, indentation, selection or existing markers.
 let marked=ctx.contentMarkedLine('First line\nSecond line',15,15,'# ');
 assert.equal(marked.text,'First line\n# Second line');assert.equal(marked.start,17);
@@ -155,3 +155,56 @@ assert.equal(pending.source,'# My pending source\nDo not replace this draft.');
 assert(pending.appliedSource.includes('Latest canvas heading'));
 assert.equal(ctx.contentSlidesSource(synced.slides,synced.settings),synced.source);
 console.log('PASS: latest canvas wording reaches raw source; subheadings survive; automatic CTA excluded; unapplied source drafts preserved.');
+
+// Blank entry skips text generation and keeps an existing writing draft intact.
+vm.runInContext(utils.slice(utils.indexOf('const SIZE_PRESETS'),utils.indexOf('function resizeSlideToFit')),ctx);
+vm.runInContext(utils.slice(utils.indexOf('const newProject ='),utils.indexOf('// -------------- Reducer with history')),ctx);
+for(const size of ['portrait','post']){
+  const empty=ctx.newBlankProject(size),page=empty.canvases[0];
+  assert.equal(page.w,1080);assert.equal(page.h,size==='post'?1080:1350);
+  assert.equal(page.bg.value,'transparent');assert.equal(page.elements.length,0);
+  assert.equal(empty.contentWorkspaceSettings.format,'post');
+  const writing={id:'keep-writing',source:'My unfinished words',slides:[]};
+  let blankState={projects:[],contentDraft:writing,contentDrafts:[],past:[],future:[],selection:[]};
+  blankState=ctx.reducer(blankState,{type:'create-project',project:empty});
+  assert.equal(blankState.contentDraft,writing);
+  const photo={id:'photo',type:'image',src:'my-photo.jpg',x:0,y:0,w:page.w,h:page.h};
+  blankState.projects[0].canvases[0].elements.push(photo);
+  blankState.projects[0].canvases[0].bg={type:'image',value:'my-background.jpg'};
+  blankState=ctx.reducer(blankState,{type:'add-canvas'});
+  const expanded=blankState.projects[0],added=expanded.canvases[1];
+  assert.equal(expanded.canvases.length,2);assert.equal(expanded.projectType,'carousel');
+  assert.equal(expanded.contentWorkspaceSettings.format,'carousel');
+  assert.equal(added.w,page.w);assert.equal(added.h,page.h);
+  assert.equal(added.bg.value,'transparent');assert.equal(added.elements.length,0);
+  assert.equal(expanded.canvases[0].elements[0],photo);
+  const recovered=ctx.contentDraftFromProject(expanded);
+  assert.equal(ctx.contentCarouselSlides(recovered.slides,recovered.settings).length,2,'Reopen never adds an automatic ending to a blank design');
+  assert.equal(ctx.renderContentSlide(recovered.slides[0],recovered.settings,brand).bg.value,'my-background.jpg');
+  const undone=ctx.reducer(blankState,{type:'undo'});assert.equal(undone.projects[0].canvases.length,1);
+}
+// Blank is an alternative to every predesigned look, for single posts and carousels.
+const beforeBlank=JSON.stringify(slides),plain=ctx.contentWithLook({slides,index:1,settings},'blank');
+assert.equal(JSON.stringify(slides),beforeBlank,'Choosing blank leaves the previous design available to Undo');
+assert.deepEqual(plain.slides.map(words),slides.map(words));
+assert.deepEqual(plain.slides.map(s=>s.id),slides.map(s=>s.id));
+const plainUpdate=ctx.prepareSourceUpdate({...plain,source:ctx.contentSlidesSource(plain.slides,plain.settings)});
+assert.deepEqual(plainUpdate.map(words),plain.slides.map(words),'Source updates retain the existing closing words without inventing another ending');
+for(const size of ['portrait','post'])for(const slide of plain.slides){
+  const page=ctx.renderContentSlide(slide,{...plain.settings,size},{logo:'logo.png',handles:[{value:'@ecoclothpad'}]});
+  assert.equal(page.bg.value,'transparent');
+  assert(page.elements.every(e=>e.type==='text'&&!e.fromBrand&&!e.contentDecoration&&!e.engagementAction));
+  assert.deepEqual(page.elements.map(e=>e.text),slide.blocks.map(b=>b.text));
+}
+const restoredLook=ctx.contentWithLook(plain,'gentle');
+assert(!restoredLook.settings.blank);assert.equal(restoredLook.slides[1].look,'informative');
+assert.deepEqual(restoredLook.slides.map(words),slides.map(words));
+const photoDraft={...plain,slides:[{...plain.slides[0],assets:[{id:'own-photo',type:'image',src:'mine.jpg'}],originalCanvas:{bg:{type:'image',value:'mine-bg.jpg'}}}]};
+const withPhoto=ctx.contentWithLook(photoDraft,'blank'),photoPage=ctx.renderContentSlide(withPhoto.slides[0],withPhoto.settings,brand);
+assert.equal(photoPage.bg.value,'mine-bg.jpg');assert(photoPage.elements.some(e=>e.id==='own-photo'));
+vm.runInContext(read('ready-content.jsx').split('function fullSinglePostCanvas')[0],ctx);
+const quote=ctx.contentDraftFromPost({id:'quote',title:'My quote',slides:[{title:'Words for the image',body:''}],caption:'Caption stays separate',hashtags:'#sewing'});
+const plainQuote=ctx.contentWithLook(quote,'blank'),quotePage=ctx.renderContentSlide(plainQuote.slides[0],plainQuote.settings,brand);
+assert.equal(quotePage.elements.map(e=>e.text).filter(Boolean).join('\n'),'Words for the image');
+assert(plainQuote.caption.includes('Caption stays separate'));
+console.log('PASS: blank entry without words; draft preservation; empty same-size added slides; Undo/reopen without automatic CTA; lossless blank styling in both ratios; photo preservation; ready-made quote/caption separation.');

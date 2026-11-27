@@ -260,3 +260,9 @@
 .cw-entry-shell .cw-entry-resume{flex:none;align-self:flex-start;margin:0 24px 8px;padding:7px 10px;min-height:44px;background:transparent;color:#893773;border:0;font-size:13px;text-decoration:underline;text-underline-offset:3px}
 .cw-entry-typing .cw-entry-resume{display:none}
 @media(max-width:639px){.cw-entry-shell .cw-entry-tabs button{padding:8px 6px;font-size:12px}.cw-entry-shell .cw-entry-resume{margin-inline:16px}}
+
+.cw-entry-shell .cw-entry-start-blank{align-self:flex-start;flex:none;margin:0 24px 8px;min-height:44px;padding:9px 14px;background:#fff;color:#78265f;border:1px solid #d9c4d2;border-radius:10px;font-size:13px}
+.cw-entry-typing .cw-entry-start-blank{display:none}
+@media(max-width:639px){.cw-entry-shell .cw-entry-start-blank{margin-inline:16px}}
+
+.cw-shell .cw-color-styles .cw-look-blank span:first-child{white-space:normal;text-align:left}

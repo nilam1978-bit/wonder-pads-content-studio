@@ -1,5 +1,6 @@
 // Content is prepared once. Designs only arrange these blocks; no AI or splitting in rendering.
 const CONTENT_LOOKS = [
+  {id:'blank',name:'Blank / No template',family:'Blank',bg:'transparent',ink:'#2A1F2A',layout:'blank'},
   {id:'gentle',name:'Soft blush',family:'Floral',bg:'#F1CFEA',ink:'#78265F',accent:'#849879',layout:'center'},
   {id:'informative',name:'Cream editorial',family:'Editorial',bg:'#FFF9FC',ink:'#78265F',accent:'#D489C3',layout:'editorial'},
   {id:'clear',name:'Plum statement',family:'Bold',bg:'#78265F',ink:'#FFF9FC',accent:'#F1CFEA',layout:'bold'},
@@ -12,10 +13,10 @@ const CONTENT_LOOKS = [
   {id:'floral-slate-blue',name:'Slate blue',family:'Floral',bg:'#EEF3F8',ink:'#314A65',accent:'#4C6F96',layout:'center',background:'assets/templates/wonder-pads-poster-template-slate-blue.png'},
   {id:'floral-deep-plum',name:'Deep plum',family:'Floral',bg:'#54284A',ink:'#FFFFFF',accent:'#E8C6DF',layout:'center',background:'assets/templates/wonder-pads-poster-template-deep-plum.png'},
 ];
-const contentLook = id => CONTENT_LOOKS.find(l=>l.id===id)||CONTENT_LOOKS[0];
+const contentLook = id => CONTENT_LOOKS.find(l=>l.id===id)||CONTENT_LOOKS.find(l=>l.id==='gentle');
 const contentBlock = (role,text) => ({id:uid(),role,text:String(text??'')});
 function contentCarouselSlides(slides,settings,selectedLook) {
-  if(settings.format==='post'||!slides.length)return slides;
+  if(settings.format==='post'||settings.blank||!slides.length)return slides;
   const choice=CAROUSEL_CTA_CHOICES.generic;
   const isStandard=s=>s.standardCta||(s.blocks[0]?.text===choice.title&&s.blocks.some(b=>b.text===choice.body));
   const existing=slides.find(isStandard);
@@ -92,6 +93,23 @@ function renderContentSlide(slide,settings,brand,options={}) {
   if(slide.originalCanvas&&!options.force)return applyBrandSlideFonts(slide.originalCanvas,brand);
   const standard=!!slide.standardCta;
   const look=contentLook(options.look||slide.look),W=1080,H=settings.size==='post'?1080:1350;
+  if(look.id==='blank'){
+    const c={id:slide.id,name:'Slide',slideKind:slide.kind,standardCta:standard,contentLook:'blank',w:W,h:H,
+      bg:slide.blankBackground||{type:'color',value:'transparent'},elements:[]};
+    let y=86;
+    c.elements=slide.blocks.map(b=>{
+      const e=newElement('text',{__role:b.role,contentBlockId:b.id,text:b.text,hidden:!!b.hidden,x:86,y,w:W-172,
+        fontFamily:'Montserrat',fontSize:b.role==='heading'?64:b.role==='sub'?48:40,color:'#2A1F2A',align:'left',lineHeight:1.3});
+      e.h=textLayout(e).height;if(!e.hidden)y+=e.h+28;return e;
+    });
+    if(slide.fit||options.fit)for(let pass=0;pass<60&&y-28>H-86;pass++){
+      let changed=false;y=86;
+      for(const e of c.elements){if(e.hidden)continue;const next=Math.max(e.__role==='heading'?40:28,Math.floor(e.fontSize*.95));if(next<e.fontSize)changed=true;e.fontSize=next;e.y=y;e.h=textLayout(e).height;y+=e.h+28;}
+      if(!changed)break;
+    }
+    c.elements.push(...(slide.assets||[]));
+    return c;
+  }
   const middle=slide.kind==='content'&&!standard&&(options.slideNumber??((slide.sourceIndex??1)+1))>1,floralBackground=!!look.background&&!standard&&!middle;
   const background=middle&&look.id==='informative'?['#FFF9FC','#FCF8F2','#F5F8F3'][slide.contentTone||0]:look.bg;
   const c={id:slide.id,name:slide.kind==='hook'?'Cover':slide.kind==='cta'?'Closing slide':'Slide',slideKind:slide.kind,standardCta:standard,contentLook:look.id,contentTone:slide.contentTone||0,w:W,h:H,bg:{type:'color',value:background},elements:[]};
@@ -123,7 +141,7 @@ function renderContentSlide(slide,settings,brand,options={}) {
   return c;
 }
 function contentOverflow(canvas) {
-  return canvas.elements.some(e=>isContentText(e)&&!e.hidden&&(e.y+textLayout(e).height>canvas.h-180||e.x<0||e.x+e.w>canvas.w||e.y<0));
+  return canvas.elements.some(e=>isContentText(e)&&!e.hidden&&(e.y+textLayout(e).height>canvas.h-(canvas.contentLook==='blank'?86:180)||e.x<0||e.x+e.w>canvas.w||e.y<0));
 }
 function contentSplitSlide(slide) {
   if(slide.standardCta)throw new Error('Keep the standard CTA together. Shorten its text or use Fit text.');
@@ -136,6 +154,9 @@ function contentSplitSlide(slide) {
   return [{...slide,originalCanvas:null,blocks:left},{id:uid(),kind:slide.kind==='cta'?'cta':'content',look:slide.look,blocks:right,fit:slide.fit}].map((s,i)=>({...s,kind:slide.kind==='cta'&&i===0?'content':s.kind}));
 }
 function contentWithLook(draft,look) {
+  if(look==='blank')return {...draft,settings:{...draft.settings,blank:true},slides:draft.slides.map(s=>({...s,look,originalCanvas:null,
+    blankBackground:s.originalCanvas?.bg?.type==='image'?s.originalCanvas.bg:s.blankBackground}))};
+  if(draft.settings.blank)draft={...draft,settings:{...draft.settings,blank:false},slides:draft.slides.map(s=>s.look==='blank'?{...s,look:'informative',originalCanvas:null}:s)};
   if(draft.settings.format==='post')return {...draft,slides:draft.slides.map((s,i)=>i===draft.index?{...s,look,originalCanvas:null}:s)};
   const pages=contentCarouselSlides(draft.slides,draft.settings,look);
   const coverIndex=Math.max(0,pages.findIndex(s=>s.kind==='hook'));
@@ -143,6 +164,8 @@ function contentWithLook(draft,look) {
 }
 function prepareSourceUpdate(draft) {
   const previous=draft.slides.filter(s=>!s.standardCta),coverLook=draft.slides.find(s=>s.kind==='hook')?.look||draft.slides[0]?.look||'gentle';
+  if(draft.settings.blank)return [...prepareContentSlides(draft.source,draft.settings).map((slide,i)=>({...slide,look:'blank',fit:true,assets:previous[i]?.assets||[],blankBackground:previous[i]?.blankBackground})),
+    ...(draft.settings.format==='post'?[]:draft.slides.filter(s=>s.standardCta).map(s=>({...s,look:'blank',originalCanvas:null})))];
   return prepareContentSlides(draft.source,draft.settings).map((slide,i)=>({...slide,look:slide.kind==='hook'||slide.standardCta?coverLook:'informative',fit:true,assets:slide.standardCta?[]:previous[i]?.assets||[],photo:!slide.standardCta&&!!previous[i]?.photo}));
 }
 function contentDraftForSource(project,source) {
@@ -184,7 +207,7 @@ function ContentWorkspace({startWithWords=false}) {
   },[draft?.slides?.length,mobile,tab,showEntry]);
   React.useEffect(()=>{if(zoom==='fit'&&stageRef.current)stageRef.current.scrollTo(0,0);},[zoom]);
   React.useEffect(()=>{if(!draft){let input='';try{input=JSON.parse(sessionStorage.getItem('wpr-social-create-draft')||'{}').input||'';}catch{}dispatch({type:'set-content-draft',draft:contentDraftNew(input)});}},[]);
-  React.useEffect(()=>{if(draft?.slides?.length&&draft.settings.format!=='post'&&!draft.slides.some(s=>s.standardCta))dispatch({type:'set-content-draft',draft:{...draft,slides:contentCarouselSlides(draft.slides,draft.settings)}});},[draft?.id,draft?.slides,draft?.settings]);
+  React.useEffect(()=>{if(draft?.slides?.length&&!draft.settings.blank&&draft.settings.format!=='post'&&!draft.slides.some(s=>s.standardCta))dispatch({type:'set-content-draft',draft:{...draft,slides:contentCarouselSlides(draft.slides,draft.settings)}});},[draft?.id,draft?.slides,draft?.settings]);
   React.useEffect(()=>{let live=true;setFonts(false);loadCarouselFonts(state.brand).then(()=>{if(live)setFonts(true);}).catch(()=>{if(live)setFonts(true);});return()=>{live=false;};},[state.brand.slideFontHeading,state.brand.slideFontSubheading]);
   const patch=(changes,history=false)=>{if(history){undo.current.push(draft);undo.current=undo.current.slice(-40);redo.current=[];}dispatch({type:'set-content-draft',draft:{...draft,...changes,updatedAt:now()}});setError('');};
   const travel=(from,to)=>{const next=from.current.pop();if(next){to.current.push(draft);dispatch({type:'set-content-draft',draft:next});}};
@@ -223,8 +246,8 @@ function ContentWorkspace({startWithWords=false}) {
       {overflow.includes(index)&&<div className="cw-warning" role="status">Text needs more room. All words are kept.<div><button onClick={()=>patch({slides:draft.slides.map((s,i)=>i===index?{...s,originalCanvas:null,fit:true}:s)},true)}>Fit text</button><button onClick={()=>patch({slides:draft.slides.map((s,i)=>i===index?{...s,originalCanvas:null,look:'informative',fit:true}:s)},true)}>Roomier layout</button><button onClick={previewSplit}>Preview split</button></div></div>}
       <div className="cw-preview-stage" ref={stageRef} data-zoomed={zoom!=='fit'}><div className="cw-preview-surface"><div className="cw-large-preview" style={{width:canvas.w*previewScale,height:canvas.h*previewScale,touchAction:zoom==='fit'?'pan-y':'pan-x pan-y'}} onTouchStart={e=>{touch.current=zoom==='fit'?{x:e.touches[0].clientX,y:e.touches[0].clientY}:null;}} onTouchEnd={e=>{if(touch.current===null)return;const dx=e.changedTouches[0].clientX-touch.current.x,dy=e.changedTouches[0].clientY-touch.current.y;touch.current=null;if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.4)patch({index:Math.max(0,Math.min(canvases.length-1,index+(dx<0?1:-1)))});}} onTouchCancel={()=>{touch.current=null;}}><MiniPreview canvas={canvas} fluid/></div></div></div>
       <section className="cw-template-browser" aria-label="Choose a design">{!single&&<nav className="cw-thumbnails" aria-label="Carousel slides"><button className="cw-slide-arrow" aria-label="Previous slide" disabled={!index} onClick={()=>patch({index:index-1})}>‹</button>{canvases.map((c,i)=><button key={c.id} aria-label={`Slide ${i+1}${overflow.includes(i)?' needs fitting':''}`} aria-pressed={i===index} onClick={()=>patch({index:i})}><MiniPreview canvas={c} maxW={34} maxH={38}/><span>{i+1}{overflow.includes(i)?' ⚠':''}</span></button>)}<button className="cw-slide-arrow" aria-label="Next slide" disabled={index===canvases.length-1} onClick={()=>patch({index:index+1})}>›</button></nav>}
-      <div className="cw-style-heading"><span>{single?'Post style':'Cover style'}</span><label className="cw-style-filter"><span className="cw-entry-sr">Style family</span><select value={family} onChange={e=>setFamily(e.target.value)}>{['All','Floral','Editorial','Bold'].map(f=><option key={f} value={f}>{f==='All'?'All styles':f}</option>)}</select></label><details className="cw-style-info"><summary aria-label="About cover styles">ⓘ</summary><p>{single?'Select a colour card to preview its style.':'Cover and closing slide share the selected colours. Content slides keep their layout.'}</p></details></div>
-      <div ref={styleStrip} className="cw-template-strip cw-color-styles" aria-label="Cover styles">{CONTENT_LOOKS.filter(l=>family==='All'||l.family===family).map(l=><button key={l.id} className="cw-look" style={{background:l.bg,color:l.ink}} aria-pressed={(single?slide:coverSlide).look===l.id} onClick={()=>patch(contentWithLook(draft,l.id),true)}><span>{l.name}</span>{(single?slide:coverSlide).look===l.id&&<span aria-hidden="true">✓</span>}</button>)}</div></section>
+      <div className="cw-style-heading"><span>{single?'Post style':draft.settings.blank?'Slide style':'Cover style'}</span><label className="cw-style-filter"><span className="cw-entry-sr">Style family</span><select value={family} onChange={e=>setFamily(e.target.value)}>{['All','Floral','Editorial','Bold'].map(f=><option key={f} value={f}>{f==='All'?'All styles':f}</option>)}</select></label><details className="cw-style-info"><summary aria-label="About cover styles">ⓘ</summary><p>{single?'Select a style, or choose Blank / No template to keep only your words.':'Cover styles change the cover and closing slide. Blank / No template removes preset design from every slide and keeps your words.'}</p></details></div>
+      <div ref={styleStrip} className="cw-template-strip cw-color-styles" aria-label="Cover styles">{CONTENT_LOOKS.filter(l=>l.id==='blank'||family==='All'||l.family===family).map(l=><button key={l.id} className={'cw-look'+(l.id==='blank'?' cw-look-blank':'')} style={{background:l.bg,color:l.ink}} aria-pressed={(single?slide:coverSlide).look===l.id} onClick={()=>patch(contentWithLook(draft,l.id),true)}><span>{l.name}</span>{(single?slide:coverSlide).look===l.id&&<span aria-hidden="true">✓</span>}</button>)}</div></section>
     </>:<div className="cw-empty"><h2>Your words, your look.</h2><p>Prepare your slides once. Then tap the template strip to compare designs using your own text.</p>{mobile&&<button onClick={()=>setTab('text')}>Enter your text</button>}</div>}</main></div></div>
     {error&&<p className="cw-error" role="alert">{error}</p>}<SaveErrorBanner/><footer className={"cw-footer"+(sourceChanged?" cw-footer-pending":"")}><span>{canvases.length?`${single?'Single post':canvases.length+' slides'}${overflow.length?` · check ${overflow.length} for overflow`:''}`:'Start with your words'}</span>{sourceChanged?<div className="cw-update-choice"><p role="status">Text changes saved. Update slides to apply.</p><div className="cw-choice-actions" role="group" aria-label="Apply source changes"><button disabled={busy||!canvas} onClick={proceed} title="Continue with the current slides. Your text draft stays saved.">Keep current</button><button className="cw-primary" disabled={busy||!draft.source.trim()} onClick={()=>{document.activeElement?.blur();prepare();}}>Update slides</button></div></div>:<button className="cw-primary" disabled={busy||!canvas} onClick={proceed}>{busy?'Preparing…':'Continue editing'}</button>}</footer>
     {contentReview}
@@ -267,6 +290,7 @@ function ContentEntryScreen({draft,hasSlides=false,embedded=false,dirty=false,on
     {!embedded&&<StudioSectionHeader className="cw-header" title="Your words" subtitle="Wonder Pads · Content Studio" icon="text" onBack={onBack} backLabel={studioBackLabel('words','home')} disabled={busy} actions={<SaveIndicator/>}/>} 
     <main className="cw-entry-main"><div className="cw-entry-paper">
       {embedded?<h2 className="cw-source-title">Your words</h2>:<nav className="cw-entry-tabs" aria-label="Writing sources"><button aria-pressed="true" disabled={busy}>Write / Paste</button><button aria-pressed="false" disabled={busy} onClick={()=>studioOpen(dispatch,'ready-content','words')}>Ready-made posts</button><button aria-pressed="false" disabled={busy} onClick={()=>studioOpen(dispatch,'repurpose','words')}>Reuse my words</button></nav>}
+      {!embedded&&<button className="cw-entry-start-blank" disabled={busy} onClick={()=>dispatch({type:'create-project',project:newBlankProject(settings.size)})}>Start with a blank canvas</button>}
       {!embedded&&hasSlides&&<button className="cw-entry-resume" onClick={onContinue} disabled={busy}>Continue with prepared slides</button>}
       <div className="cw-entry-writing">
         <div className="cw-entry-markers" role="toolbar" aria-label="Mark slides"><button onMouseDown={e=>e.preventDefault()} onClick={()=>mark('# ')} disabled={busy}>+ Slide</button><button onMouseDown={e=>e.preventDefault()} onClick={()=>mark('## ')} disabled={busy}>+ Subheading</button><button className="cw-entry-help" aria-label="Help with slide markers" aria-expanded={help} onClick={()=>setHelp(!help)}>?</button><button className="cw-entry-keyboard-done" onClick={()=>field.current?.blur()}>Done</button></div>

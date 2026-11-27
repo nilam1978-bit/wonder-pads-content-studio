@@ -11,7 +11,7 @@ vm.runInContext(utils.slice(utils.indexOf('function applyBrandSlideFonts'),utils
 vm.runInContext(renderer.slice(renderer.indexOf('let textMeasureContext'),renderer.indexOf('function fitTextSize')),ctx);
 vm.runInContext(legacy.slice(0,legacy.indexOf('const CAROUSEL_STYLE_PAIRS')),ctx);
 vm.runInContext(legacy.slice(legacy.indexOf('const CAROUSEL_CTA_CHOICES'),legacy.indexOf('function endpointSlide')),ctx);
-vm.runInContext(workspace.slice(0,workspace.indexOf('function ContentWorkspace()'))+'\nglobalThis.looks=CONTENT_LOOKS;',ctx);
+vm.runInContext(workspace.slice(0,workspace.indexOf('function ContentWorkspace('))+'\nglobalThis.looks=CONTENT_LOOKS.filter(look=>look.id!=="blank");',ctx);
 const brand={logo:'assets/wpr-logo.png',fontBody:'Montserrat',handles:[{platform:'instagram',value:'@ecoclothpad'},{platform:'website',value:'wonder-pads.com'}]};
 const text='# A clear cover\nSupporting words.\n# First detail\n## A helpful subheading\nEvery word stays here.\n# Second detail\nAnother point.\n# Final detail\nOur original ending.';
 const bounds=e=>({x:e.x,y:e.y,w:e.w,h:e.type==='text'?ctx.textLayout(e).height:e.h});
