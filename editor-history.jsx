@@ -224,30 +224,7 @@ function HistoryScreen() {
     }}>
       {Toast}
 
-      {/* Top bar */}
-      <div className="safe-top" style={{
-        padding: '14px 24px', display: 'flex', alignItems: 'center', gap: 12,
-        borderBottom: '1px solid var(--line)', background: 'rgba(255,255,255,.7)',
-        backdropFilter: 'blur(8px)', flexShrink: 0,
-      }}>
-        <button className="btn-ghost" onClick={() => dispatch({ type: 'set-view', view: 'home' })}
-          style={{ padding: 8, borderRadius: 10, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--ink-2)' }}>
-          <Icon name="arrow_left" size={16} /> <span className="desktop-only" style={{ fontSize: 13 }}>Home</span>
-        </button>
-        <div style={{ height: 20, width: 1, background: 'var(--line)' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 10, background: 'var(--pink-200)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--pink-600)',
-          }}>
-            <Icon name="history" size={16} />
-          </div>
-          <div>
-            <div style={{ fontFamily: 'DM Serif Display', fontSize: 16, color: 'var(--ink)', lineHeight: 1 }}>History</div>
-            <div style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-3)', marginTop: 3 }}>saved sessions + content library</div>
-          </div>
-        </div>
-      </div>
+      <StudioSectionHeader title="History" subtitle="Saved sessions and content library" icon="history" onBack={()=>studioBack(dispatch,'history','home')} backLabel={studioBackLabel('history','home')}/>
 
       {/* Body */}
       <div className="scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
@@ -318,7 +295,7 @@ function HistoryScreen() {
                     : ['instagram-caption', 'tiktok-hook', 'facebook-post'],
                 };
                 try { sessionStorage.setItem('simple-preview-repurpose-seed', JSON.stringify(seed)); } catch {}
-                dispatch({ type: 'set-view', view: 'repurpose' });
+                studioOpen(dispatch,'repurpose','history');
               }}
             />
           ) : items.length === 0 ? (
@@ -334,7 +311,7 @@ function HistoryScreen() {
               <div style={{ fontSize: 13 }}>
                 Save any generated copy from the {tab === 'repurpose' ? 'Repurpose' : 'Launch'} tool to see it here.
               </div>
-              <button onClick={() => dispatch({ type: 'set-view', view: tab })}
+              <button onClick={() => studioOpen(dispatch,tab,'history')}
                 className="btn btn-primary"
                 style={{ marginTop: 20, padding: '10px 20px', fontSize: 13, background: 'var(--ink)', color: 'white', borderRadius: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <Icon name={tab === 'repurpose' ? 'sparkles' : 'launch'} size={13} /> Open {tab === 'repurpose' ? 'Repurpose' : 'Launch'}

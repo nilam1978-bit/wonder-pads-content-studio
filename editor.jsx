@@ -206,7 +206,7 @@ function TopBar({ onResize, onBulkCreate }) {
       flexShrink: 0, zIndex: 100, position: 'relative',
     }}>
       {/* Home / brand */}
-      <button onClick={() => dispatch({ type: 'close-project' })}
+      <button onClick={() => { dispatch({ type: 'close-project' }); studioShow(dispatch,'home'); }}
         className="btn-ghost" style={{
           display: 'flex', alignItems: 'center', gap: 10, minWidth: 172,
           padding: '6px 10px 6px 6px', borderRadius: 10,
@@ -231,7 +231,7 @@ function TopBar({ onResize, onBulkCreate }) {
         <Menu label="File">
           {onResize && <MenuItem icon="duplicate" label="Resize as a copy" onClick={onResize} />}
           {onBulkCreate && <MenuItem icon="duplicate" label="Bulk create" onClick={onBulkCreate} />}
-          <MenuItem icon="templates" label="Back to home" onClick={() => dispatch({ type: 'close-project' })} />
+          <MenuItem icon="templates" label="Back to home" onClick={() => { dispatch({ type: 'close-project' }); studioShow(dispatch,'home'); }} />
           <MenuItem icon="plus" label="New design" onClick={() => { dispatch({ type: 'close-project' }); }} />
           <MenuItem icon="duplicate" label="Duplicate design" onClick={() => dispatch({ type: 'duplicate-project', id: proj.id })} />
           <MenuItem icon="save" label="Save as template" shortcut="⌘⇧T" onClick={saveAsTemplate} />
@@ -548,7 +548,7 @@ function App() {
   const isMobile = useIsMobile();
   const inEditor = !!state.activeProjectId && !!activeProject(state);
   if (inEditor) return <FinalProjectWorkspace isMobile={isMobile} />;
-  if (state.view === 'carousel') return <ContentWorkspace />;
+  if (state.view === 'carousel' || state.view === 'words') return <ContentWorkspace key={state.view} startWithWords={state.view==='words'} />;
   if (state.view === 'ready-content') return <ContentLibrary />;
   if (state.view === 'repurpose') return <RepurposeScreen />;
   if (state.view === 'launch') return <LaunchScreen />;

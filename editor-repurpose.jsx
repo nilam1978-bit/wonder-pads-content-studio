@@ -385,36 +385,7 @@ function RepurposeScreen() {
     }}>
       {Toast}
 
-      {/* Top bar */}
-      <div className="safe-top" style={{
-        padding: '14px 24px', display: 'flex', alignItems: 'center', gap: 12,
-        borderBottom: '1px solid var(--line)', background: 'rgba(255,255,255,.7)',
-        backdropFilter: 'blur(8px)', flexShrink: 0,
-      }}>
-        <button className="btn-ghost" onClick={() => dispatch({ type: 'set-view', view: 'home' })}
-          style={{ padding: 8, borderRadius: 10, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--ink-2)' }}
-          title="Back to studio home">
-          <Icon name="arrow_left" size={16} /> <span className="desktop-only" style={{ fontSize: 13 }}>Home</span>
-        </button>
-        <div style={{ height: 20, width: 1, background: 'var(--line)' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 10, background: 'var(--pink-200)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--pink-600)',
-          }}>
-            <Icon name="sparkles" size={16} />
-          </div>
-          <div>
-            <div style={{ fontFamily: 'DM Serif Display', fontSize: 16, color: 'var(--ink)', lineHeight: 1 }}>Content Repurposer</div>
-            <div style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-3)', marginTop: 3 }}>one idea → everywhere</div>
-          </div>
-        </div>
-        <div style={{ flex: 1 }} />
-        <button className="btn btn-tonal" onClick={() => dispatch({ type: 'set-view', view: 'history' })}
-          style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Icon name="history" size={14} /> <span className="desktop-only">History</span>
-        </button>
-      </div>
+      <StudioSectionHeader title="Reuse my words" subtitle="One idea, everywhere" icon="sparkles" onBack={()=>studioBack(dispatch,'repurpose','words')} backLabel={studioBackLabel('repurpose','words')} actions={<button className="btn btn-tonal" aria-label="History" title="History" onClick={()=>studioOpen(dispatch,'history','repurpose')}><Icon name="history" size={16}/><span className="desktop-only">History</span></button>}/>
 
       {/* Body */}
       <div className="scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
