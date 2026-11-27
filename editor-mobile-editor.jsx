@@ -171,6 +171,7 @@ function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBu
     return () => clearTimeout(t);
   }, [thumbSig, proj?.id]);
 
+  meE(()=>{const outside=e=>{if(e.target.closest?.('.mobile-ribbon-dock,dialog,.sheet-back'))return;setTray(null);if(['text','images','icons','shapes','frames'].includes(openSheet))setOpenSheet(null);};document.addEventListener('pointerdown',outside,true);return()=>document.removeEventListener('pointerdown',outside,true);},[openSheet]);
   if (!proj || !canvas) return null;
 
   const openTool = (tool) => {
@@ -181,6 +182,7 @@ function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBu
   };
 
   const closeSheet = () => setOpenSheet(null);
+
   const pickTool = (tool) => setTray(t => (t === tool ? null : tool));
   const clearSelection = () => {
     setTray(null);setBackgroundSelected(false);
@@ -251,7 +253,8 @@ function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBu
       </div>
 
       <div className="mobile-ribbon-dock">
-        {primaryEl && (
+        {['text','images','icons','shapes','frames','pages'].includes(openSheet)&&<div className="mobile-ribbon-context">{openSheet==='pages'?<MobileSlideLibrary onClose={closeSheet}/>:<MobileInsertLibrary key={canvas.id+openSheet} tool={openSheet} onClose={closeSheet}/>}</div>}
+        {primaryEl && !['text','images','icons','shapes','frames','pages'].includes(openSheet) && (
           <div className="mobile-ribbon-context">
             {activeTray && !openSheet && !wordDraft && (
               <MobileToolTray key={primaryEl.id + activeTray} el={primaryEl} tool={activeTray} onClose={() => setTray(null)} />
@@ -278,28 +281,14 @@ function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBu
       <BottomSheet open={openSheet === 'brand'} onClose={closeSheet} title="Brand">
         <BrandPanel />
       </BottomSheet>
-      <BottomSheet open={openSheet === 'text'} onClose={closeSheet} title="Text">
-        <MobileTextPresets />
-      </BottomSheet>
-      <BottomSheet open={openSheet === 'shapes'} onClose={closeSheet} title="Shapes">
-        <ShapesPanel />
-      </BottomSheet>
-      <BottomSheet open={openSheet === 'images'} onClose={closeSheet} title="Images">
-        <ImagesPanel />
-      </BottomSheet>
-      <BottomSheet open={openSheet === 'icons'} onClose={closeSheet} title="Illustrations">
-        <IconsPanel />
-      </BottomSheet>
-      <BottomSheet open={openSheet === 'frames'} onClose={closeSheet} title="Frames">
-        <FramesPanel />
-      </BottomSheet>
+
       <BottomSheet open={openSheet === 'bg-image'} onClose={closeSheet} title="Background image"><MobileBackgroundImages onClose={closeSheet}/></BottomSheet>
       <BottomSheet open={openSheet === 'bg'} onClose={closeSheet} title="Background">
         <BackgroundPanel />
       </BottomSheet>
 
-      <BottomSheet open={openSheet === 'ai'} onClose={closeSheet} title="AI"><MobileAiTools key={canvas.id} canvas={canvas} selected={primaryEl} onClose={closeSheet}/></BottomSheet>
-      {openSheet === 'pages' && <MobilePagesOverview onClose={closeSheet} />}
+      <BottomSheet open={openSheet === 'ai'} onClose={closeSheet} title="AI" height="calc(var(--studio-viewport-height, 100dvh) * .5)"><MobileAiTools key={canvas.id} canvas={canvas} selected={primaryEl} onClose={closeSheet}/></BottomSheet>
+
       <BottomSheet open={openSheet === 'more'} onClose={closeSheet} title="Design actions" height="auto">
         <SheetAction icon="layer" label="Layers" onClick={() => openTool('layers')} />
         <SheetAction icon="brand_kit" label="Brand" onClick={() => openTool('brand')} />
@@ -974,15 +963,37 @@ function MobileRibbon({ label, children, end }) {
   );
 }
 
-function MobileLibraryDrawer({title,onClose,children}){
+function MobileSlideLibrary({onClose}){
+  const {state,dispatch}=useStore(),project=activeProject(state),[open,setOpen]=meS(false);
+  return <>{open?<MobilePagesOverview onClose={()=>setOpen(false)}/>:<MobileLibraryStrip title="Slides" onExpand={()=>setOpen(true)} onClose={onClose}>{project.canvases.map((c,i)=><button className="mobile-slide-library-choice" key={c.id} aria-label={'Open slide '+(i+1)} aria-pressed={c.id===project.activeCanvasId} onClick={()=>{dispatch({type:'set-active-canvas',id:c.id});onClose();}}><MiniPreview canvas={c} maxW={40} maxH={48}/><span>{i+1}</span></button>)}<button className="mobile-insert-upload" onClick={()=>{dispatch({type:'add-canvas'});onClose();}} aria-label="Add slide"><Icon name="plus" size={20}/></button></MobileLibraryStrip>}</>;
+}
+
+function MobileInsertLibrary({tool,onClose}){
+  const [open,setOpen]=meS(false),host=meR(null);
+  const title={text:'Text',images:'Images',icons:'Illustrations',shapes:'Shapes',frames:'Frames'}[tool];
+  const content=tool==='text'?<MobileTextPresets/>:tool==='images'?<ImagesPanel/>:tool==='icons'?<IconsPanel/>:tool==='shapes'?<ShapesPanel/>:<FramesPanel/>;
+  const items=<div ref={host} className={open?'mobile-insert-full':'mobile-insert-preview'} data-tool={tool}>{content}</div>;
+  return open?<MobileLibraryDrawer title={title+' library'} onDismiss={onClose} onClose={()=>setOpen(false)}>{items}</MobileLibraryDrawer>:<MobileLibraryStrip title={title} onExpand={()=>setOpen(true)} onClose={onClose}>{['images','icons'].includes(tool)&&<button className="mobile-insert-upload" onClick={()=>host.current?.querySelector('input[type=file]')?.click()} aria-label={'Upload '+title.toLowerCase()}><Icon name="upload" size={22}/><span>Upload</span></button>}{items}</MobileLibraryStrip>;
+}
+
+function MobileImageSizeTool({el}){
+  const {state,dispatch}=useStore(),canvas=activeCanvas(state),{live,done}=useLiveElementEdit(el.id),[open,setOpen]=meS(false);
+  const logo=isBrandLogo(el),art=isIllustration(el),size=logo?brandLogoSize(el):art?illustrationSize(el):el.w,max=Math.max(Math.max(canvas.w,canvas.h)*1.2,size);
+  const patch=v=>logo?brandLogoSizePatch(el,v):art?illustrationSizePatch(el,v):{w:v,h:v*el.h/el.w,x:el.x+(el.w-v)/2,y:el.y+(el.h-v*el.h/el.w)/2};
+  const set=v=>dispatch({type:'update-element',id:el.id,patch:patch(clamp(v,10,max))});
+  const [draft,setDraft]=meS(String(Math.round(size)));meE(()=>setDraft(String(Math.round(size))),[size]);
+  return <><div className="mobile-image-size-row"><LiveSlider label="Image size" value={size} min={10} max={max} step={2} onLive={v=>live(patch(v))} onDone={done}/><div className="mobile-image-size-stepper"><button aria-label="Decrease image size" disabled={el.locked||size<=10} onClick={()=>set(size-2)}>−</button><input aria-label={logo?'Logo size':'Image size value'} type="number" value={draft} min={10} max={max} disabled={el.locked} onChange={e=>setDraft(e.target.value)} onBlur={()=>{if(draft!==''&&Number.isFinite(Number(draft)))set(Number(draft));else setDraft(String(Math.round(size)));}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/><button aria-label="Increase image size" disabled={el.locked||size>=max} onClick={()=>set(size+2)}>+</button></div><button className="mobile-ribbon-pin" aria-label="Expand image size settings" onClick={()=>setOpen(true)}><Icon name="chevron_u" size={18}/></button></div>{open&&<MobileLibraryDrawer title="Image size settings" onClose={()=>setOpen(false)}><SizeTool el={el} full/></MobileLibraryDrawer>}</>;
+}
+
+function MobileLibraryDrawer({title,onClose,onDismiss=onClose,children}){
   const viewport=()=>({height:window.visualViewport?.height||window.innerHeight,top:window.visualViewport?.offsetTop||0,width:window.visualViewport?.width||window.innerWidth,left:window.visualViewport?.offsetLeft||0});
   const ref=meR(null),id=React.useId(),[view,setView]=meS(viewport);
   meE(()=>{const resize=()=>setView(viewport());window.visualViewport?.addEventListener('resize',resize);window.visualViewport?.addEventListener('scroll',resize);window.addEventListener('resize',resize);const dialog=ref.current;dialog.showModal();return()=>{window.visualViewport?.removeEventListener('resize',resize);window.visualViewport?.removeEventListener('scroll',resize);window.removeEventListener('resize',resize);dialog.close();};},[]);
-  return <dialog ref={ref} aria-labelledby={id} className="mobile-library-drawer" style={{top:view.top+view.height*.5,bottom:'auto',left:view.left+Math.max(0,(view.width-576)/2),right:'auto',width:Math.min(576,view.width),height:view.height*.5,maxHeight:view.height*.5}} onCancel={e=>{e.preventDefault();onClose();}}><header><h2 id={id}>{title}</h2><button className="mobile-ribbon-pin" aria-label={'Collapse '+title} onClick={onClose}><Icon name="chevron_dn" size={20}/></button></header><div className="mobile-library-drawer-body">{children}</div></dialog>;
+  return <dialog ref={ref} aria-labelledby={id} className="mobile-library-drawer" onPointerDown={e=>{if(e.target!==e.currentTarget)return;const r=e.currentTarget.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)onDismiss();}} style={{top:view.top+view.height*.5,bottom:'auto',left:view.left+Math.max(0,(view.width-576)/2),right:'auto',width:Math.min(576,view.width),height:view.height*.5,maxHeight:view.height*.5}} onCancel={e=>{e.preventDefault();onClose();}}><header><h2 id={id}>{title}</h2><button className="mobile-ribbon-pin" aria-label={'Collapse '+title} onClick={onClose}><Icon name="chevron_dn" size={20}/></button></header><div className="mobile-library-drawer-body">{children}</div></dialog>;
 }
 
 function MobileLibraryStrip({title,onExpand,onClose,children,extra}){
-  return <section className="mobile-ribbon-panel mobile-library-strip" aria-label={title+' controls'}><div className="mobile-library-strip-row"><div className="mobile-library-scroll" aria-label={title+' choices'}>{children}</div><button className="mobile-ribbon-pin mobile-library-close" aria-label={'Close '+title+' controls'} onClick={onClose}><Icon name="x" size={16}/></button><button className="mobile-ribbon-pin mobile-library-expand" aria-label={'Expand '+title+' library'} title="Full library" onClick={onExpand}><Icon name="chevron_u" size={20}/></button></div>{extra}</section>;
+  return <section className="mobile-ribbon-panel mobile-library-strip" aria-label={title+' controls'}><div className="mobile-library-strip-row"><div className="mobile-library-scroll" aria-label={title+' choices'}>{children}</div><button className="mobile-ribbon-pin mobile-library-expand" aria-label={'Expand '+title+' library'} title="Full library" onClick={onExpand}><Icon name="chevron_u" size={20}/></button></div>{extra}</section>;
 }
 
 function MobileFontLibrary({el,onClose}){
@@ -991,14 +1002,14 @@ function MobileFontLibrary({el,onClose}){
   const pick=async family=>{const request=++seq.current;setError('');try{const patch=await fontChangePatch(el,family),current=latest.current;if(request!==seq.current||!current)return;const live=activeCanvas(current.state)?.elements.find(e=>e.id===el.id);if(!live||live.locked)return;dispatch({type:'update-element',id:el.id,patch:{...patch,fontWeight:nearestWeight(family,live.fontWeight)}});}catch(e){if(latest.current&&request===seq.current)setError('Could not load this font. Try again.');}};
   const choices=ALL_FONT_OPTIONS.filter(f=>(category==='all'||f.kind===category)&&(f.family+' '+f.label).toLowerCase().includes(search.toLowerCase()));
   const button=f=><button key={f.family} className="mobile-font-choice" aria-label={'Use font '+f.family} aria-pressed={el.fontFamily===f.family} disabled={el.locked} style={{fontFamily:'"'+f.family+'", sans-serif'}} onClick={()=>pick(f.family)}>{f.label}</button>;
-  return <><MobileLibraryStrip title="Font" onExpand={()=>setOpen(true)} onClose={onClose}>{ALL_FONT_OPTIONS.map(button)}</MobileLibraryStrip>{open&&<MobileLibraryDrawer title="Font library" onClose={()=>setOpen(false)}><div className="mobile-library-search"><input className="text-input" aria-label="Search fonts" placeholder="Search fonts" value={search} onChange={e=>setSearch(e.target.value)}/><select className="pk-select" aria-label="Font category" value={category} onChange={e=>setCategory(e.target.value)}><option value="all">All fonts</option>{FONT_GROUPS.map(g=><option key={g.kind} value={g.kind}>{g.label}</option>)}</select></div><div className="mobile-font-library-grid">{choices.map(button)}</div>{!choices.length&&<p>No matching fonts.</p>}{error&&<p role="alert">{error}</p>}</MobileLibraryDrawer>}</>;
+  return <><MobileLibraryStrip title="Font" onExpand={()=>setOpen(true)} onClose={onClose}>{ALL_FONT_OPTIONS.map(button)}</MobileLibraryStrip>{open&&<MobileLibraryDrawer title="Font library" onDismiss={onClose} onClose={()=>setOpen(false)}><div className="mobile-library-search"><input className="text-input" aria-label="Search fonts" placeholder="Search fonts" value={search} onChange={e=>setSearch(e.target.value)}/><select className="pk-select" aria-label="Font category" value={category} onChange={e=>setCategory(e.target.value)}><option value="all">All fonts</option>{FONT_GROUPS.map(g=><option key={g.kind} value={g.kind}>{g.label}</option>)}</select></div><div className="mobile-font-library-grid">{choices.map(button)}</div>{!choices.length&&<p>No matching fonts.</p>}{error&&<p role="alert">{error}</p>}</MobileLibraryDrawer>}</>;
 }
 
 function MobileColourLibrary({el,onClose}){
   const {state,dispatch}=useStore(),[open,setOpen]=meS(false),original=meR(el.color);
   const colors=[...new Set([...(state.brand.colors||BRAND_PALETTE),...NEUTRAL_PALETTE,...COMPLEMENT_PALETTE,original.current,el.color])].filter(Boolean);
   const change=color=>{if(!el.locked)dispatch({type:'update-element',id:el.id,patch:{color}});};
-  return <><MobileLibraryStrip title="Colour" onExpand={()=>setOpen(true)} onClose={onClose}><button className="mobile-library-custom" aria-label="Custom text colour" onClick={()=>setOpen(true)}>+</button>{colors.map(color=><button key={color} className="mobile-library-swatch" style={{background:color}} aria-label={'Text colour '+color} aria-pressed={el.color?.toLowerCase()===color.toLowerCase()} disabled={el.locked} onClick={()=>change(color)}/>)}</MobileLibraryStrip>{open&&<MobileLibraryDrawer title="Colour library" onClose={()=>setOpen(false)}><ColorPicker value={el.color} onChange={change}/></MobileLibraryDrawer>}</>;
+  return <><MobileLibraryStrip title="Colour" onExpand={()=>setOpen(true)} onClose={onClose}><button className="mobile-library-custom" aria-label="Custom text colour" onClick={()=>setOpen(true)}>+</button>{colors.map(color=><button key={color} className="mobile-library-swatch" style={{background:color}} aria-label={'Text colour '+color} aria-pressed={el.color?.toLowerCase()===color.toLowerCase()} disabled={el.locked} onClick={()=>change(color)}/>)}</MobileLibraryStrip>{open&&<MobileLibraryDrawer title="Colour library" onDismiss={onClose} onClose={()=>setOpen(false)}><ColorPicker value={el.color} onChange={change}/></MobileLibraryDrawer>}</>;
 }
 
 function MobileBackgroundLibrary({mode,onClose}){
@@ -1008,7 +1019,7 @@ function MobileBackgroundLibrary({mode,onClose}){
   const swatch=(type,value,label)=><button key={type+value} className="mobile-library-swatch" style={{background:type==='image'?'url("'+value+'") center/cover':value}} aria-label={label} aria-pressed={canvas.bg.type===type&&canvas.bg.value===value} onClick={()=>choose(type,value)}/>;
   const images=state.uploads||[];
   const imageChoices=images.map((src,i)=>swatch('image',src,'Use background image '+(i+1)));
-  return <><MobileLibraryStrip title={mode==='images'?'Background image':'Background fill'} onExpand={()=>setOpen(true)} onClose={onClose}><button className="mobile-library-custom" aria-label="Custom background" onClick={()=>setOpen(true)}>+</button>{mode==='images'?imageChoices:<>{colors.map(c=>swatch('color',c,'Background colour '+c))}{GRADIENTS.map((g,i)=>swatch('gradient',g,'Background gradient '+(i+1)))}</>}</MobileLibraryStrip>{open&&<MobileLibraryDrawer title="Background library" onClose={()=>setOpen(false)}><h3>Colours</h3><ColorPicker value={canvas.bg.type==='color'?canvas.bg.value:'#FDFBFC'} onChange={v=>choose('color',v)}/><h3>Gradients</h3><div className="mobile-library-grid">{GRADIENTS.map((g,i)=>swatch('gradient',g,'Background gradient '+(i+1)))}</div><h3>Images</h3><button className="btn btn-tonal" onClick={()=>file.current.click()}>Upload background image</button><input ref={file} hidden type="file" accept="image/*" onChange={e=>{const f=e.target.files?.[0];if(!f)return;const reader=new FileReader();reader.onload=()=>{if(latest.current===canvas.id){dispatch({type:'add-upload',src:reader.result});choose('image',reader.result);}};reader.readAsDataURL(f);e.target.value='';}}/><div className="mobile-library-grid">{imageChoices}</div><h3>Saved backgrounds</h3><div className="mobile-library-grid">{(state.savedBackgrounds||[]).filter(b=>b.kind==='bg-only').map(b=><button key={b.id} className="mobile-library-swatch" style={{background:renderBg(b.bg)}} aria-label={'Saved background '+b.name} onClick={()=>{if(latest.current===canvas.id)dispatch({type:'update-canvas',id:canvas.id,patch:{bg:JSON.parse(JSON.stringify(b.bg))}});}}/>)}</div></MobileLibraryDrawer>}</>;
+  return <><MobileLibraryStrip title={mode==='images'?'Background image':'Background fill'} onExpand={()=>setOpen(true)} onClose={onClose}><button className="mobile-library-custom" aria-label="Custom background" onClick={()=>setOpen(true)}>+</button>{mode==='images'?imageChoices:<>{colors.map(c=>swatch('color',c,'Background colour '+c))}{GRADIENTS.map((g,i)=>swatch('gradient',g,'Background gradient '+(i+1)))}</>}</MobileLibraryStrip>{open&&<MobileLibraryDrawer title="Background library" onDismiss={onClose} onClose={()=>setOpen(false)}><h3>Colours</h3><ColorPicker value={canvas.bg.type==='color'?canvas.bg.value:'#FDFBFC'} onChange={v=>choose('color',v)}/><h3>Gradients</h3><div className="mobile-library-grid">{GRADIENTS.map((g,i)=>swatch('gradient',g,'Background gradient '+(i+1)))}</div><h3>Images</h3><button className="btn btn-tonal" onClick={()=>file.current.click()}>Upload background image</button><input ref={file} hidden type="file" accept="image/*" onChange={e=>{const f=e.target.files?.[0];if(!f)return;const reader=new FileReader();reader.onload=()=>{if(latest.current===canvas.id){dispatch({type:'add-upload',src:reader.result});choose('image',reader.result);}};reader.readAsDataURL(f);e.target.value='';}}/><div className="mobile-library-grid">{imageChoices}</div><h3>Saved backgrounds</h3><div className="mobile-library-grid">{(state.savedBackgrounds||[]).filter(b=>b.kind==='bg-only').map(b=><button key={b.id} className="mobile-library-swatch" style={{background:renderBg(b.bg)}} aria-label={'Saved background '+b.name} onClick={()=>{if(latest.current===canvas.id)dispatch({type:'update-canvas',id:canvas.id,patch:{bg:JSON.parse(JSON.stringify(b.bg))}});}}/>)}</div></MobileLibraryDrawer>}</>;
 }
 
 function MobileBackgroundImages({onClose}){
@@ -1188,7 +1199,7 @@ function ColourTool({ el }) {
 }
 
 // ---- Size: text gets a size slider + box width; everything else scales as a whole ----
-function SizeTool({ el }) {
+function SizeTool({ el, full=false }) {
   const { state, dispatch } = useStore();
   const canvas = activeCanvas(state);
   const { live, done } = useLiveElementEdit(el.id);
@@ -1207,6 +1218,7 @@ function SizeTool({ el }) {
       </div>
     );
   }
+  if(el.type==='image'&&!full)return <MobileImageSizeTool el={el}/>;
   if (isBrandLogo(el)) {
     const update = patch => dispatch({ type: 'update-element', id: el.id, patch });
     return <BrandLogoSizeControl el={el} update={update} />;
@@ -1507,6 +1519,4 @@ function MobileWordsDialog({draft,onChange,onCancel,onDone}) {
     </footer>
   </div>;
 }
-
-
 

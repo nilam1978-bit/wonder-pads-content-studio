@@ -709,7 +709,7 @@ function ImagesPanel({replacement,onReplaced} = {}) {
   };
 
   const stockImages = [
-    'assets/wonder-pads-logo.png',
+    'assets/wpr-logo.png',
   ];
 
   return (
