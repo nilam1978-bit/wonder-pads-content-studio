@@ -25,7 +25,7 @@ async function main(){
  const snapshot=()=>page.evaluate(async()=>(await studioStorage.read())?.state||{});
  async function poll(check){for(let n=0;n<80;n++){const state=await snapshot();if(check(state))return;await page.waitForTimeout(100);}throw Error('Save did not settle');}
  try{
-  await page.goto('http://127.0.0.1:8770/');await page.getByRole('button',{name:/Start creating/}).click({timeout:60000});await page.getByRole('button',{name:/Start with your words/}).click();
+  await page.goto('http://127.0.0.1:8770/');await page.getByRole('button',{name:/Start creating/}).click({timeout:60000});
   const source=page.locator('#cw-source');await source.fill('Typing on a phone.');
   for(const [width,height] of [[390,380],[320,300],[390,470]]){
    await page.setViewportSize({width,height:844});await page.evaluate(()=>new Promise(requestAnimationFrame));
@@ -88,9 +88,9 @@ async function main(){
   await page.getByRole('button',{name:'+ Subheading',exact:true}).tap();await page.locator('.cw-workspace-typing').waitFor();assert(await source.evaluate(el=>document.activeElement===el));
   await page.screenshot({path:path.join(outputs,'source-style-workspace-keyboard.png'),clip:{x:0,y:0,width:390,height:380}});
   await page.getByRole('button',{name:'Done',exact:true}).tap();await page.evaluate(()=>{delete visualViewport.height;visualViewport.dispatchEvent(new Event('resize'));});
-  const pendingSource=await source.inputValue();await poll(s=>s.contentDraft?.source===pendingSource);await page.reload();await page.getByRole('button',{name:/Continue with your words/}).click({timeout:60000});await page.getByRole('button',{name:'Text',exact:true}).click();assert.equal(await source.inputValue(),pendingSource);assert.equal(JSON.stringify((await snapshot()).contentDraft.slides),oldSlides);
+  const pendingSource=await source.inputValue();await poll(s=>s.contentDraft?.source===pendingSource);await page.reload();await page.getByRole('button',{name:/Start creating/}).click({timeout:60000});await page.getByRole('button',{name:'Text',exact:true}).click();assert.equal(await source.inputValue(),pendingSource);assert.equal(JSON.stringify((await snapshot()).contentDraft.slides),oldSlides);
   await page.getByRole('button',{name:'Keep current',exact:true}).click();await poll(s=>s.projects?.length===1);assert.equal((await snapshot()).projects[0].sourceDraft,pendingSource);
-  await page.getByRole('button',{name:'Back to studio',exact:true}).click();await page.getByRole('button',{name:/Start with your words/}).click();
+  await page.getByRole('button',{name:'Back to studio',exact:true}).click();await page.getByRole('button',{name:/Start creating/}).click();
   await source.fill('A first sentence with several useful words. A second point also has enough words for balanced slides. A final sentence completes this small example.');
   await page.locator('.cw-entry-options').click();await page.getByRole('combobox',{name:'Split by',exact:true}).selectOption('balanced');await page.getByRole('spinbutton',{name:'Source slides',exact:true}).fill('2');await page.getByRole('button',{name:'Apply options',exact:true}).click();await page.getByRole('button',{name:'Prepare slides',exact:true}).click();await page.getByRole('button',{name:'Text',exact:true}).click();
   await page.getByRole('button',{name:'Slide breaks: Balanced · Change',exact:true}).click();assert.equal(await page.getByRole('button',{name:'Square · 1:1',exact:true}).count(),0);await page.getByRole('spinbutton',{name:'Source slides',exact:true}).fill('3');await page.getByRole('button',{name:'Save changes',exact:true}).click();await poll(s=>s.contentDraft?.sourceSettings?.count===3);assert.equal((await snapshot()).contentDraft.settings.count,2);
