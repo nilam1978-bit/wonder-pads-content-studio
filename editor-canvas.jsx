@@ -229,7 +229,10 @@ function ElementView({ el, selected, dispatch, scale, editing, setEditing }) {
           {el.src ? (
             <img src={el.src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-            <span>Drop image</span>
+            <button type="button" aria-label="Add photo to frame" disabled={el.locked}
+              onPointerDown={e=>e.stopPropagation()} onTouchStart={e=>e.stopPropagation()}
+              onClick={e=>{e.stopPropagation();dispatch({type:'open-frame-photo',id:el.id});}}
+              style={{minHeight:44,padding:'12px 18px',border:0,borderRadius:10,background:'white',color:'#78265f',fontSize:18,cursor:'pointer'}}>Add photo</button>
           )}
         </div>
       </div>

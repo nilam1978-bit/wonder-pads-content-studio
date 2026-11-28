@@ -878,13 +878,12 @@ function FramesPanel() {
   const { state, dispatch } = useStore();
   const canvas = activeCanvas(state);
   const addFrame = (shape) => {
+    const frame=newElement('frame',{shape,w:400,h:400,x:canvas.w/2-200,y:canvas.h/2-200});
     dispatch({
       type: 'add-element',
-      element: newElement('frame', {
-        shape, w: 400, h: 400,
-        x: canvas.w / 2 - 200, y: canvas.h / 2 - 200,
-      })
+      element: frame,
     });
+    dispatch({type:'open-frame-photo',id:frame.id});
   };
   const frames = [
     { shape: 'circle', label: 'Circle' },
@@ -893,7 +892,7 @@ function FramesPanel() {
   ];
   return (
     <>
-      <PanelHeader title="Frames" subtitle="Drop images into shaped frames" />
+      <PanelHeader title="Frames" subtitle="Choose a shape, then add your photo" />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
         {frames.map(f => (
           <button key={f.shape} onClick={() => addFrame(f.shape)}
@@ -1867,14 +1866,7 @@ function IconProps({el,update,showFlip=true,showLibrary=true}){
 }
 
 function FrameProps({ el, update }) {
-  const fileRef = pR(null);
-  const handleFile = (e) => {
-    const f = e.target.files[0];
-    if (!f) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => update({ src: ev.target.result });
-    reader.readAsDataURL(f);
-  };
+  const {dispatch}=useStore();
   return (
     <>
       <SectionLabel>Frame shape</SectionLabel>
@@ -1892,13 +1884,46 @@ function FrameProps({ el, update }) {
       </div>
       <SectionLabel>Image</SectionLabel>
       <button className="btn btn-tonal" style={{ width: '100%', justifyContent: 'center' }}
-        onClick={() => fileRef.current?.click()}>
-        <Icon name="upload" size={14} /> {el.src ? 'Change image' : 'Add image'}
+        disabled={el.locked} onClick={() => dispatch({type:'open-frame-photo',id:el.id})}>
+        <Icon name="images" size={14} /> {el.src ? 'Replace photo' : 'Add photo'}
       </button>
-      <input type="file" ref={fileRef} accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
     </>
   );
 }
+
+function FramePhotoPicker() {
+  const {state,dispatch}=useStore();
+  const target=state.framePhotoTarget,context=framePhotoContext(state,target),valid=!!context;
+  pE(()=>{if(target&&!valid)dispatch({type:'close-frame-photo'});},[target,valid,dispatch]);
+  return valid?<FramePhotoDialog key={target.requestId} target={target} frame={context.frame}/>:null;
+}
+
+function FramePhotoDialog({target,frame}) {
+  const {state,dispatch}=useStore();
+  const dialog=pR(null),file=pR(null),reader=pR(null),live=pR(true);
+  const [library,setLibrary]=pS(false),[busy,setBusy]=pS(false),[error,setError]=pS('');
+  const close=()=>dispatch({type:'close-frame-photo'});
+  const choose=src=>dispatch({type:'set-frame-photo',request:target,src});
+  pE(()=>{dialog.current.showModal();return()=>{live.current=false;if(reader.current?.readyState===1)reader.current.abort();};},[]);
+  const upload=e=>{
+    const photo=e.target.files?.[0];e.target.value='';if(!photo)return;
+    if(photo.type&&!photo.type.startsWith('image/')){setError('Choose an image file.');return;}
+    setBusy(true);setError('');const next=new FileReader();reader.current=next;
+    next.onload=()=>{if(live.current)choose(next.result);};
+    next.onerror=()=>{if(live.current){setBusy(false);setError('The photo could not be read. Please try again.');}};
+    try{next.readAsDataURL(photo);}catch{setBusy(false);setError('The photo could not be read. Please try again.');}
+  };
+  return <dialog ref={dialog} className="frame-photo-dialog" aria-labelledby="frame-photo-title" onCancel={e=>{e.preventDefault();close();}}>
+    <header><h2 id="frame-photo-title">{frame.src?'Replace frame photo':'Add photo to frame'}</h2><button type="button" aria-label="Cancel photo selection" onClick={close}>×</button></header>
+    <p>Your photo will fit inside the {frame.shape} frame.</p>
+    <div className="frame-photo-actions"><button type="button" className="btn btn-primary" disabled={busy} onClick={()=>file.current.click()}>{busy?'Loading photo…':'Upload photo'}</button><button type="button" className="btn btn-tonal" disabled={busy} aria-expanded={library} onClick={()=>setLibrary(true)}>Choose from library</button></div>
+    <input ref={file} type="file" accept="image/*" aria-label="Upload frame photo" hidden onChange={upload}/>
+    {library&&<section aria-label="Your photo library">{state.uploads?.length?<div className="frame-photo-library">{state.uploads.map((src,i)=><button type="button" key={src} disabled={busy} aria-label={'Use library photo '+(i+1)} onClick={()=>choose(src)}><img src={src} alt=""/></button>)}</div>:<p>No photos yet. Upload a photo to use here.</p>}</section>}
+    {error&&<p role="alert">{error}</p>}
+    <style>{`.frame-photo-dialog{box-sizing:border-box;width:min(440px,calc(100% - 32px));max-height:80dvh;overflow:auto;padding:20px;border:1px solid #decbd9;border-radius:18px;background:#fff9fc;color:#2a1f2a;font:14px/1.5 Montserrat,sans-serif}.frame-photo-dialog::backdrop{background:#2a1f2a66}.frame-photo-dialog header{display:flex;align-items:center;justify-content:space-between;gap:10px}.frame-photo-dialog h2{font:24px/1.2 'DM Serif Display',serif;margin:0}.frame-photo-dialog button{min-height:44px;cursor:pointer}.frame-photo-dialog header button{min-width:44px;border:0;border-radius:10px;background:#f1cfea;color:#78265f;font-size:24px}.frame-photo-actions{display:flex;flex-wrap:wrap;gap:10px}.frame-photo-actions button{flex:1;white-space:normal}.frame-photo-library{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:16px}.frame-photo-library button{padding:0;aspect-ratio:1;border:1px solid #decbd9;border-radius:10px;overflow:hidden;background:#f1cfea}.frame-photo-library img{width:100%;height:100%;object-fit:cover}.frame-photo-dialog button:focus-visible{outline:2px solid #78265f;outline-offset:2px}`}</style>
+  </dialog>;
+}
+Object.assign(window,{FramePhotoPicker});
 
 // ---------- LAYERS PANEL ----------
 function LayersPanel({ onSelect } = {}) {
