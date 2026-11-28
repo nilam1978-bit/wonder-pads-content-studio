@@ -50,7 +50,7 @@ async function main(){
   assert.equal((await snapshot()).contentDraft.index,0);assert.equal(JSON.stringify((await snapshot()).contentDraft.slides.slice(1,-1)),middleBefore);
   assert.equal((await page.locator('.cw-color-styles').boundingBox()).height<=64,true);assert.equal(await page.locator('.cw-color-styles .mobile-page-art').count(),0);
   assert((await page.getByRole('button',{name:'Deep plum',exact:true}).boundingBox()).height>=44);
-  await page.getByRole('combobox',{name:'Style family',exact:true}).selectOption('Bold');assert.equal(await page.locator('.cw-color-styles button').count(),2);
+  await page.getByRole('combobox',{name:'Style family',exact:true}).selectOption('Bold');assert.equal(await page.locator('.cw-color-styles button').count(),3);assert.equal(await page.getByRole('button',{name:'Blank / No template',exact:true}).count(),1);
   await page.getByRole('combobox',{name:'Style family',exact:true}).selectOption('All');
   await page.screenshot({path:path.join(outputs,'source-style-workspace-desktop.png')});
   for(const width of [390,320]){

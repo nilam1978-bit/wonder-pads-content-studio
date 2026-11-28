@@ -256,6 +256,7 @@
 
 /* Entry navigation fits three source choices without oversized mobile buttons. */
 .cw-entry-shell .cw-entry-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-self:stretch;gap:4px}
+.cw-entry-shell.cw-entry-typing .cw-entry-tabs{display:none}
 .cw-entry-shell .cw-entry-tabs button{min-width:0;min-height:44px;padding:9px 10px;font-size:13px;line-height:1.3;white-space:normal}
 .cw-entry-shell .cw-entry-resume{flex:none;align-self:flex-start;margin:0 24px 8px;padding:7px 10px;min-height:44px;background:transparent;color:#893773;border:0;font-size:13px;text-decoration:underline;text-underline-offset:3px}
 .cw-entry-typing .cw-entry-resume{display:none}
@@ -266,3 +267,36 @@
 @media(max-width:639px){.cw-entry-shell .cw-entry-start-blank{margin-inline:16px}}
 
 .cw-shell .cw-color-styles .cw-look-blank span:first-child{white-space:normal;text-align:left}
+.content-import{margin:18px 0;color:#361929;min-width:0;}
+.content-import>header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;}
+.content-import>header h2{margin:0;font:700 22px Montserrat,sans-serif;}
+.content-import-tabs{display:flex;gap:4px;background:#FAF0F5;border:1px solid #E8C5D8;border-radius:12px;padding:4px;}
+.content-import-tabs>button{flex:1;min-width:0;min-height:40px;padding:6px;border:1px solid transparent;border-radius:9px;background:transparent;color:#6E495E;font:600 13px Montserrat,sans-serif;}
+.content-import-tabs>button[aria-selected=true]{background:#fff;color:#7A2359;border-color:#E8C5D8;box-shadow:0 1px 3px rgba(80,30,70,.07);}
+.content-import [role=tabpanel]{min-width:0;}
+.content-import .content-import-code{font-family:ui-monospace,monospace;}
+.content-import textarea{min-height:220px;resize:vertical;}
+.content-import small{color:#6E495E;}
+.content-import-utilities{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0;}
+.ready-fields .content-import-file{position:relative;display:inline-flex;align-items:center;min-height:40px;box-sizing:border-box;padding:8px 12px;margin:0;border:1px solid #E8C5D8;border-radius:10px;background:#FAF0F5;font-size:13px;font-weight:600;cursor:pointer;}
+.content-import-file:focus-within{outline:2px solid #7A2359;outline-offset:2px;}
+.ready-fields .content-import-file input{position:absolute;inset:0;width:100%;height:100%;padding:0;opacity:0;cursor:pointer;}
+.content-import .content-import-words{white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;font:14px/1.6 Montserrat,sans-serif;background:#FAF0F5;border-radius:10px;padding:12px;}
+.content-import-slide{padding:10px 0;border-bottom:1px solid #E8C5D8;overflow-wrap:anywhere;}
+.content-import-slide strong{display:block;white-space:pre-wrap;}
+.content-import-slide p{white-space:pre-wrap;}
+.content-import-invalid{border:1px solid #E8C5D8;border-left:3px solid #7A2359;border-radius:10px;padding:12px;margin:10px 0;background:#FAF0F5;overflow-wrap:anywhere;}
+.content-import-invalid p{margin:6px 0;}
+.content-import-count{font-weight:600;font-size:13px;}
+.ready-fields .content-import-check{display:flex;align-items:center;gap:8px;}
+.content-import footer{margin-top:16px;border-top:1px solid #E8C5D8;padding-top:14px;}
+.content-import footer .simple-muted{font-size:12px;line-height:1.5;margin-bottom:0;}
+.content-import-notice{background:#FAF0F5;border:1px solid #E8C5D8;border-radius:12px;padding:14px;margin:16px 0;}
+.content-import-notice>p{margin:0;font-weight:600;}
+.content-import-notice .ready-actions{margin:10px 0;}
+.content-import-notice small{font-size:12px;color:#6E495E;}
+.content-new-badge{display:inline-block;margin:0 0 6px;padding:3px 7px;border-radius:20px;background:#F5E5EE;color:#7A2359;font:700 10px Montserrat,sans-serif;}
+.content-added-filter{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;}
+.library-source-draft textarea{min-height:300px;}
+.ready-fields .library-source-draft label{margin:16px 0;}
+@media(max-width:420px){.content-import.simple-card{padding:16px;}.content-import-tabs>button{font-size:11px;}.content-import-notice .ready-actions>button{font-size:12px;padding:8px 10px;}.content-import footer>.simple-action{width:100%;}.content-import-utilities .simple-action,.ready-fields .content-import-file{font-size:12px;}.content-import textarea{min-height:200px;}.library-source-draft .ready-actions>button{width:100%;justify-content:center;}}
