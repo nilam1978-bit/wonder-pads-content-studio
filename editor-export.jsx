@@ -139,6 +139,11 @@ function transformFor(el) {
   return `translate(${el.x}, ${el.y}) rotate(${el.rot || 0}, ${el.w / 2}, ${el.h / 2})${flip}`;
 }
 
+function croppedPhotoSVG(el){
+  const r=photoCropRect(el);if(!r)return '';
+  return `<svg width="${el.w}" height="${el.h}" viewBox="${r.sx} ${r.sy} ${r.sw} ${r.sh}" preserveAspectRatio="none" overflow="hidden"><image width="${el.crop.sourceW}" height="${el.crop.sourceH}" href="${escapeAttr(el.src)}"/></svg>`;
+}
+
 function elementToSVG(el, embedImages) {
   const t = transformFor(el);
   const op = el.opacity != null ? ` opacity="${el.opacity}"` : '';
@@ -226,6 +231,7 @@ function elementToSVG(el, embedImages) {
     }
     const clip = clipShape ? `<defs><clipPath id="${clipId}">${clipShape}</clipPath></defs>` : '';
     const clipAttr = clipShape ? ` clip-path="url(#${clipId})"` : '';
+    if(el.crop&&!contain&&photoCropRect(el))return `<g transform="${t}"${op}>${filter}${clip}<g${filterAttr}${clipAttr}>${croppedPhotoSVG(el)}</g></g>`;
     return `<g transform="${t}"${op}>${filter}${clip}<image width="${el.w}" height="${el.h}" preserveAspectRatio="xMidYMid ${contain ? 'meet' : 'slice'}" href="${escapeAttr(el.src)}"${filterAttr}${clipAttr}/></g>`;
   }
   if (el.type === 'icon') {
@@ -241,7 +247,8 @@ function elementToSVG(el, embedImages) {
     const clipId = 'clip-' + el.id;
     let inner = '';
     if (el.src) {
-      inner = `<defs><clipPath id="${clipId}"><rect width="${el.w}" height="${el.h}" rx="${rx}" ry="${ry}"/></clipPath></defs><image width="${el.w}" height="${el.h}" preserveAspectRatio="xMidYMid slice" href="${escapeAttr(el.src)}" clip-path="url(#${clipId})"/>`;
+      const image=el.crop&&photoCropRect(el)?croppedPhotoSVG(el):`<image width="${el.w}" height="${el.h}" preserveAspectRatio="xMidYMid slice" href="${escapeAttr(el.src)}"/>`;
+      inner = `<defs><clipPath id="${clipId}"><rect width="${el.w}" height="${el.h}" rx="${rx}" ry="${ry}"/></clipPath></defs><g clip-path="url(#${clipId})">${image}</g>`;
     } else {
       inner = `<rect width="${el.w}" height="${el.h}" fill="${el.bg}" rx="${rx}" ry="${ry}" stroke="rgba(194,96,168,0.4)" stroke-width="2" stroke-dasharray="8 6"/>`;
     }
@@ -327,7 +334,9 @@ async function rasterizeDesign(canvas,mime='image/png'){
       } else {
         if(el.radius){ctx.beginPath();ctx.roundRect(0,0,el.w,el.h,Math.min(el.radius,el.w/2,el.h/2));ctx.clip();}
         const fit=Math.max(el.w/img.naturalWidth,el.h/img.naturalHeight),sw=el.w/fit,sh=el.h/fit;
-        ctx.drawImage(img,(img.naturalWidth-sw)/2,(img.naturalHeight-sh)/2,sw,sh,0,0,el.w,el.h);
+        const crop=el.crop&&photoCropRect(el);
+        if(crop)ctx.drawImage(img,crop.sx,crop.sy,crop.sw,crop.sh,0,0,el.w,el.h);
+        else ctx.drawImage(img,(img.naturalWidth-sw)/2,(img.naturalHeight-sh)/2,sw,sh,0,0,el.w,el.h);
       }
       ctx.restore();continue;
     }

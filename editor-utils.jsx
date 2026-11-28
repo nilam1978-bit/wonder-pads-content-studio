@@ -64,7 +64,7 @@ const isIllustration = el => el.type === 'icon' || !!el.stickerId || !!el.ctaGro
 
 const isBrandLogo = el => el.type === 'image' && (el.role === 'logo' || el.brandSlot === 'logo');
 const hasBrandLogoMask = el => isBrandLogo(el) && el.src === 'assets/wpr-logo.png';
-const keepsAspectOnResize = el => isIllustration(el) || isBrandLogo(el);
+const keepsAspectOnResize = el => isIllustration(el) || el.type==='image' || el.type==='frame';
 const fitsWholeImage = el => el.imageFit?el.imageFit==='contain':isBrandLogo(el)||isIllustration(el);
 const brandLogoSize = el => Math.min(el.w, el.h);
 
@@ -105,6 +105,10 @@ function proportionalElementResize(el, handle, width, height, min) {
   const sx = width / el.w;
   const sy = height / el.h;
   const factor = Math.abs(sx - 1) >= Math.abs(sy - 1) ? sx : sy;
+  if(!isIllustration(el)){
+    const scale=Math.max(min/el.w,min/el.h,factor),w=el.w*scale,h=el.h*scale;
+    return {w,h,x:handle.includes('w')?el.x+el.w-w:el.x,y:handle.includes('n')?el.y+el.h-h:el.y};
+  }
   const size = Math.max(min, illustrationSize(el) * factor);
   const { w, h } = illustrationSizePatch(el, size);
   return { w, h, x: handle.includes('w') ? el.x + el.w - w : el.x, y: handle.includes('n') ? el.y + el.h - h : el.y };
@@ -133,6 +137,23 @@ const newElement = (type, patch = {}) => {
   };
   return { ...base, ...defaults[type], ...patch };
 };
+
+function photoSizePatch(el,width){
+  const w=Math.max(10,width),h=w*el.h/Math.max(1,el.w);
+  return {w,h,x:el.x+(el.w-w)/2,y:el.y+(el.h-h)/2};
+}
+function photoCropRect(el){
+  const c=el.crop;
+  if(!c||!Number.isFinite(c.sourceW)||!Number.isFinite(c.sourceH)||c.sourceW<=0||c.sourceH<=0)return null;
+  const zoom=clamp(Number(c.zoom)||1,1,5),x=clamp(Number(c.x)||0,0,1),y=clamp(Number(c.y)||0,0,1);
+  const scale=Math.max(el.w/c.sourceW,el.h/c.sourceH)*zoom,sw=el.w/scale,sh=el.h/scale;
+  return {sx:(c.sourceW-sw)*x,sy:(c.sourceH-sh)*y,sw,sh};
+}
+function photoImageStyle(el){
+  const contain=el.type!=='frame'&&fitsWholeImage(el),c=!contain&&el.crop;
+  const x=c?clamp(Number(c.x)||0,0,1)*100:50,y=c?clamp(Number(c.y)||0,0,1)*100:50,zoom=c?clamp(Number(c.zoom)||1,1,5):1;
+  return {width:'100%',height:'100%',display:'block',objectFit:contain?'contain':'cover',objectPosition:`${x}% ${y}%`,transform:`scale(${zoom})`,transformOrigin:`${x}% ${y}%`,pointerEvents:'none'};
+}
 
 // Branded backgrounds use the short side for readable type and square logos.
 // Semantic slots let ratio changes reflow branding without resetting user edits.
@@ -388,6 +409,13 @@ function framePhotoContext(state,target) {
   return frame?{project,canvas,frame}:null;
 }
 
+function photoCropContext(state,target){
+  if(!target||state.activeProjectId!==target.projectId)return null;
+  const project=state.projects.find(p=>p.id===target.projectId);
+  if(!project||project.activeCanvasId!==target.canvasId)return null;
+  return project.canvases.find(c=>c.id===target.canvasId)?.elements.find(e=>e.id===target.elementId&&['image','frame'].includes(e.type)&&e.src===target.src&&!e.locked&&!e.hidden&&e.w===target.w&&e.h===target.h)||null;
+}
+
 function reducer(state, action) {
   action=normalizeAppProse(action);
   // History is per active project. We mutate state.projects, then push snapshot to state.past.
@@ -616,6 +644,21 @@ function reducer(state, action) {
       };
 
     // ---------- Element CRUD ----------
+    case 'open-photo-crop': {
+      const project=state.projects.find(p=>p.id===state.activeProjectId),el=project?.canvases.find(c=>c.id===project.activeCanvasId)?.elements.find(e=>e.id===action.id);
+      if(!el?.src||!['image','frame'].includes(el.type)||el.locked||el.hidden)return state;
+      return {...state,photoCropTarget:{projectId:project.id,canvasId:project.activeCanvasId,elementId:el.id,src:el.src,w:el.w,h:el.h,requestId:uid()}};
+    }
+    case 'close-photo-crop':return {...state,photoCropTarget:null};
+    case 'apply-photo-crop': {
+      const t=state.photoCropTarget,el=photoCropContext(state,t),crop=action.crop;
+      if(!el||t.requestId!==action.requestId||!photoCropRect({...el,crop})||!['zoom','x','y'].every(k=>Number.isFinite(crop[k]))||crop.zoom<1||crop.zoom>5||crop.x<0||crop.x>1||crop.y<0||crop.y>1)return state;
+      const size=el.type==='frame'?{w:el.w,h:el.h}:action.size;
+      if(!size||!Number.isFinite(size.w)||!Number.isFinite(size.h)||size.w<10||size.h<10)return state;
+      const patch={crop:{...crop},imageFit:'cover',w:size.w,h:size.h,x:el.x+(el.w-size.w)/2,y:el.y+(el.h-size.h)/2};
+      const next=activeProjectMutate(proj=>patchCanvas(proj,t.canvasId,{elements:proj.canvases.find(c=>c.id===t.canvasId).elements.map(e=>e.id===el.id?{...e,...patch}:e)}));
+      return {...next,photoCropTarget:null};
+    }
     case 'open-frame-photo': {
       const project=state.projects.find(p=>p.id===state.activeProjectId);
       const target={projectId:project?.id,canvasId:project?.activeCanvasId,elementId:action.id,requestId:uid()};
@@ -627,7 +670,7 @@ function reducer(state, action) {
       const target=state.framePhotoTarget;
       if(!target||action.request?.requestId!==target.requestId||!framePhotoContext(state,target)||typeof action.src!=='string'||!action.src)return state;
       const next=activeProjectMutate(proj=>patchCanvas(proj,target.canvasId,{
-        elements:proj.canvases.find(c=>c.id===target.canvasId).elements.map(e=>e.id===target.elementId?{...e,src:action.src}:e),
+        elements:proj.canvases.find(c=>c.id===target.canvasId).elements.map(e=>e.id===target.elementId?{...e,src:action.src,...(e.crop?{crop:null}:{})}:e),
       }));
       return {...next,framePhotoTarget:null,uploads:state.uploads?.includes(action.src)?state.uploads:[action.src,...(state.uploads||[])].slice(0,24)};
     }
@@ -647,6 +690,7 @@ function reducer(state, action) {
             .map(e => {
               if(e.id !== action.id) return e;
               const merged=deepMerge(e,action.patch);
+              if(action.patch.src!==undefined&&action.patch.src!==e.src&&!Object.prototype.hasOwnProperty.call(action.patch,'crop'))merged.crop=null;
               if(merged.type==='text') merged.h=textLayout(merged).height;
               return merged;
             }),
@@ -1067,7 +1111,7 @@ const initialState = () => ({
 });
 
 function studioSnapshot(state) {
-  const { past, future, selection, framePhotoTarget, saveStatus, saveError, savedAt, ...persist } = state;
+  const { past, future, selection, framePhotoTarget, photoCropTarget, saveStatus, saveError, savedAt, ...persist } = state;
   return persist;
 }
 
@@ -1313,5 +1357,5 @@ function parseEditableProjectFile(text) {
   return state;
 }
 
-Object.assign(window, { uid, clamp, now, SIZE_PRESETS, defaultCanvas, newElement, framePhotoContext, newProject, newBlankProject, defaultBrand, defaultCarousel, reducer, initialState, computeSnapGuides, brandBackgroundElements, reflowBrandBackground, SLIDE_TEXT_STYLES, slideTextRole, styleSlideText, cleanSlideSwipe, starterBackgroundElements, StoreCtx, useStore, StoreProvider, activeProject, activeCanvas, useMediaQuery, useIsMobile, alignElementsToPage, exportEditableProjectFile, parseEditableProjectFile, STORAGE_KEY });
+Object.assign(window, { uid, clamp, now, SIZE_PRESETS, defaultCanvas, newElement, framePhotoContext, photoCropContext, photoCropRect, photoImageStyle, photoSizePatch, newProject, newBlankProject, defaultBrand, defaultCarousel, reducer, initialState, computeSnapGuides, brandBackgroundElements, reflowBrandBackground, SLIDE_TEXT_STYLES, slideTextRole, styleSlideText, cleanSlideSwipe, starterBackgroundElements, StoreCtx, useStore, StoreProvider, activeProject, activeCanvas, useMediaQuery, useIsMobile, alignElementsToPage, exportEditableProjectFile, parseEditableProjectFile, STORAGE_KEY });
 

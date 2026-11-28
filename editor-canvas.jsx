@@ -186,16 +186,15 @@ function ElementView({ el, selected, dispatch, scale, editing, setEditing }) {
     const f = el.filter || { brightness: 100, contrast: 100, saturate: 100, blur: 0 };
     return (
       <div {...commonProps}>
+        <div style={{width:'100%',height:'100%',overflow:'hidden',borderRadius:fitsWholeImage(el)?undefined:el.radius,clipPath:hasBrandLogoMask(el)?'circle(closest-side)':undefined,transform:`scale(${el.flipX?-1:1}, ${el.flipY?-1:1})`}}>
         <img src={el.src} draggable={false}
           style={{
-            width: '100%', height: '100%', objectFit: fitsWholeImage(el) ? 'contain' : 'cover',
-            display: 'block', borderRadius: fitsWholeImage(el) ? undefined : el.radius,
-            clipPath: hasBrandLogoMask(el) ? 'circle(closest-side)' : undefined,
-            transform: `scale(${el.flipX ? -1 : 1}, ${el.flipY ? -1 : 1})`,
+            ...photoImageStyle(el),
             filter: `brightness(${f.brightness}%) contrast(${f.contrast}%) saturate(${f.saturate}%) blur(${f.blur}px)`,
             pointerEvents: 'none',
           }}
         />
+        </div>
       </div>
     );
   }
@@ -223,11 +222,11 @@ function ElementView({ el, selected, dispatch, scale, editing, setEditing }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: 'var(--pink-500)',
           fontSize: 12, letterSpacing: '.1em', textTransform: 'uppercase',
-          border: `2px dashed rgba(194, 96, 168, 0.4)`,
+          border: el.src?'none':`2px dashed rgba(194, 96, 168, 0.4)`,
           boxSizing: 'border-box',
         }}>
           {el.src ? (
-            <img src={el.src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <div style={{width:'100%',height:'100%',transform:`scale(${el.flipX?-1:1},${el.flipY?-1:1})`}}><img src={el.src} draggable={false} style={photoImageStyle(el)} /></div>
           ) : (
             <button type="button" aria-label="Add photo to frame" disabled={el.locked}
               onPointerDown={e=>e.stopPropagation()} onTouchStart={e=>e.stopPropagation()}

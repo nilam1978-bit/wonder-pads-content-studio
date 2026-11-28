@@ -997,7 +997,7 @@ function MobileImageSizeTool({el}){
   const patch=v=>logo?brandLogoSizePatch(el,v):art?illustrationSizePatch(el,v):{w:v,h:v*el.h/el.w,x:el.x+(el.w-v)/2,y:el.y+(el.h-v*el.h/el.w)/2};
   const set=v=>dispatch({type:'update-element',id:el.id,patch:patch(clamp(v,10,max))});
   const reset=logo?brandLogoSizePatch(el):art?illustrationSizePatch(el):null;
-  return <div className="mobile-library-scroll"><MobileControlSlider label="Image size" valueLabel={logo?'Logo size':'Image size value'} value={size} min={10} max={max} step={2} onLive={v=>live(patch(v))} onDone={done} onSet={set}/>{reset&&(Math.abs(reset.w-el.w)>.01||Math.abs(reset.h-el.h)>.01)&&<button className="mobile-ribbon-tool" onClick={()=>dispatch({type:'update-element',id:el.id,patch:reset})}>Reset proportions</button>}</div>;
+  return <div className="mobile-library-scroll"><MobileControlSlider label={el.type==='frame'?'Frame size':'Image size'} valueLabel={logo?'Logo size':'Image size value'} value={size} min={10} max={max} step={2} onLive={v=>live(patch(v))} onDone={done} onSet={set}/>{reset&&(Math.abs(reset.w-el.w)>.01||Math.abs(reset.h-el.h)>.01)&&<button className="mobile-ribbon-tool" onClick={()=>dispatch({type:'update-element',id:el.id,patch:reset})}>Reset proportions</button>}<button className="mobile-ribbon-tool" disabled={!el.src||el.locked} onClick={()=>{done();dispatch({type:'open-photo-crop',id:el.id});}}>Crop photo</button>{el.type==='frame'&&Math.abs(el.w-el.h)>.1&&<button className="mobile-ribbon-tool" onClick={()=>dispatch({type:'update-element',id:el.id,patch:{h:el.w,y:el.y+(el.h-el.w)/2}})}>Square frame</button>}</div>;
 }
 
 function MobileLibraryDrawer({title,onClose,onDismiss=onClose,children}){
@@ -1240,7 +1240,7 @@ function SizeTool({ el, full=false }) {
       </div>
     );
   }
-  if(el.type==='image'&&!full)return <MobileImageSizeTool el={el}/>;
+  if(['image','frame'].includes(el.type)&&!full)return <MobileImageSizeTool el={el}/>;
   if (isBrandLogo(el)) {
     const update = patch => dispatch({ type: 'update-element', id: el.id, patch });
     return <BrandLogoSizeControl el={el} update={update} />;
@@ -1257,7 +1257,7 @@ function SizeTool({ el, full=false }) {
   const setDimension = (key, value) => {
     if (value === '' || !Number.isFinite(Number(value))) return;
     const size = Math.max(10, Number(value));
-    dispatch({ type: 'update-element', id: el.id, patch: { [key]: size } });
+    dispatch({ type: 'update-element', id: el.id, patch: ['image','frame'].includes(el.type)?photoSizePatch(el,key==='w'?size:size*el.w/el.h):{[key]:size} });
   };
   const isLine = el.type === 'line' || el.type === 'arrow';
   return (
