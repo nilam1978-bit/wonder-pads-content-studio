@@ -16,7 +16,7 @@ const CONTENT_LOOKS = [
 const contentLook = id => CONTENT_LOOKS.find(l=>l.id===id)||CONTENT_LOOKS.find(l=>l.id==='gentle');
 const contentBlock = (role,text) => ({id:uid(),role,text:String(text??'')});
 function contentCarouselSlides(slides,settings,selectedLook) {
-  if(settings.format==='post'||settings.blank||!slides.length)return slides;
+  if(settings.format==='post'||settings.blank||settings.autoClosing===false||!slides.length)return slides;
   const choice=CAROUSEL_CTA_CHOICES.generic;
   const isStandard=s=>s.standardCta||(s.blocks[0]?.text===choice.title&&s.blocks.some(b=>b.text===choice.body));
   const existing=slides.find(isStandard);
@@ -63,7 +63,7 @@ function contentDraftFromPost(post) {
   }
   const draft=contentDraftNew();
   const prepared={...draft,name:post.title,contentEntryId:post.id,caption:[post.caption,post.hashtags].filter(Boolean).join('\n\n'),footerLine:post.footerLine||'',returnView:'ready-content',
-    settings:{...draft.settings,size:post.defaultSize||'portrait',format:slides.length===1?'post':'carousel'},
+    settings:{...draft.settings,size:post.defaultSize||'portrait',format:slides.length===1?'post':'carousel',...(post.exactSlides?{autoClosing:false}:{})},
     slides:slides.map((s,i)=>{const slide=contentSlideFromChunk(s.title+'\n'+(s.body||''),slides.length===1?'post':i===0?'hook':'content');if(i===0&&post.footerLine)slide.blocks.push(contentBlock('body',post.footerLine));return {...slide,look:i===0?contentLook(post.stylePair).id:'informative',sourceIndex:i,contentTone:Math.max(0,i-1)%3,photo:!!s.photo};}),
     source:slides.map(s=>'# '+s.title+'\n'+(s.body||'')).join('\n\n')};
   return {...prepared,appliedSource:prepared.source,slides:contentCarouselSlides(prepared.slides,prepared.settings)};
@@ -207,7 +207,7 @@ function ContentWorkspace({startWithWords=false}) {
   },[draft?.slides?.length,mobile,tab,showEntry]);
   React.useEffect(()=>{if(zoom==='fit'&&stageRef.current)stageRef.current.scrollTo(0,0);},[zoom]);
   React.useEffect(()=>{if(!draft){let input='';try{input=JSON.parse(sessionStorage.getItem('wpr-social-create-draft')||'{}').input||'';}catch{}dispatch({type:'set-content-draft',draft:contentDraftNew(input)});}},[]);
-  React.useEffect(()=>{if(draft?.slides?.length&&!draft.settings.blank&&draft.settings.format!=='post'&&!draft.slides.some(s=>s.standardCta))dispatch({type:'set-content-draft',draft:{...draft,slides:contentCarouselSlides(draft.slides,draft.settings)}});},[draft?.id,draft?.slides,draft?.settings]);
+  React.useEffect(()=>{if(draft?.slides?.length&&!draft.settings.blank&&draft.settings.format!=='post'&&draft.settings.autoClosing!==false&&!draft.slides.some(s=>s.standardCta))dispatch({type:'set-content-draft',draft:{...draft,slides:contentCarouselSlides(draft.slides,draft.settings)}});},[draft?.id,draft?.slides,draft?.settings]);
   React.useEffect(()=>{let live=true;setFonts(false);loadCarouselFonts(state.brand).then(()=>{if(live)setFonts(true);}).catch(()=>{if(live)setFonts(true);});return()=>{live=false;};},[state.brand.slideFontHeading,state.brand.slideFontSubheading]);
   const patch=(changes,history=false)=>{if(history){undo.current.push(draft);undo.current=undo.current.slice(-40);redo.current=[];}dispatch({type:'set-content-draft',draft:{...draft,...changes,updatedAt:now()}});setError('');};
   const travel=(from,to)=>{const next=from.current.pop();if(next){to.current.push(draft);dispatch({type:'set-content-draft',draft:next});}};
@@ -238,7 +238,7 @@ function ContentWorkspace({startWithWords=false}) {
   };
   const contentReview=review&&<ContentReview review={review} original={review.original??draft.source} onCancel={()=>{patch({sourceReview:null});setReview(null);}} onApply={()=>{patch({slides:review.slides,index:Math.min(index,review.slides.length-1),sourceReview:null,sourceSettings:null,settings:review.settings||settings,appliedSource:review.source??draft.source,...(review.source?{source:review.source}:{})},true);setReview(null);setShowEntry(false);setTab('design');}}/>;
   const changeSourceDraft=(changes,history=false)=>{const sourceChanges={...changes};if(sourceChanges.settings){sourceChanges.sourceSettings=sourceChanges.settings;delete sourceChanges.settings;}patch(sourceChanges,history);};
-  if(showEntry||!slide)return <ContentEntryScreen key={draft.id} draft={{...draft,settings:sourceSettings}} hasSlides={!!slide} onContinue={()=>{setShowEntry(false);setTab('design');}} onChange={draft.slides.length?changeSourceDraft:patch} onBack={()=>studioBack(dispatch,'words','home')} onPrepare={prepare} onAi={previewAi} busy={busy} error={error}>{contentReview}</ContentEntryScreen>;
+  if(showEntry||!slide)return <ContentEntryScreen key={draft.id} draft={{...draft,settings:sourceSettings}} hasSlides={!!slide} onContinue={()=>{setShowEntry(false);setTab('design');}} onChange={draft.slides.length?changeSourceDraft:patch} onBack={()=>draft.returnView==='ready-content'?studioShow(dispatch,'ready-content'):studioBack(dispatch,'words','home')} backLabel={draft.returnView==='ready-content'?'Back to selected post':undefined} onPrepare={prepare} onAi={previewAi} busy={busy} error={error}>{contentReview}</ContentEntryScreen>;
   return <div className={'cw-shell cw-workspace'+(typingSource?' cw-workspace-typing':'')}><SimpleStudioStyles/><StudioSectionHeader className="cw-header" title="Find your look" subtitle="Wonder Pads · Content Studio" icon="brand_kit" onBack={back} backLabel={backLabel} actions={<SaveIndicator/>}/><nav className="cw-mobile-tabs" aria-label="Text workspace sections">{['text','design'].map(t=><button key={t} aria-pressed={tab===t} onClick={()=>setTab(t)}>{t==='text'?'Text':'Design'}</button>)}</nav>
     <div className="cw-body"><div className="cw-columns"><div className="cw-source-column" hidden={mobile&&tab!=='text'}><ContentEntryScreen key={draft.id} embedded hasSlides draft={{...draft,settings:sourceSettings}} dirty={sourceChanged} onChange={changeSourceDraft} onPrepare={prepare} onTypingChange={setTypingSource} busy={busy}/></div><main className="cw-design" hidden={mobile&&tab!=='design'}>{canvas?<><div className="cw-preview-tools" aria-label="Preview controls"><div className="cw-history"><button aria-label="Undo" disabled={!undo.current.length} onClick={()=>travel(undo,redo)}><Icon name="undo" size={16}/><span className="cw-tool-label">Undo</span></button><button aria-label="Redo" disabled={!redo.current.length} onClick={()=>travel(redo,undo)}><Icon name="redo" size={16}/><span className="cw-tool-label">Redo</span></button></div>
       <div className="cw-zoom" role="group" aria-label="Preview zoom"><button aria-pressed={zoom==='fit'} onClick={()=>setZoom('fit')}>Fit</button><button aria-label="Preview at 100 percent" aria-pressed={zoom===1} onClick={()=>setZoom(1)}>100%</button><button aria-label="Zoom out" disabled={previewScale<=.1} onClick={()=>changeZoom(-1)}>−</button><output className="cw-zoom-value" aria-label="Preview zoom level">{Math.round(previewScale*100)}%</output><button aria-label="Zoom in" disabled={previewScale>=2} onClick={()=>changeZoom(1)}>+</button></div></div>
@@ -253,7 +253,7 @@ function ContentWorkspace({startWithWords=false}) {
     {contentReview}
   </div>;
 }
-function ContentEntryScreen({draft,hasSlides=false,embedded=false,dirty=false,onChange,onBack,onPrepare,onAi,onContinue,onTypingChange,busy,error,children}) {
+function ContentEntryScreen({backLabel,draft,hasSlides=false,embedded=false,dirty=false,onChange,onBack,onPrepare,onAi,onContinue,onTypingChange,busy,error,children}) {
   const {dispatch}=useStore();
   const field=React.useRef(null),selection=React.useRef({start:0,end:0}),pendingSelection=React.useRef(null),shell=React.useRef(null);
   const [focused,setFocused]=React.useState(false),[options,setOptions]=React.useState(false),[cleared,setCleared]=React.useState(null),[help,setHelp]=React.useState(false);
@@ -287,7 +287,7 @@ function ContentEntryScreen({draft,hasSlides=false,embedded=false,dirty=false,on
   const clear=()=>{setCleared({source,...selection.current,scrollTop:field.current?.scrollTop||0});onChange({source:''});selection.current={start:0,end:0};};
   const restore=()=>{const saved=cleared;selection.current={start:saved.start,end:saved.end};pendingSelection.current={...selection.current,scrollTop:saved.scrollTop};onChange({source:saved.source});setCleared(null);};
   return <div ref={shell} className={(embedded?'cw-source-panel':'cw-shell')+' cw-entry-shell'+(focused&&shortViewport?' cw-entry-typing':'')}>{!embedded&&<SimpleStudioStyles/>}
-    {!embedded&&<StudioSectionHeader className="cw-header" title="Your words" subtitle="Wonder Pads · Content Studio" icon="text" onBack={onBack} backLabel={studioBackLabel('words','home')} disabled={busy} actions={<SaveIndicator/>}/>} 
+    {!embedded&&<StudioSectionHeader className="cw-header" title="Your words" subtitle="Wonder Pads · Content Studio" icon="text" onBack={onBack} backLabel={backLabel||studioBackLabel('words','home')} disabled={busy} actions={<SaveIndicator/>}/>}
     <main className="cw-entry-main"><div className="cw-entry-paper">
       {embedded?<h2 className="cw-source-title">Your words</h2>:<nav className="cw-entry-tabs" aria-label="Writing sources"><button aria-pressed="true" disabled={busy}>Write / Paste</button><button aria-pressed="false" disabled={busy} onClick={()=>studioOpen(dispatch,'ready-content','words')}>Ready-made posts</button><button aria-pressed="false" disabled={busy} onClick={()=>studioOpen(dispatch,'repurpose','words')}>Reuse my words</button></nav>}
       {!embedded&&<button className="cw-entry-start-blank" disabled={busy} onClick={()=>dispatch({type:'create-project',project:newBlankProject(settings.size)})}>Start with a blank canvas</button>}

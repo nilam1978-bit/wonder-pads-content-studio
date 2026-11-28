@@ -156,6 +156,7 @@ const READY_CONTENT_SECTIONS=[
   {id:'small',name:'Small switches & savings'},{id:'archive',name:'Archive'}
 ];
 function readyContentStatus(post){
+  if(post.layout==='source-draft')return 'draft';
   if(post.status==='posted')return 'posted';
   return readyPostHasPlaceholders(post)||(post.confirmation&&!post.confirmed)?'check':'ready';
 }
@@ -164,7 +165,7 @@ function filterReadyLibrary(posts,{section='all',format='',status='',search=''}=
   return posts.filter(p=>(section==='archive'?!!p.archived:!p.archived)&&
     (['all','archive'].includes(section)||section==='priority'&&p.priority!=null||p.librarySection===section)&&
     (!format||p.format===format)&&(!status||readyContentStatus(p)===status)&&
-    (!query||[p.title,p.caption,...(p.slides||[]).flatMap(s=>[s.title,s.body])].join(' ').toLowerCase().includes(query)));
+    (!query||[p.title,p.sourceText,p.caption,...(p.slides||[]).flatMap(s=>[s.title,s.body])].join(' ').toLowerCase().includes(query)));
 }
 function readySectionName(post){return READY_CONTENT_SECTIONS.find(s=>s.id===post.librarySection)?.name||'About Wonder Pads';}
 function QuotePostPreview({post,size,pair,brand}){
@@ -182,7 +183,7 @@ function ReadyContentPlan(){
   const posts=(state.calendar||[]).filter(p=>p.packId==='wp-weeks-1-8'||p.packId==='user-uploads').sort((a,b)=>(a.priority??100)-(b.priority??100)||String(a.date||'').localeCompare(String(b.date||'')));
   const importBatch=items=>{
     const batch=uid();
-    const entries=items.map(p=>({id:uid(),packId:'user-uploads',librarySection:'uploads',importBatchId:batch,uploadKey:p.uploadKey,title:p.title,hook:p.headline,caption:p.caption,hashtags:p.hashtags,imageText:p.headline,slides:[{title:p.headline,body:p.body}],layout:'uploaded-single',includeFullText:false,format:'Static post',platform:'instagram-caption',status:'queued',defaultSize:'portrait',stylePair:'clear',confirmation:'',notes:'Uploaded content. Caption and hashtags stay off the image.',ts:Date.now()}));
+    const entries=contentLibraryEntries(items,batch);
     dispatch({type:'add-content-batch',entries});setLastBatch(batch);setUploadOpen(false);setSection('uploads');setFormat('');setStatus('');setSearch('');
   };
   const post=posts.find(p=>p.id===selected);
@@ -267,54 +268,3 @@ function ReadyContentPlan(){
     </div></main>
   </div>;
 }
-
-function parseContentUpload(input){
-  const posts=[],errors=[];let current=null,mode='body';
-  const start=title=>({title,headline:'',body:[],caption:[],hashtags:[]});
-  const finish=()=>{
-    if(!current)return;
-    if(!current.headline.trim())errors.push('“'+(current.title||'Untitled post')+'” needs a ## headline.');
-    else posts.push({title:current.title.trim()||current.headline.trim(),headline:current.headline.trim(),body:current.body.join('\n').trim(),caption:current.caption.join('\n').trim(),hashtags:current.hashtags.join('\n').trim()});
-  };
-  for(const [index,line] of String(input||'').replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n').split('\n').entries()){
-    const title=line.match(/^#\s+(.+)$/),heading=line.match(/^##\s+(.+)$/),label=line.match(/^\s*(Caption|Hashtags):\s*(.*)$/i);
-    if(title){finish();current=start(title[1]);mode='body';continue;}
-    if(heading){if(!current)current=start('');else if(current.headline){finish();current=start('');}current.headline=heading[1];mode='body';continue;}
-    if(!current){if(line.trim())errors.push('Line '+(index+1)+': start with # Title or ## Headline.');continue;}
-    if(label){mode=label[1].toLowerCase();if(label[2])current[mode].push(label[2]);continue;}
-    current[mode].push(line);
-  }
-  finish();return {posts,errors};
-}
-function contentUploadKey(post){
-  return JSON.stringify([post.title,post.headline,post.body,post.caption,post.hashtags].map(s=>String(s||'').trim()));
-}
-function ContentUpload({existing,onImport,onClose}){
-  const [source,setSource]=React.useState(''),[error,setError]=React.useState(''),[excluded,setExcluded]=React.useState([]);
-  const result=React.useMemo(()=>parseContentUpload(source),[source]);
-  const prior=new Set(existing.map(p=>p.uploadKey).filter(Boolean)),seen=new Set();
-  const rows=result.posts.map((post,i)=>{const key=contentUploadKey(post),duplicate=prior.has(key)||seen.has(key);seen.add(key);return {post,key,duplicate,i};});
-  const chosen=rows.filter(r=>!r.duplicate&&!excluded.includes(r.i));
-  const change=text=>{setSource(text);setExcluded([]);setError('');};
-  const read=async e=>{const file=e.target.files?.[0];if(!file)return;try{if(!/\.(txt|md)$/i.test(file.name))throw new Error('Choose a .txt or .md file.');if(file.size>2000000)throw new Error('Please use a text file smaller than 2 MB.');change(await file.text());}catch(err){setError(err.message);}e.target.value='';};
-  return <section className="simple-card ready-fields" aria-label="Upload content">
-    <div className="ready-actions"><h2 style={{flex:1,margin:0}}>Add content</h2><button className="simple-action simple-secondary" onClick={onClose}>Close</button></div>
-    <p>Import single posts. # starts a library post; ## is its large headline. Plain paragraphs become smaller text on the image. Caption: and Hashtags: stay off the image. Another # or ## starts the next post.</p>
-    <p>If you start with ##, its headline is also the library name. Without Caption:, the caption is empty. No AI rewriting or automatic slide splitting.</p>
-    <label>Upload .txt or .md<input type="file" accept=".txt,.md,text/plain,text/markdown" onChange={read}/></label>
-    <label>Or paste your batch<textarea aria-label="Batch content" value={source} onChange={e=>change(e.target.value)} placeholder={'# Library title\n## Headline on the image\nSmaller body text on the image.\n\nCaption:\nWords for your social caption.\n\nHashtags:\n#WonderPadsSG'}/></label>
-    {error&&<p role="alert">{error}</p>}
-    {result.errors.length>0&&<div role="alert">{result.errors.map((e,i)=><p key={i}>{e}</p>)}</div>}
-    <p role="status">{rows.length} posts found · {rows.filter(r=>r.duplicate).length} duplicates skipped · {chosen.length} selected</p>
-    {rows.map(({post,key,duplicate,i})=><details key={i} style={{padding:'12px 0',borderTop:'1px solid var(--line)'}}><summary>{post.title}{duplicate?', already imported or repeated':''}</summary>
-      <label><input type="checkbox" disabled={duplicate} checked={!duplicate&&!excluded.includes(i)} onChange={e=>setExcluded(xs=>e.target.checked?xs.filter(x=>x!==i):[...xs,i])}/> Add this post</label>
-      <h3>On the image</h3><strong style={{display:'block',whiteSpace:'pre-wrap'}}>{post.headline}</strong><p style={{whiteSpace:'pre-wrap'}}>{post.body||'No body text'}</p>
-      {(post.headline.length>100||post.body.length>500)&&<p role="status">Long image text: review before creating. The design builder will flag text that cannot fit legibly; no words are cut.</p>}
-      <h3>Caption, not on the image</h3><p style={{whiteSpace:'pre-wrap'}}>{post.caption||'No caption'}</p>
-      <h3>Hashtags</h3><p style={{whiteSpace:'pre-wrap'}}>{post.hashtags||'No hashtags'}</p>
-    </details>)}
-    <button className="simple-action" disabled={!chosen.length||!!result.errors.length} onClick={()=>onImport(chosen.map(r=>({...r.post,uploadKey:r.key})))}>Add {chosen.length} posts to library</button>
-    <p className="simple-muted">Saved in this browser. Include your uploads in an editable backup to move them to another device.</p>
-  </section>;
-}
-Object.assign(window,{parseContentUpload,contentUploadKey,ContentUpload});
