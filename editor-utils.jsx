@@ -379,6 +379,15 @@ function normalizeAppProse(value,key='') {
   const result={};for(const [k,v] of Object.entries(value))result[k]=normalizeAppProse(v,k);return result;
 }
 
+function framePhotoContext(state,target) {
+  if(!target||state.activeProjectId!==target.projectId)return null;
+  const project=state.projects.find(p=>p.id===target.projectId);
+  if(!project||project.activeCanvasId!==target.canvasId)return null;
+  const canvas=project.canvases.find(c=>c.id===target.canvasId);
+  const frame=canvas?.elements.find(e=>e.id===target.elementId&&e.type==='frame'&&!e.locked&&!e.hidden);
+  return frame?{project,canvas,frame}:null;
+}
+
 function reducer(state, action) {
   action=normalizeAppProse(action);
   // History is per active project. We mutate state.projects, then push snapshot to state.past.
@@ -607,6 +616,21 @@ function reducer(state, action) {
       };
 
     // ---------- Element CRUD ----------
+    case 'open-frame-photo': {
+      const project=state.projects.find(p=>p.id===state.activeProjectId);
+      const target={projectId:project?.id,canvasId:project?.activeCanvasId,elementId:action.id,requestId:uid()};
+      return framePhotoContext(state,target)?{...state,framePhotoTarget:target,selection:[action.id]}:state;
+    }
+    case 'close-frame-photo':
+      return {...state,framePhotoTarget:null};
+    case 'set-frame-photo': {
+      const target=state.framePhotoTarget;
+      if(!target||action.request?.requestId!==target.requestId||!framePhotoContext(state,target)||typeof action.src!=='string'||!action.src)return state;
+      const next=activeProjectMutate(proj=>patchCanvas(proj,target.canvasId,{
+        elements:proj.canvases.find(c=>c.id===target.canvasId).elements.map(e=>e.id===target.elementId?{...e,src:action.src}:e),
+      }));
+      return {...next,framePhotoTarget:null,uploads:state.uploads?.includes(action.src)?state.uploads:[action.src,...(state.uploads||[])].slice(0,24)};
+    }
     case 'add-element':
       return {
         ...activeProjectMutate(proj => patchCanvas(proj, proj.activeCanvasId, {
@@ -1032,6 +1056,7 @@ const initialState = () => ({
   activeProjectId: null,
   selection: [],
   tool: 'templates',
+  framePhotoTarget: null,
   zoom: 0.4,
   search: '',
   past: [],
@@ -1042,7 +1067,7 @@ const initialState = () => ({
 });
 
 function studioSnapshot(state) {
-  const { past, future, selection, saveStatus, saveError, savedAt, ...persist } = state;
+  const { past, future, selection, framePhotoTarget, saveStatus, saveError, savedAt, ...persist } = state;
   return persist;
 }
 
@@ -1288,5 +1313,5 @@ function parseEditableProjectFile(text) {
   return state;
 }
 
-Object.assign(window, { uid, clamp, now, SIZE_PRESETS, defaultCanvas, newElement, newProject, newBlankProject, defaultBrand, defaultCarousel, reducer, initialState, computeSnapGuides, brandBackgroundElements, reflowBrandBackground, SLIDE_TEXT_STYLES, slideTextRole, styleSlideText, cleanSlideSwipe, starterBackgroundElements, StoreCtx, useStore, StoreProvider, activeProject, activeCanvas, useMediaQuery, useIsMobile, alignElementsToPage, exportEditableProjectFile, parseEditableProjectFile, STORAGE_KEY });
+Object.assign(window, { uid, clamp, now, SIZE_PRESETS, defaultCanvas, newElement, framePhotoContext, newProject, newBlankProject, defaultBrand, defaultCarousel, reducer, initialState, computeSnapGuides, brandBackgroundElements, reflowBrandBackground, SLIDE_TEXT_STYLES, slideTextRole, styleSlideText, cleanSlideSwipe, starterBackgroundElements, StoreCtx, useStore, StoreProvider, activeProject, activeCanvas, useMediaQuery, useIsMobile, alignElementsToPage, exportEditableProjectFile, parseEditableProjectFile, STORAGE_KEY });
 

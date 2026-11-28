@@ -582,6 +582,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <ErrorBoundary>
     <StoreProvider>
       <App />
+      <FramePhotoPicker />
       <SaveErrorBanner />
     </StoreProvider>
   </ErrorBoundary>
