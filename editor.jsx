@@ -529,7 +529,7 @@ function sigForThumb(canvas) {
       canvas.elements.map(e => e.id + ':' + Math.round(e.x) + ',' + Math.round(e.y) + ',' +
         Math.round(e.w) + ',' + Math.round(e.h) + ',' + Math.round(e.rot||0) + ',' +
         (e.text||'') + ',' + (e.fill||'') + ',' + (e.color||'') + ',' + !!e.flipX + ',' + !!e.flipY + ',' +
-        (e.type==='icon' ? e.name : '') + ',' + (e.artworkRevision||'')).join('|');
+        (e.type==='icon' ? e.name : '') + ',' + (e.artworkRevision||'') + ',' + JSON.stringify(e.crop||null)).join('|');
   } catch { return ''; }
 }
 
@@ -583,6 +583,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <StoreProvider>
       <App />
       <FramePhotoPicker />
+      <PhotoCropPicker />
       <SaveErrorBanner />
     </StoreProvider>
   </ErrorBoundary>

@@ -47,7 +47,7 @@ function MobileToolTray({el,tool,onClose}){
   if(tool==='adjust')return <MobileImageAdjustments key={el.id} el={el} onClose={onClose}/>;
   if(['colour','outline','accent'].includes(tool)){const field=tool==='outline'?'stroke':tool==='accent'?'iconAccent':colourKey(el),title=el.type==='text'?'Colour':field==='fill'?'Fill':field==='iconAccent'?'Soft fill':field==='stroke'?'Stroke':'Colour';return <MobileColourLibrary key={field} el={el} field={field} title={title} onClose={onClose}/>;}
   if(['position','flip','fit'].includes(tool))return <MobileLegacyToolTray el={el} tool={tool} onClose={onClose}/>;
-  if(tool==='size'&&el.type==='image')return <section className="mobile-ribbon-panel" aria-label="Size controls"><MobileImageSizeTool el={el}/></section>;
+  if(tool==='size'&&['image','frame'].includes(el.type))return <section className="mobile-ribbon-panel" aria-label="Size controls"><MobileImageSizeTool el={el}/></section>;
   const title=TRAY_LABELS[tool]||tool;
   let content;
   if(tool==='styles')content=<MobileStyleChoices el={el} update={update}/>;

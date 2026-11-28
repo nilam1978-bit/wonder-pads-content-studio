@@ -1359,6 +1359,7 @@ function ElementProperties({ el }) {
       </PropFold>
 
       <PropFold title="Position & size">
+        {['image','frame'].includes(el.type)&&<><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}><LabeledInput label="Width" value={Math.round(el.w)} onChange={v=>{if(+v>0)update(photoSizePatch(el,+v));}}/><LabeledInput label="Height" value={Math.round(el.h)} onChange={v=>{if(+v>0)update(photoSizePatch(el,+v*el.w/el.h));}}/></div><button className="btn btn-tonal" disabled={!el.src||el.locked} onClick={()=>dispatch({type:'open-photo-crop',id:el.id})}>Crop photo</button>{el.type==='frame'&&Math.abs(el.w-el.h)>.1&&<button className="btn btn-tonal" onClick={()=>update({h:el.w,y:el.y+(el.h-el.w)/2})}>Square frame</button>}</>}
         {isIllustration(el) && !isBrandLogo(el) && <IllustrationSizeControl el={el} update={update} />}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <LabeledInput label="X" value={Math.round(el.x)} onChange={v => update({ x: +v })} />
