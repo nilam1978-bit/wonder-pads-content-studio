@@ -262,6 +262,7 @@ function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBu
         {(multiSelecting||state.selection.length>1)&&!openSheet&&<div className="mobile-ribbon-context"><MobileMultiTools onDone={clearSelection}/></div>}
         {primaryEl && !multiSelecting&&state.selection.length<2 && !['text','images','icons','shapes','frames','pages','ai'].includes(openSheet) && (
           <div className="mobile-ribbon-context">
+            {activeTray==='adjust'&&!openSheet&&!wordDraft?<MobileImageAdjustments key={canvas.id+primaryEl.id} el={primaryEl} onClose={()=>setTray(null)}/>:<>
             {activeTray && !openSheet && !wordDraft && (
               <MobileToolTray key={primaryEl.id + activeTray} el={primaryEl} tool={activeTray} onClose={() => setTray(null)} />
             )}
@@ -274,6 +275,7 @@ function MobileEditor({ onExit, progressNav, onPreview, onSource, onResize, onBu
               <MobileSelectionTools el={primaryEl} activeTool={activeTray}
                 onTool={tool => tool === 'words' ? beginEdit(primaryEl.id) : pickTool(tool)} />
             </MobileRibbon>
+            </>}
           </div>
         )}
         {backgroundSelected&&!primaryEl&&!openSheet&&<div className="mobile-ribbon-context">{(tray==='bg-fill'||tray==='bg-images')&&<MobileBackgroundLibrary key={canvas.id+tray} mode={tray==='bg-images'?'images':'fill'} onClose={()=>setTray(null)}/>} <MobileRibbon label="Background tools" end={<button className="mobile-ribbon-pin mobile-ribbon-done" aria-label="Done selecting background" onClick={()=>setBackgroundSelected(false)}><Icon name="check" size={22}/></button>}><button className="mobile-ribbon-tool" aria-label="Background fill" aria-expanded={tray==='bg-fill'} onClick={()=>setTray(tray==='bg-fill'?null:'bg-fill')}><Icon name="bg" size={19}/></button><button className="mobile-ribbon-tool" aria-label="Background image" aria-expanded={tray==='bg-images'} onClick={()=>setTray(tray==='bg-images'?null:'bg-images')}><Icon name="images" size={19}/></button></MobileRibbon></div>}

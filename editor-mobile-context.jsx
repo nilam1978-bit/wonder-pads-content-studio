@@ -16,12 +16,35 @@ function MobileStyleChoices({el,update}){
   return <>{TEXT_LOOKS.map(look=><button key={look.name} className="mobile-font-choice" disabled={busy} style={{fontFamily:look.fontFamily,fontWeight:look.fontWeight,fontStyle:look.italic?'italic':'normal'}} onClick={()=>apply(look)}>{look.name}</button>)}{error&&<span role="alert">{error}</span>}</>;
 }
 
+const PHOTO_ADJUSTMENTS=[
+  ['brightness','Brightness',100,100,'%'],['contrast','Contrast',100,100,'%'],
+  ['saturate','Saturation',100,100,'%'],['blur','Blur',20,0,'px'],
+];
+function MobileImageAdjustments({el,onClose}){
+  const [adjustment,setAdjustment]=React.useState(null),{live,done}=useLiveElementEdit(el.id);
+  const current=PHOTO_ADJUSTMENTS.find(option=>option[0]===adjustment);
+  const value=current?(el.filter?.[current[0]]??current[3])-current[3]:0;
+  const valueLabel=current?(value>0&&current[0]!=='blur'?'+':'')+value+current[4]:'';
+  const finish=()=>{done();onClose();};
+  return <fieldset className="mobile-ribbon-panel mobile-photo-adjust" role="toolbar" aria-label={current?current[1]+' adjustment':'Photo adjustments'} disabled={!!el.locked}>
+    {current?<>
+      <button type="button" className="mobile-ribbon-pin" aria-label="Back to adjustments" onClick={()=>{done();setAdjustment(null);}}><Icon name="arrow_left" size={18}/></button>
+      <span className="mobile-photo-adjust-label">{current[1]} · <output aria-label={current[1]+' value'}>{valueLabel}</output></span>
+      <LiveSlider key={current[0]} label={current[1]} min={-current[3]} max={current[2]} value={value}
+        onLive={value=>{if(!el.locked)live({filter:{...el.filter,[current[0]]:value+current[3]}});}} onDone={done}/>
+    </>:<div className="mobile-photo-adjust-choices">{PHOTO_ADJUSTMENTS.map(([key,label])=><button key={key} type="button" className="mobile-ribbon-tool" onClick={()=>setAdjustment(key)}>{label}</button>)}</div>}
+    <button type="button" className="mobile-ribbon-pin mobile-ribbon-done" aria-label="Done adjusting photo" onClick={finish}><Icon name="check" size={20}/></button>
+  </fieldset>;
+}
+Object.assign(window,{MobileImageAdjustments});
+
 function MobileToolTray({el,tool,onClose}){
   const {state,dispatch}=useStore(),canvas=activeCanvas(state),{live,done}=useLiveElementEdit(el.id),host=React.useRef(null);
   const update=patch=>dispatch({type:'update-element',id:el.id,patch});
-  const [widthOpen,setWidthOpen]=React.useState(false),[adjustment,setAdjustment]=React.useState('brightness');
+  const [widthOpen,setWidthOpen]=React.useState(false);
   const slider=(label,key,min,max,step=1,value=el[key],make=value=>({[key]:value}),unit='px')=><MobileControlSlider key={label} label={label} unit={unit} value={Number(value)||0} min={min} max={max} step={step} onLive={value=>live(make(value))} onDone={done} onSet={value=>update(make(value))}/>;
   if(tool==='font')return <MobileFontLibrary el={el} onClose={onClose}/>;
+  if(tool==='adjust')return <MobileImageAdjustments key={el.id} el={el} onClose={onClose}/>;
   if(['colour','outline','accent'].includes(tool)){const field=tool==='outline'?'stroke':tool==='accent'?'iconAccent':colourKey(el),title=el.type==='text'?'Colour':field==='fill'?'Fill':field==='iconAccent'?'Soft fill':field==='stroke'?'Stroke':'Colour';return <MobileColourLibrary key={field} el={el} field={field} title={title} onClose={onClose}/>;}
   if(['position','flip','fit'].includes(tool))return <MobileLegacyToolTray el={el} tool={tool} onClose={onClose}/>;
   if(tool==='size'&&el.type==='image')return <section className="mobile-ribbon-panel" aria-label="Size controls"><MobileImageSizeTool el={el}/></section>;
@@ -37,7 +60,6 @@ function MobileToolTray({el,tool,onClose}){
     if(el.type==='text')content=<>{widthOpen?slider('Box width','w',80,Math.max(el.w,canvas.w-el.x),4,el.w):slider('Text size','fontSize',6,600,1,el.fontSize)}<button className="mobile-ribbon-tool" aria-pressed={widthOpen} onClick={()=>setWidthOpen(!widthOpen)}>{widthOpen?'Text size':'Box width'}</button>{[['Small',32],['Body',44],['Heading',76],['Big',112]].map(([name,fontSize])=><button key={name} className="mobile-ribbon-tool" onClick={()=>update({fontSize})}>{name}</button>)}<button className="mobile-ribbon-tool" onClick={()=>update({fontSize:fitTextSize(el,el.h,400)})}>Fit to box</button><button className="mobile-ribbon-tool" onClick={()=>update({fontSize:fitTextSize(el,Math.max(40,canvas.h-el.y-150),el.fontSize||48)})}>Fit to slide</button></>;
     else {const ratio=el.h/Math.max(1,el.w),max=Math.max(canvas.w*1.2,el.w);const scale=w=>el.type==='icon'?illustrationSizePatch(el,w):{w,h:w*ratio,x:el.x+(el.w-w)/2,y:el.y+(el.h-w*ratio)/2};content=<>{slider('Size','w',10,max,2,el.type==='icon'?illustrationSize(el):el.w,scale)}{el.type!=='icon'&&<>{slider('Width','w',10,Math.max(canvas.w*2,el.w),2,el.w)}{slider('Height','h',10,Math.max(canvas.h*2,el.h),2,el.h)}</>}</>;}
   }
-  if(tool==='adjust'){const options=[['brightness','Brightness',200,100,'%'],['contrast','Contrast',200,100,'%'],['saturate','Saturation',200,100,'%'],['blur','Blur',20,0,'px']],current=options.find(o=>o[0]===adjustment);content=<>{slider(current[1],current[0],0,current[2],1,el.filter?.[current[0]]??current[3],value=>({filter:{...el.filter,[current[0]]:value}}),current[4])}{options.map(([key,label])=><button key={key} className="mobile-ribbon-tool" aria-pressed={key===adjustment} onClick={()=>setAdjustment(key)}>{label}</button>)}</>;}
   if(tool==='frame')content=<div ref={host} className="mobile-context-frame"><FrameProps el={el} update={update}/></div>;
   if(['replace-icon','replace-artwork'].includes(tool))content=<>{tool==='replace-artwork'&&<button className="mobile-insert-upload" aria-label="Upload replacement" onClick={()=>host.current?.querySelector('input[type=file]')?.click()}><Icon name="upload" size={20}/></button>}<div ref={host} className="mobile-insert-preview">{tool==='replace-icon'?<IconLibraryGrid selected={el.name} accent={el.iconAccent||'none'} onChoose={name=>update({name})}/>:isIllustration(el)||isBrandLogo(el)?<IconsPanel replacement={el} onReplaced={onClose}/>:<ImagesPanel replacement={el} onReplaced={onClose}/>}</div></>;
   return <MobileContextShelf el={el} tool={tool} title={title} onClose={onClose} expand={['styles','replace-icon','replace-artwork'].includes(tool)}>{content}</MobileContextShelf>;
